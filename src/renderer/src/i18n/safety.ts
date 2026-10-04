@@ -7,8 +7,9 @@ import type { Lang } from '../../../shared/types'
  */
 export const safetyStrings: Record<Lang, Record<string, string>> = {
   zh: {
-    // The permanent note at the top of the passwords page.
+    // The note at the top of the passwords page, there until its cross is clicked.
     pwd_safety_title: '密码仅作便捷存放，不是密码管理器',
+    pwd_safety_dismiss: '知道了，不再显示',
     pwd_safety_body:
       '密码只保存在这台电脑上，用当前 Windows 账户加密。能登录这个 Windows 账户的人都可以查看它们。重要账号的密码请使用专门的密码管理器。',
     // Said after an export that was written without the passwords.
@@ -29,6 +30,7 @@ export const safetyStrings: Record<Lang, Record<string, string>> = {
   },
   en: {
     pwd_safety_title: 'Convenient storage, not a password manager',
+    pwd_safety_dismiss: 'Got it, don’t show again',
     pwd_safety_body:
       'Passwords stay on this computer, encrypted with your current Windows account. Anyone who can sign in to this Windows account can view them. For important accounts, use a dedicated password manager.',
     export_success_no_passwords: 'Backup exported (without passwords)',
@@ -49,6 +51,7 @@ export const safetyStrings: Record<Lang, Record<string, string>> = {
   },
   ja: {
     pwd_safety_title: 'パスワードマネージャーではなく、簡易保管用です',
+    pwd_safety_dismiss: '了解しました。今後は表示しない',
     pwd_safety_body:
       'パスワードはこのコンピューターにのみ保存され、現在の Windows アカウントで暗号化されます。この Windows アカウントにサインインできる人は誰でも閲覧できます。重要なアカウントには、専用のパスワードマネージャーをお使いください。',
     export_success_no_passwords:
