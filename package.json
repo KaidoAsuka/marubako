@@ -1,6 +1,6 @@
 {
   "name": "marubako",
-  "version": "2.5.8",
+  "version": "3.0.0",
   "description": "Marubako desktop launcher widget",
   "author": "Marubako authors",
   "main": "out/main/index.js",
