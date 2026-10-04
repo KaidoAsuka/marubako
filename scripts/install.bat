@@ -1,5 +1,5 @@
 @echo off
-cd /d "%~dp0"
+cd /d "%~dp0.."
 where node >nul 2>&1
 if %errorlevel% neq 0 (
     echo [ERROR] Node.js not found.
@@ -26,5 +26,5 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 echo.
-echo [OK] Done. Run start.bat to launch the app.
+echo [OK] Done. Run scripts\start.bat to launch the app.
 pause

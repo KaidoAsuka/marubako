@@ -382,7 +382,9 @@ describe('application icon ICO files', () => {
   it.each(['icon.ico', 'icon-256.ico'])(
     '%s lists the nine sizes and embeds the same PNG frames as resources/icons',
     (fileName) => {
-      const ico = fs.readFileSync(path.join(projectDir, fileName))
+      const ico = fs.readFileSync(
+        path.join(projectDir, 'resources/icons', fileName)
+      )
       expect(ico.readUInt16LE(0)).toBe(0)
       expect(ico.readUInt16LE(2)).toBe(1)
       expect(ico.readUInt16LE(4)).toBe(SIZES.length)
@@ -406,27 +408,27 @@ describe('application icon ICO files', () => {
   )
 
   it('keeps icon.ico and icon-256.ico identical, the files electron-builder, the window and the tray point at', () => {
+    const icons = path.join(projectDir, 'resources/icons')
     expect(
       fs
-        .readFileSync(path.join(projectDir, 'icon.ico'))
-        .equals(fs.readFileSync(path.join(projectDir, 'icon-256.ico')))
+        .readFileSync(path.join(icons, 'icon.ico'))
+        .equals(fs.readFileSync(path.join(icons, 'icon-256.ico')))
     ).toBe(true)
     const config = createRequire(import.meta.url)(
       path.join(projectDir, 'electron-builder.config.cjs')
     ) as { win: { icon: string }; files: string[] }
     expect(fs.existsSync(path.join(projectDir, config.win.icon))).toBe(true)
+    expect(config.win.icon).toBe('resources/icons/icon-256.ico')
     expect(config.files).toEqual(
-      expect.arrayContaining([
-        'icon.ico',
-        'icon-256.ico',
-        'resources/icons/*.png',
-      ])
+      expect.arrayContaining(['resources/icons/*.png', 'resources/icons/*.ico'])
     )
     const windowManager = fs.readFileSync(
       path.join(projectDir, 'src/main/window-manager.ts'),
       'utf8'
     )
-    expect(windowManager).toContain("'icon.ico'")
+    expect(windowManager).toContain("'resources', 'icons', 'icon.ico'")
+    // Nothing of the kind is left in the project root.
+    expect(fs.existsSync(path.join(projectDir, 'icon.ico'))).toBe(false)
   })
 
   it('ships every PNG size the tray asks for', () => {

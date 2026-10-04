@@ -101,9 +101,8 @@ const config = {
     'package.json',
     'LICENSE',
     'THIRD-PARTY-NOTICES.md',
-    'icon.ico',
-    'icon-256.ico',
     'resources/icons/*.png',
+    'resources/icons/*.ico',
   ],
   // Only the three languages of the interface keep their Chromium locale pack (about 45 MB less).
   // app.getLocale(), which the first start reads to pick the interface language (initial-lang.ts),
@@ -112,12 +111,12 @@ const config = {
   electronLanguages: ['zh-CN', 'en-US', 'ja'],
   win: {
     target: ['nsis'],
-    icon: 'icon-256.ico',
+    icon: 'resources/icons/icon-256.ico',
     // Editing the executable (icon, version information) stays on; the "signing" step is the hook
     // below, which signs nothing and says so in the log: the releases are not code-signed.
     signAndEditExecutable: true,
     signtoolOptions: {
-      sign: './noop-sign.js',
+      sign: './scripts/noop-sign.cjs',
     },
   },
   nsis: {

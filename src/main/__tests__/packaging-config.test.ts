@@ -134,9 +134,8 @@ describe('what is packed into app.asar (performance-4)', () => {
         'out/**/*',
         'package.json',
         'THIRD-PARTY-NOTICES.md',
-        'icon.ico',
-        'icon-256.ico',
         'resources/icons/*.png',
+        'resources/icons/*.ico',
       ])
     )
     // No catch-all, and none of the folders that only exist for development.
@@ -153,7 +152,7 @@ describe('the development scripts after the Electron upgrade', () => {
 
   // Electron 44's package no longer downloads the runtime while npm installs it.
   it('fetch the Electron runtime themselves, where npm install no longer does', () => {
-    expect(script('install.bat')).toContain(
+    expect(script('scripts/install.bat')).toContain(
       'node_modules\\electron\\install.js'
     )
     expect(script('scripts/launch.ps1')).toContain(
@@ -162,10 +161,10 @@ describe('the development scripts after the Electron upgrade', () => {
   })
 
   it('decide whether dependencies are there by the package, not by the downloaded runtime', () => {
-    expect(script('build.bat')).toContain(
+    expect(script('scripts/build.bat')).toContain(
       'node_modules\\electron\\package.json'
     )
-    expect(script('build.bat')).not.toContain('dist\\electron.exe')
+    expect(script('scripts/build.bat')).not.toContain('dist\\electron.exe')
   })
 })
 
@@ -191,12 +190,14 @@ describe('the installer (release-repo-11)', () => {
 
 describe('the signing hook (release-repo-7)', () => {
   const noopSign = nodeRequire(
-    path.join(projectDir, 'noop-sign.js')
+    path.join(projectDir, 'scripts/noop-sign.cjs')
   ) as (configuration?: { path?: string }) => Promise<boolean>
 
   it('is the one the builder config points at', () => {
-    expect(config.win.signtoolOptions.sign).toBe('./noop-sign.js')
-    expect(fs.existsSync(path.join(projectDir, 'noop-sign.js'))).toBe(true)
+    expect(config.win.signtoolOptions.sign).toBe('./scripts/noop-sign.cjs')
+    expect(fs.existsSync(path.join(projectDir, 'scripts/noop-sign.cjs'))).toBe(
+      true
+    )
   })
 
   it('says plainly that the file is not signed, naming it, and succeeds', async () => {

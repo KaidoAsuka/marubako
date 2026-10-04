@@ -1,5 +1,5 @@
 @echo off
-cd /d "%~dp0"
+cd /d "%~dp0.."
 
 echo [->] Building Marubako installer exe...
 if not exist "node_modules\electron\package.json" (
