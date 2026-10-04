@@ -367,8 +367,7 @@
 }
 
 /* Package "safety" (iteration 5): the security boundary of the password category
-   (PasswordSafetyNote), one permanent block at the top of the page that folds down to its first
-   line. */
+   (PasswordSafetyNote), one block at the top of the page until its cross is clicked. */
 .pwd-safety {
   margin: 0 0 10px;
   border: 1px solid var(--line);
@@ -378,22 +377,13 @@
   font-size: 12px;
   line-height: 1.5;
 }
-.pwd-safety-toggle {
+.pwd-safety-head {
   display: flex;
   align-items: center;
   gap: 8px;
-  width: 100%;
   min-height: 32px;
-  padding: 6px 10px;
-  border-radius: 10px;
-  background: transparent;
+  padding: 4px 4px 4px 10px;
   color: var(--text);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-.pwd-safety-toggle:hover {
-  background: var(--hover-bg);
 }
 .pwd-safety-icon {
   flex-shrink: 0;
@@ -407,9 +397,16 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.pwd-safety-toggle > svg:last-child {
+.pwd-safety-close {
   flex-shrink: 0;
-  color: var(--text-dim);
+  width: 24px;
+  height: 24px;
+  border-color: transparent;
+  background: transparent;
+}
+.pwd-safety-close:hover {
+  background: var(--hover-bg);
+  color: var(--text);
 }
 .pwd-safety-body {
   margin: 0;
