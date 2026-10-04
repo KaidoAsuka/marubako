@@ -43,9 +43,8 @@ const HAN = /\p{Script=Han}/u
 const KANA = /[\p{Script=Hiragana}\p{Script=Katakana}]/u
 
 describe('sample data of a new installation', () => {
-  it('is Chinese unless asked otherwise (the normaliser and many tests rely on it)', () => {
+  it('has a Chinese interface unless asked otherwise (the normaliser and many tests rely on it)', () => {
     expect(createDefaultAppData().prefs.lang).toBe('zh')
-    expect(createDefaultAppData().folders[0]?.name).toBe('工作文件')
     expect(createDefaultAppData()).toEqual(createDefaultAppData('zh'))
   })
 
@@ -67,79 +66,74 @@ describe('sample data of a new installation', () => {
     }
   )
 
-  it('has no Chinese or Japanese characters in the English sample data', () => {
-    for (const word of sampleWords(createDefaultAppData('en'))) {
-      expect(word, word).not.toMatch(HAN)
-      expect(word, word).not.toMatch(KANA)
+  // One set of samples, in English, whatever language the first start picks: the guess of the
+  // language can then never leave samples in a language the user did not expect.
+  it.each(LANGS)(
+    'has the English sample words, with no Chinese or Japanese characters (%s)',
+    (lang) => {
+      const data = createDefaultAppData(lang)
+
+      expect(sampleGroups(data).map((group) => group.name)).toEqual([
+        'Work files',
+        'Personal',
+        'Everyday tools',
+        'Fun',
+        'Terminals',
+        'Accounts',
+        'Notes',
+        'Network',
+      ])
+      expect(data.folders[0]?.items.map((item) => item.name)).toEqual([
+        'Desktop',
+        'Documents',
+      ])
+      expect(data.apps[0]?.items.map((item) => item.name)).toEqual([
+        'PowerShell',
+        'Command Prompt',
+      ])
+      expect(data.passwords[0]?.items[0]?.name).toBe('Example account')
+      expect(data.notes[0]?.items[0]?.name).toBe('How to use')
+      expect(data.commands[0]?.items[0]?.name).toBe('Flush the DNS cache')
+      for (const word of sampleWords(data)) {
+        expect(word, word).not.toMatch(HAN)
+        expect(word, word).not.toMatch(KANA)
+      }
+    }
+  )
+
+  it.each(LANGS)(
+    'is the same in every language apart from the language itself (%s)',
+    (lang) => {
+      const data = createDefaultAppData(lang)
+
+      expect({ ...data, prefs: { ...data.prefs, lang: 'en' } }).toEqual(
+        createDefaultAppData('en')
+      )
+    }
+  )
+
+  it('has the same sample sites everywhere', () => {
+    for (const lang of LANGS) {
+      const data = createDefaultAppData(lang)
+
+      expect(
+        data.websites.flatMap((group) => group.items.map((item) => item.name))
+      ).toEqual(['Google', 'GitHub', 'YouTube'])
     }
   })
 
-  it('gives a Japanese first start the English sample words, not Chinese or Japanese ones', () => {
-    const data = createDefaultAppData('ja')
-    const english = createDefaultAppData('en')
-
-    expect(data.folders.map((group) => group.name)).toEqual([
-      'Work files',
-      'Personal',
-    ])
-    expect(data.folders[0]?.items.map((item) => item.name)).toEqual([
-      'Desktop',
-      'Documents',
-    ])
-    expect(data.notes[0]?.items[0]?.name).toBe('How to use')
-    expect(sampleWords(data)).not.toContain('使用说明')
-    for (const word of sampleWords(data)) {
-      expect(word, word).not.toMatch(HAN)
-      expect(word, word).not.toMatch(KANA)
-    }
-    // Everything but the language itself is the English sample data.
-    expect({ ...data, prefs: { ...data.prefs, lang: 'en' } }).toEqual(english)
-  })
-
-  it('keeps Chinese sample words for Chinese', () => {
-    const data = createDefaultAppData('zh')
-
-    expect(sampleGroups(data).map((group) => group.name)).toEqual([
-      '工作文件',
-      '个人',
-      '常用工具',
-      '娱乐',
-      '终端',
-      '常用账号',
-      '备忘',
-      '网络',
-    ])
-    expect(data.apps[0]?.items.map((item) => item.name)).toEqual([
-      'PowerShell',
-      '命令提示符',
-    ])
-    expect(data.passwords[0]?.items[0]?.name).toBe('示例账号')
-    expect(data.commands[0]?.items[0]?.name).toBe('刷新 DNS 缓存')
-  })
-
-  it('has no Japanese kana in the Chinese sample data', () => {
-    for (const word of sampleWords(createDefaultAppData('zh'))) {
-      expect(word, word).not.toMatch(KANA)
-    }
-  })
-
-  it('opens sample sites that load where the language is spoken', () => {
+  it('opens the same sample sites in every language', () => {
     const urls = (lang: 'zh' | 'en' | 'ja') =>
       createDefaultAppData(lang)
         .websites.flatMap((group) => group.items)
         .map((item) => (item.kind === 'website' ? item.url : ''))
 
-    // Google and YouTube do not open in much of the Chinese-speaking world.
-    expect(urls('zh')).toEqual([
-      'https://cn.bing.com',
-      'https://github.com',
-      'https://www.bilibili.com',
-    ])
     expect(urls('en')).toEqual([
       'https://google.com',
       'https://github.com',
       'https://youtube.com',
     ])
+    expect(urls('zh')).toEqual(urls('en'))
     expect(urls('ja')).toEqual(urls('en'))
   })
 
@@ -226,7 +220,7 @@ describe('sample data of a new installation', () => {
     }
   )
 
-  it('says in the words of the language what the samples are', () => {
+  it('says in plain words what the samples are', () => {
     const english = createDefaultAppData('en')
 
     expect(english.apps[0]?.name).toBe('Terminals')
@@ -239,10 +233,6 @@ describe('sample data of a new installation', () => {
     expect(english.passwords[0]?.items[0]?.note).toContain('sample')
     expect(english.commands[0]?.name).toBe('Network')
     expect(english.commands[0]?.items[0]?.name).toBe('Flush the DNS cache')
-
-    const chinese = createDefaultAppData('zh')
-    expect(chinese.passwords[0]?.items[0]?.note).toContain('示例')
-    expect(chinese.commands[0]?.items[0]?.description).toMatch(HAN)
   })
 
   it('has nothing outside the sample groups and no tasks', () => {
@@ -326,11 +316,10 @@ describe('sample data of a new installation', () => {
       (createDefaultAppData(lang).notes[0]?.items[0] as { content: string })
         .content
 
-    expect(note('zh')).toContain('悬浮球')
-    expect(note('zh')).not.toContain('托盘')
     expect(note('en')).toContain('bubble')
     expect(note('en')).not.toContain('tray')
-    // A Japanese first start reads the English note.
+    // Every first start reads the same note.
+    expect(note('zh')).toBe(note('en'))
     expect(note('ja')).toBe(note('en'))
   })
 })

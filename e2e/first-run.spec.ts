@@ -82,9 +82,9 @@ test('without a posed locale the e2e runs start in Chinese with no first-run car
 for (const [locale, lang, htmlLang, firstGroup, firstSite] of [
   ['en-US', 'en', 'en', 'Work files', 'Google'],
   ['de-DE', 'en', 'en', 'Work files', 'Google'],
-  // A Japanese first start speaks Japanese; its sample entries have the English words.
+  // The interface follows the computer; the sample entries have the same English words everywhere.
   ['ja-JP', 'ja', 'ja', 'Work files', 'Google'],
-  ['zh-TW', 'zh', 'zh-CN', '工作文件', '必应'],
+  ['zh-TW', 'zh', 'zh-CN', 'Work files', 'Google'],
 ] as const) {
   test(`a first launch on a ${locale} computer is in ${lang}, sample data included`, async () => {
     const context = await launchAs({ locale })

@@ -128,13 +128,13 @@ describe('first start', () => {
     expect(file.data.window).toBeUndefined()
   })
 
-  // The interface follows the system language; the sample words are Chinese for Chinese and
-  // English for everything else, a Japanese start included.
+  // The interface follows the system language; the sample words are the same English ones
+  // whatever it is.
   it.each([
     ['en-US', 'en', 'Work files'],
     ['de-DE', 'en', 'Work files'],
     ['ja-JP', 'ja', 'Work files'],
-    ['zh-TW', 'zh', '工作文件'],
+    ['zh-TW', 'zh', 'Work files'],
   ])(
     'follows the system language: %s starts in %s with sample groups named for it',
     async (locale, lang, firstGroup) => {
@@ -302,7 +302,7 @@ describe('first start', () => {
     const data = await second.loadAppData()
 
     expect(data.prefs.lang).toBe('zh')
-    expect(data.folders[0]?.name).toBe('工作文件')
+    expect(data.folders[0]?.name).toBe('Work files')
   })
 
   it('removes temporary files left by an interrupted write', async () => {

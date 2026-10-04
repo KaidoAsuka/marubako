@@ -136,14 +136,17 @@ test('folder cards share action placement and preview paths and websites', async
     await folder.click()
     const inner = page.getByTestId('grid-item-folder-documents')
     await expect(inner.locator('.grid-detail')).toHaveCount(0)
-    await expect(inner).toHaveAttribute('title', '文档\nC:\\Work\\Documents')
+    await expect(inner).toHaveAttribute(
+      'title',
+      'Documents\nC:\\Work\\Documents'
+    )
     await expectActionsAtTheRight(inner, '.grid-actions')
     await page.screenshot({
       path: 'artifacts/folder-popup.png',
       animations: 'disabled',
     })
     await page.getByTestId('edit-item-folder-documents').click()
-    await expect(page.getByTestId('item-name-input')).toHaveValue('文档')
+    await expect(page.getByTestId('item-name-input')).toHaveValue('Documents')
     await page.keyboard.press('Escape')
     await page.keyboard.press('Escape')
     await page.getByTestId('tab-websites').click()

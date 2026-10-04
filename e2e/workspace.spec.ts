@@ -9,13 +9,13 @@ test('searches across categories and opens a note for editing using the keyboard
   try {
     await context.page.keyboard.press('Control+k')
     await expect(context.page.getByTestId('command-input')).toBeFocused()
-    await context.page.getByTestId('command-input').fill('使用说明')
+    await context.page.getByTestId('command-input').fill('How to use')
     await expect(context.page.getByRole('option')).toHaveCount(1)
     // Enter copies a note (search-palette.spec.ts); Shift+Enter opens it.
     await context.page.keyboard.press('Shift+Enter')
     await expect(context.page.getByTestId('modal-item')).toBeVisible()
     await expect(context.page.getByTestId('item-name-input')).toHaveValue(
-      '使用说明'
+      'How to use'
     )
     await expect(context.page.getByTestId('tab-notes')).toHaveClass(/active/)
     await context.page.keyboard.press('Escape')

@@ -64,10 +64,10 @@ test('moves the active category marker into place and preserves search keyboard 
         .toBeLessThan(1)
     }
     await page.keyboard.press('Control+k')
-    await page.getByTestId('command-input').fill('使用说明')
+    await page.getByTestId('command-input').fill('How to use')
     // Enter would copy the note; Shift+Enter opens it for editing.
     await page.keyboard.press('Shift+Enter')
-    await expect(page.getByTestId('item-name-input')).toHaveValue('使用说明')
+    await expect(page.getByTestId('item-name-input')).toHaveValue('How to use')
     await expect(page.getByTestId('item-name-input')).toBeFocused()
     await expect(page.getByTestId('command-palette')).toHaveCount(0)
     await page.keyboard.press('Escape')

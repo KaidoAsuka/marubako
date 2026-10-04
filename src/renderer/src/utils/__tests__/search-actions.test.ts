@@ -98,7 +98,7 @@ describe('what Enter does with a search result', () => {
     ]
 
     expect(primaryAction(searchEntries(data, 'plan')[0]!)).toBe('view')
-    expect(primaryAction(searchEntries(data, '备忘')[0]!)).toBe('view')
+    expect(primaryAction(searchEntries(data, 'Notes')[0]!)).toBe('view')
   })
 })
 
@@ -156,6 +156,6 @@ describe('what a copy action puts on the clipboard', () => {
       )
     ).toBe('')
     const data = createDefaultAppData()
-    expect(copyTextOf(searchEntries(data, '备忘')[0]!)).toBe('')
+    expect(copyTextOf(searchEntries(data, 'Notes')[0]!)).toBe('')
   })
 })

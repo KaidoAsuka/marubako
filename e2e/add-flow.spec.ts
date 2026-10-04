@@ -123,8 +123,8 @@ test('the place is chosen in the form, and a group opened for adding is the defa
     await expect(place).toHaveValue('')
     await expect(place.locator('option')).toHaveText([
       '独立条目',
-      '常用工具',
-      '娱乐',
+      'Everyday tools',
+      'Fun',
     ])
     await page.getByTestId('item-url-input').fill('example.org')
     await place.selectOption('grp-sites-fun')
@@ -137,7 +137,7 @@ test('the place is chosen in the form, and a group opened for adding is the defa
       saved.data.websites
         .find((group) => group.id === 'grp-sites-fun')!
         .items.map((item) => item.name)
-    ).toEqual(['哔哩哔哩', 'example.org'])
+    ).toEqual(['YouTube', 'example.org'])
     expect(saved.data.loose.websites).toHaveLength(0)
 
     // Editing it from there moves it, in the same save, and the strip can put it back.

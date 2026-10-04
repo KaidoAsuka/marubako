@@ -31,7 +31,7 @@ describe('searchEntries', () => {
     })
     expect(searchEntries(data, 'tools code')[0]?.name).toBe('VS Code')
     expect(searchEntries(data, 'github')[0]?.tab).toBe('websites')
-    expect(searchEntries(data, '全局唤起')[0]?.tab).toBe('notes')
+    expect(searchEntries(data, 'global shortcut')[0]?.tab).toBe('notes')
   })
   it('ranks an exact item name above a match in metadata', () => {
     const data = createDefaultAppData()

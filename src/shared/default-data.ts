@@ -103,7 +103,10 @@ interface StarterText {
   commandDescription: string
 }
 
-const ENGLISH_TEXT: StarterText = {
+// One set of words for every language, in English. The samples are the same on every computer,
+// whatever language the first start picks (and however that guess turns out), and the sample
+// folders are named as Windows itself names them in a path.
+const STARTER_TEXT: StarterText = {
   folderWork: 'Work files',
   folderLife: 'Personal',
   desktop: 'Desktop',
@@ -125,34 +128,6 @@ const ENGLISH_TEXT: StarterText = {
   commandName: 'Flush the DNS cache',
   commandDescription:
     'For when a site will not load after its address changed.',
-}
-
-// Chinese has its own words. A Japanese first start takes the English ones: they read the same on
-// any computer, and the sample folders are then named as Windows itself names them in a path.
-const STARTER_TEXT: Record<Lang, StarterText> = {
-  zh: {
-    folderWork: '工作文件',
-    folderLife: '个人',
-    desktop: '桌面',
-    documents: '文档',
-    downloads: '下载',
-    siteTools: '常用工具',
-    siteFun: '娱乐',
-    appGroup: '终端',
-    appCmd: '命令提示符',
-    passwordGroup: '常用账号',
-    passwordName: '示例账号',
-    passwordNote: '这是示例：换成你自己的账号，或者删掉。',
-    noteGroup: '备忘',
-    noteName: '使用说明',
-    noteContent:
-      '全局唤起快捷键可在设置中查看\nCtrl + K 搜索所有条目与任务\n方向键选择，回车打开\nAlt + 数字键切换分类，Ctrl + N 新建\n密码和命令可一键复制\nEsc 关闭弹窗或收起到悬浮球',
-    commandGroup: '网络',
-    commandName: '刷新 DNS 缓存',
-    commandDescription: '网站换了地址后打不开时用。',
-  },
-  en: ENGLISH_TEXT,
-  ja: ENGLISH_TEXT,
 }
 
 interface StarterSite {
@@ -181,36 +156,6 @@ const YOUTUBE: StarterSite = {
   name: 'YouTube',
   url: 'https://youtube.com',
   icon: 'tile:youtube-logo:7',
-}
-
-// Google and YouTube do not load for much of the Chinese-speaking world, so the Chinese sample
-// sites are a search engine and a video site that do (Bing, Bilibili). GitHub is the same
-// everywhere, and the other languages keep Google and YouTube.
-const STARTER_TOOL_SITES: Record<Lang, StarterSite[]> = {
-  zh: [
-    {
-      id: 'site-bing',
-      name: '必应',
-      url: 'https://cn.bing.com',
-      icon: 'tile:magnifying-glass:2',
-    },
-    GITHUB,
-  ],
-  en: [GOOGLE, GITHUB],
-  ja: [GOOGLE, GITHUB],
-}
-
-const STARTER_FUN_SITES: Record<Lang, StarterSite[]> = {
-  zh: [
-    {
-      id: 'site-bilibili',
-      name: '哔哩哔哩',
-      url: 'https://www.bilibili.com',
-      icon: 'tile:monitor-play:9',
-    },
-  ],
-  en: [YOUTUBE],
-  ja: [YOUTUBE],
 }
 
 function folderGroups(text: StarterText): Group<FolderItem>[] {
@@ -259,21 +204,21 @@ function websiteItems(sites: StarterSite[]): WebsiteItem[] {
   return sites.map((site) => ({ ...site, kind: 'website' as const }))
 }
 
-function websiteGroups(lang: Lang, text: StarterText): Group<WebsiteItem>[] {
+function websiteGroups(text: StarterText): Group<WebsiteItem>[] {
   return [
     {
       id: 'grp-sites-tools',
       name: text.siteTools,
       icon: 'tile:wrench:6',
       open: true,
-      items: websiteItems(STARTER_TOOL_SITES[lang]),
+      items: websiteItems([GOOGLE, GITHUB]),
     },
     {
       id: 'grp-sites-fun',
       name: text.siteFun,
       icon: 'tile:game-controller:8',
       open: false,
-      items: websiteItems(STARTER_FUN_SITES[lang]),
+      items: websiteItems([YOUTUBE]),
     },
   ]
 }
@@ -376,15 +321,15 @@ function starterTasks(): Record<string, TaskItem[]> {
 }
 
 /**
- * The data of a new installation, with the sample groups and entries for `lang` (Chinese words for
- * Chinese, English ones otherwise). Chinese is the default because the normaliser and many tests
- * depend on it; the main process passes the language of the system for a first start
- * (initial-lang.ts).
+ * The data of a new installation. `lang` is the language of the interface only (Chinese is the
+ * default because the normaliser and many tests depend on it; the main process passes the language
+ * of the system for a first start, initial-lang.ts). The sample groups and entries are the same in
+ * every language.
  */
 export function createDefaultAppData(lang: Lang = 'zh'): AppData {
-  const text = STARTER_TEXT[lang]
+  const text = STARTER_TEXT
   const folders = folderGroups(text)
-  const websites = websiteGroups(lang, text)
+  const websites = websiteGroups(text)
   const apps = appGroups(text)
   const passwords = passwordGroups(text)
   const notes = noteGroups(text)

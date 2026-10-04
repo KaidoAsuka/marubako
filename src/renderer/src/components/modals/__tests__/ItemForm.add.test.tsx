@@ -320,7 +320,7 @@ describe('the add form', () => {
       expect(select.value).toBe('')
       expect(
         Array.from(select.options).map((option) => option.textContent)
-      ).toEqual(['Standalone items', '工作文件', '个人'])
+      ).toEqual(['Standalone items', 'Work files', 'Personal'])
       cleanup()
 
       open('folders', GROUP)
