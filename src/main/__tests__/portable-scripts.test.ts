@@ -197,9 +197,11 @@ describe('scripts/smoke-portable.cjs', () => {
     expect(script).toMatch(/refused\.status\)\.toBe\(3\)/)
   })
 
-  it('checks where the data went and that updates are off', () => {
+  // Asked for updates, a portable copy only finds out which version is the newest.
+  it('checks where the data went and that nothing is downloaded as an update', () => {
     expect(script).toMatch(/getPath\('userData'\)/)
-    expect(script).toMatch(/status: 'disabled'/)
+    expect(script).toContain("['latest', 'available', 'error']")
+    expect(script).not.toMatch(/'downloading'|'ready'/)
     expect(script).toContain(UNINSTALLER_FILENAME)
   })
 })

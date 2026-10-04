@@ -7,6 +7,7 @@ import { autoUpdater } from 'electron-updater'
 
 import type { UpdateCheckResult } from '../shared/types'
 import { isPortable } from './portable'
+import { checkPortableUpdate } from './portable-update'
 
 let configured = false
 let missingUpdateFeedLogged = false
@@ -130,10 +131,8 @@ async function runUpdateCheck(): Promise<UpdateCheckResult> {
     return { status: 'disabled' }
   }
 
-  if (isPortable()) {
-    log.info('Skipped update check: a portable copy does not update itself')
-    return { status: 'disabled' }
-  }
+  // A portable copy does not update itself; it only finds out whether there is a newer version.
+  if (isPortable()) return checkPortableUpdate()
 
   if (!hasConfiguredUpdateFeed()) {
     return { status: 'disabled' }

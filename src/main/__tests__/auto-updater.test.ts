@@ -33,6 +33,8 @@ const mocks = vi.hoisted(() => {
         this.quitAndInstall.mockReset()
       },
     },
+    // What a portable copy asks instead of the feed (portable-update.test.ts has its own tests).
+    checkPortableUpdate: vi.fn(),
     log: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
   }
 })
@@ -41,6 +43,9 @@ vi.mock('electron', () => ({ app: mocks.app }))
 vi.mock('electron-log/main', () => ({ default: mocks.log }))
 vi.mock('electron-updater', () => ({ autoUpdater: mocks.updater }))
 vi.mock('../portable', () => ({ isPortable: () => mocks.portable }))
+vi.mock('../portable-update', () => ({
+  checkPortableUpdate: mocks.checkPortableUpdate,
+}))
 
 // Electron sets process.resourcesPath; under vitest it is whatever the test makes it.
 const originalResourcesPath = Object.getOwnPropertyDescriptor(
@@ -86,6 +91,11 @@ beforeEach(async () => {
   mocks.app.isPackaged = true
   mocks.portable = false
   mocks.updater.reset()
+  mocks.checkPortableUpdate.mockReset()
+  mocks.checkPortableUpdate.mockResolvedValue({
+    status: 'latest',
+    version: '2.5.8',
+  })
   Object.values(mocks.log).forEach((fn) => fn.mockClear())
   vi.resetModules()
   updater = await import('../auto-updater')
@@ -159,21 +169,12 @@ describe('checking for updates', () => {
     expect(mocks.updater.checkForUpdates).not.toHaveBeenCalled()
   })
 
-  // The zip of a release carries the same app-update.yml as the installed program.
-  it('does not ask the feed from a portable copy, feed file or not', async () => {
-    mocks.portable = true
-    writeFeed(GITHUB_FEED)
+  it('asks nothing in an installed copy that a portable copy would ask', async () => {
+    mocks.updater.checkForUpdates.mockResolvedValue(answer(false))
 
-    await expect(updater.checkForUpdatesNow()).resolves.toEqual({
-      status: 'disabled',
-    })
-    expect(mocks.updater.checkForUpdates).not.toHaveBeenCalled()
+    await updater.checkForUpdatesNow()
 
-    // Nothing is set up to download or to install on quit either.
-    updater.configureAutoUpdater()
-    expect(mocks.updater.autoDownload).toBeUndefined()
-    expect(mocks.updater.autoInstallOnAppQuit).toBeUndefined()
-    expect(updater.installDownloadedUpdate()).toBe(false)
+    expect(mocks.checkPortableUpdate).not.toHaveBeenCalled()
   })
 
   it.each([
@@ -319,5 +320,91 @@ describe('checking for updates', () => {
       'Auto updater failed',
       expect.any(Error)
     )
+  })
+})
+
+// The zip of a release carries the same app-update.yml as the installed program, and must not use
+// it: the updater would install the installer's version somewhere else and leave the folder of the
+// portable copy as it is. Such a copy only finds out whether there is a newer version.
+describe('checking for updates in a portable copy', () => {
+  beforeEach(() => {
+    mocks.portable = true
+  })
+
+  it.each([
+    ['there is a feed file', GITHUB_FEED],
+    ['there is none', null],
+  ])(
+    'asks which version is the newest and never the feed, when %s',
+    async (_name, feed) => {
+      writeFeed(feed)
+      mocks.checkPortableUpdate.mockResolvedValue({
+        status: 'available',
+        version: '2.6.0',
+      })
+
+      await expect(updater.checkForUpdatesNow()).resolves.toEqual({
+        status: 'available',
+        version: '2.6.0',
+      })
+      expect(mocks.checkPortableUpdate).toHaveBeenCalledTimes(1)
+      expect(mocks.updater.checkForUpdates).not.toHaveBeenCalled()
+    }
+  )
+
+  it.each([
+    [{ status: 'latest', version: '2.5.8' }],
+    [{ status: 'available', version: '2.6.0' }],
+    [{ status: 'error' }],
+  ] as const)('passes the answer %j on as it is', async (result) => {
+    mocks.checkPortableUpdate.mockResolvedValue(result)
+
+    await expect(updater.checkForUpdatesNow()).resolves.toEqual(result)
+  })
+
+  it('sets nothing up to download or to install on quit', async () => {
+    mocks.checkPortableUpdate.mockResolvedValue({
+      status: 'available',
+      version: '2.6.0',
+    })
+    await updater.checkForUpdatesNow()
+
+    updater.configureAutoUpdater()
+
+    expect(mocks.updater.autoDownload).toBeUndefined()
+    expect(mocks.updater.autoInstallOnAppQuit).toBeUndefined()
+    // There is nothing downloaded to install, whatever version was found.
+    expect(updater.installDownloadedUpdate()).toBe(false)
+    expect(mocks.updater.quitAndInstall).not.toHaveBeenCalled()
+  })
+
+  it('does not ask at all in a development build', async () => {
+    mocks.app.isPackaged = false
+
+    await expect(updater.checkForUpdatesNow()).resolves.toEqual({
+      status: 'disabled',
+    })
+    expect(mocks.checkPortableUpdate).not.toHaveBeenCalled()
+  })
+
+  it('lets two callers at once share one check, and asks again afterwards', async () => {
+    let finish: (value: unknown) => void = () => undefined
+    mocks.checkPortableUpdate.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finish = resolve
+      })
+    )
+
+    const first = updater.checkForUpdatesNow()
+    const second = updater.checkForUpdatesNow()
+    finish({ status: 'available', version: '2.6.0' })
+
+    expect(await first).toEqual({ status: 'available', version: '2.6.0' })
+    expect(await second).toEqual({ status: 'available', version: '2.6.0' })
+    expect(mocks.checkPortableUpdate).toHaveBeenCalledTimes(1)
+
+    // Nothing is remembered: the next check asks again.
+    await updater.checkForUpdatesNow()
+    expect(mocks.checkPortableUpdate).toHaveBeenCalledTimes(2)
   })
 })

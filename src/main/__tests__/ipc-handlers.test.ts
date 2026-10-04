@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { AppData, Lang } from '../../shared/types'
 import { createDefaultAppData } from '../../shared/default-data'
+import { DOCK_BALL_SIZE } from '../../shared/dock-size'
 import { AppError } from '../app-error'
 import type * as FileModule from '../data-file'
 import { InvalidBackupError } from '../data-normalize'
@@ -29,6 +30,9 @@ const mocks = vi.hoisted(() => ({
   summary: { passwordsOmitted: false },
   summaryError: null as Error | null,
   exportAppDataFile: vi.fn(async () => undefined),
+  exportMarkdownFile: vi.fn(async () => undefined),
+  /** Whether the program runs as a portable copy. */
+  portable: false,
   importAppData: vi.fn(),
   loadAppData: vi.fn(),
   saveAppData: vi.fn(),
@@ -40,6 +44,8 @@ const mocks = vi.hoisted(() => ({
   installDownloadedUpdate: vi.fn(() => true),
   flushPendingWrite: vi.fn(async () => undefined),
   applyBubblePreference: vi.fn(async () => undefined),
+  applyBallSizePreference: vi.fn(async () => undefined),
+  setWindowOpacity: vi.fn(async () => undefined),
   applyLaunchShortcut: vi.fn(),
   keepTabNamesVisible: vi.fn(async () => undefined),
   /** What Windows says about its own light or dark mode. */
@@ -54,7 +60,8 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('electron', () => ({
   app: {
-    getPath: () => 'C:\\Docs',
+    getPath: (name: string) =>
+      name === 'userData' ? 'C:\\Users\\me\\Data\\marubako' : 'C:\\Docs',
     getLocale: () => 'en-US',
     getVersion: () => '2.5.8',
   },
@@ -97,11 +104,13 @@ vi.mock('../launch-settings', () => ({
   setOpenAtLogin: vi.fn(),
 }))
 vi.mock('../browser', () => mocks.browser)
+vi.mock('../portable', () => ({ isPortable: () => mocks.portable }))
 vi.mock('../tray', () => ({ refreshTrayMenu: mocks.refreshTrayMenu }))
 vi.mock('../window-manager', () => ({
   closeWindow: vi.fn(),
   acknowledgeWindowFrame: vi.fn(),
   applyBubblePreference: mocks.applyBubblePreference,
+  applyBallSizePreference: mocks.applyBallSizePreference,
   collapseWindow: vi.fn(),
   activateDock: vi.fn(),
   dismissAfterLaunch: vi.fn(),
@@ -121,7 +130,7 @@ vi.mock('../window-manager', () => ({
   getWindowSnapshot: vi.fn(),
   hideWindow: vi.fn(),
   keepTabNamesVisible: mocks.keepTabNamesVisible,
-  setWindowOpacity: vi.fn(async () => undefined),
+  setWindowOpacity: mocks.setWindowOpacity,
   togglePin: vi.fn(),
 }))
 vi.mock('../data-store', async () => {
@@ -134,6 +143,7 @@ vi.mock('../data-store', async () => {
     getCachedLang: () => mocks.lang,
     dismissNotice: mocks.dismissNotice,
     exportAppDataFile: mocks.exportAppDataFile,
+    exportMarkdownFile: mocks.exportMarkdownFile,
     flushPendingWrite: mocks.flushPendingWrite,
     getDataStatus: mocks.getDataStatus,
     importAppData: mocks.importAppData,
@@ -151,6 +161,7 @@ vi.mock('../data-store', async () => {
 })
 
 import { registerIpcHandlers } from '../ipc-handlers'
+import { RELEASES_URL } from '../portable-update'
 
 const mainEvent = { sender: mocks.mainContents }
 
@@ -202,6 +213,10 @@ beforeEach(() => {
   mocks.loadAppData.mockImplementation(async () => createDefaultAppData())
   mocks.saveAppData.mockImplementation(async (data: AppData) => data)
   mocks.applyBubblePreference.mockImplementation(async () => undefined)
+  mocks.applyBallSizePreference.mockImplementation(async () => undefined)
+  mocks.setWindowOpacity.mockImplementation(async () => undefined)
+  mocks.exportMarkdownFile.mockImplementation(async () => undefined)
+  mocks.portable = false
   mocks.applyLaunchShortcut.mockImplementation(() => undefined)
   mocks.keepTabNamesVisible.mockImplementation(async () => undefined)
   mocks.nativeTheme.shouldUseDarkColors = false
@@ -438,6 +453,7 @@ describe('who may reach the data (data-security-8)', () => {
     ['data-load', []],
     ['data-save', [dataWithPassword()]],
     ['data-export', [dataWithPassword()]],
+    ['data-export', [dataWithPassword(), 'markdown']],
     ['data-import', []],
     ['data-get-status', []],
     ['data-dismiss-notice', ['reset']],
@@ -458,6 +474,7 @@ describe('who may reach the data (data-security-8)', () => {
       expect(mocks.loadAppData).not.toHaveBeenCalled()
       expect(mocks.saveAppData).not.toHaveBeenCalled()
       expect(mocks.exportAppDataFile).not.toHaveBeenCalled()
+      expect(mocks.exportMarkdownFile).not.toHaveBeenCalled()
       expect(mocks.importAppData).not.toHaveBeenCalled()
       expect(mocks.retryDataSave).not.toHaveBeenCalled()
       expect(mocks.dismissNotice).not.toHaveBeenCalled()
@@ -465,6 +482,7 @@ describe('who may reach the data (data-security-8)', () => {
       expect(mocks.messageBoxes).toHaveLength(0)
       // Nothing that a save does to the windows happens either.
       expect(mocks.applyBubblePreference).not.toHaveBeenCalled()
+      expect(mocks.applyBallSizePreference).not.toHaveBeenCalled()
       expect(mocks.applyLaunchShortcut).not.toHaveBeenCalled()
       expect(mocks.keepTabNamesVisible).not.toHaveBeenCalled()
     }
@@ -506,13 +524,36 @@ describe('who may reach the data (data-security-8)', () => {
     const data = dataWithPassword()
     data.prefs.lang = 'ja'
     data.prefs.theme = 'dark'
+    data.prefs.ballSize = 48
     mocks.loadAppData.mockImplementation(async () => data)
 
     const result = await invokeFrom(dockEvent, 'dock-get-appearance')
 
-    expect(result).toEqual({ ok: true, data: { lang: 'ja', theme: 'dark' } })
+    // The language, the theme and how large the ball is drawn: three values, no data.
+    expect(result).toEqual({
+      ok: true,
+      data: { lang: 'ja', theme: 'dark', ballSize: 48 },
+    })
     expect(JSON.stringify(result)).not.toContain('s3cret')
   })
+
+  it.each([
+    ['a size past the end of the setting', 500, 64],
+    ['a size below its start', 3, 24],
+    ['a size between two steps', 37, 38],
+    ['no size at all (data of an earlier version)', undefined, DOCK_BALL_SIZE],
+  ])(
+    'tells the ball a size that can be drawn for %s',
+    async (_name, saved, ballSize) => {
+      const data = dataWithPassword()
+      data.prefs.ballSize = saved as number
+      mocks.loadAppData.mockImplementation(async () => data)
+
+      const result = await invokeFrom(dockEvent, 'dock-get-appearance')
+
+      expect(result.data.ballSize).toBe(ballSize)
+    }
+  )
 
   it.each([
     ['system', true, 'dark'],
@@ -530,7 +571,10 @@ describe('who may reach the data (data-security-8)', () => {
 
       const result = await invokeFrom(dockEvent, 'dock-get-appearance')
 
-      expect(result).toEqual({ ok: true, data: { lang: 'zh', theme } })
+      expect(result).toEqual({
+        ok: true,
+        data: { lang: 'zh', theme, ballSize: DOCK_BALL_SIZE },
+      })
     }
   )
 
@@ -717,14 +761,21 @@ describe('a save keeps the names on the tabs', () => {
     )
   })
 
-  it('widens the panel after the ball and the shortcut have been dealt with', async () => {
+  /** Notes every step that follows a save or an import, in the order it happens. */
+  function recordOrder(): string[] {
     const order: string[] = []
     mocks.saveAppData.mockImplementation(async (data: AppData) => {
       order.push('save')
       return data
     })
+    mocks.setWindowOpacity.mockImplementation(async () => {
+      order.push('opacity')
+    })
     mocks.applyBubblePreference.mockImplementation(async () => {
       order.push('bubble')
+    })
+    mocks.applyBallSizePreference.mockImplementation(async () => {
+      order.push('ball size')
     })
     mocks.applyLaunchShortcut.mockImplementation(() => {
       order.push('shortcut')
@@ -732,10 +783,37 @@ describe('a save keeps the names on the tabs', () => {
     mocks.keepTabNamesVisible.mockImplementation(async () => {
       order.push('tab names')
     })
+    return order
+  }
+
+  it('widens the panel after the ball, its size and the shortcut have been dealt with', async () => {
+    const order = recordOrder()
 
     await invoke('data-save', withPrefs({ lang: 'en' }))
 
-    expect(order).toEqual(['save', 'bubble', 'shortcut', 'tab names'])
+    // The size comes after the switch: a ball that was just turned off is not laid out again.
+    expect(order).toEqual([
+      'save',
+      'bubble',
+      'ball size',
+      'shortcut',
+      'tab names',
+    ])
+  })
+
+  it('goes through the same steps in the same order after an import', async () => {
+    const order = recordOrder()
+    mocks.messageBoxAnswers = [0]
+
+    await invoke('data-import')
+
+    expect(order).toEqual([
+      'opacity',
+      'bubble',
+      'ball size',
+      'shortcut',
+      'tab names',
+    ])
   })
 
   it('does not widen anything for a save that failed', async () => {
@@ -770,6 +848,264 @@ describe('a save keeps the names on the tabs', () => {
       before.prefs,
       imported.prefs
     )
+  })
+})
+
+describe('a save applies the size of the ball at once', () => {
+  function withBallSize(ballSize: number): AppData {
+    const data = createDefaultAppData()
+    data.prefs.ballSize = ballSize
+    return data
+  }
+
+  it('hands the saved size to the window manager', async () => {
+    const result = await invoke('data-save', withBallSize(48))
+
+    expect(result.ok).toBe(true)
+    expect(mocks.applyBallSizePreference).toHaveBeenCalledTimes(1)
+    expect(mocks.applyBallSizePreference).toHaveBeenCalledWith(48)
+  })
+
+  it('uses what was really saved, not what the page sent', async () => {
+    mocks.saveAppData.mockImplementation(async () => withBallSize(64))
+
+    await invoke('data-save', withBallSize(9000))
+
+    expect(mocks.applyBallSizePreference).toHaveBeenCalledWith(64)
+  })
+
+  it('does not touch the ball for a save that failed', async () => {
+    mocks.saveAppData.mockRejectedValueOnce(new Error('disk full'))
+
+    const result = await invoke('data-save', withBallSize(48))
+
+    expect(result.ok).toBe(false)
+    expect(mocks.applyBallSizePreference).not.toHaveBeenCalled()
+  })
+
+  it('does the same after an import, with the size of the imported file', async () => {
+    mocks.importAppData.mockImplementation(async () => withBallSize(56))
+    mocks.messageBoxAnswers = [0]
+
+    const result = await invoke('data-import')
+
+    expect(result).toMatchObject({ ok: true, data: { canceled: false } })
+    expect(mocks.applyBallSizePreference).toHaveBeenCalledTimes(1)
+    expect(mocks.applyBallSizePreference).toHaveBeenCalledWith(56)
+  })
+
+  it('leaves the ball alone when the import was canceled', async () => {
+    mocks.messageBoxAnswers = [1]
+
+    await invoke('data-import')
+
+    expect(mocks.applyBallSizePreference).not.toHaveBeenCalled()
+  })
+})
+
+describe('exporting the list for reading (Markdown)', () => {
+  async function saveDialogOptions() {
+    const { dialog } = await import('electron')
+    const calls = vi.mocked(dialog.showSaveDialog).mock.calls
+    return calls[calls.length - 1]?.at(-1) as unknown as {
+      defaultPath?: string
+      filters?: Array<{ name: string; extensions: string[] }>
+    }
+  }
+
+  beforeEach(() => {
+    mocks.saveDialog = { canceled: false, filePath: 'C:\\out\\list.md' }
+  })
+
+  it('asks about the passwords in the words for a list, and leaves them out by default', async () => {
+    mocks.messageBoxAnswers = [0]
+
+    const result = await invoke('data-export', dataWithPassword(), 'markdown')
+
+    expect(mocks.messageBoxes).toHaveLength(1)
+    expect(mocks.messageBoxes[0]).toMatchObject({
+      buttons: ['Export without passwords', 'Export with passwords', 'Cancel'],
+      defaultId: 0,
+      cancelId: 2,
+    })
+    expect(String(mocks.messageBoxes[0]?.detail)).toContain(
+      'The list is plain text'
+    )
+    // A list cannot carry the passwords to another PC: the question does not say that it can.
+    expect(String(mocks.messageBoxes[0]?.detail)).not.toContain(
+      'another computer'
+    )
+    expect(String(mocks.messageBoxes[0]?.detail)).not.toContain('JSON')
+    expect(result).toMatchObject({
+      ok: true,
+      data: {
+        canceled: false,
+        filePath: 'C:\\out\\list.md',
+        passwordsIncluded: false,
+      },
+    })
+  })
+
+  it('writes the list, not the backup', async () => {
+    mocks.messageBoxAnswers = [0]
+    const data = dataWithPassword()
+
+    await invoke('data-export', data, 'markdown')
+
+    expect(mocks.exportMarkdownFile).toHaveBeenCalledTimes(1)
+    const [exported, filePath, options] = mocks.exportMarkdownFile.mock
+      .calls[0] as unknown as [AppData, string, Record<string, unknown>]
+    expect(exported.loose.passwords[0]?.name).toBe('Mail')
+    expect(filePath).toBe('C:\\out\\list.md')
+    // In the language of the interface, with the version that wrote it and the moment it did.
+    expect(options).toEqual({
+      lang: 'en',
+      includePasswords: false,
+      exportedAt: expect.any(Date),
+      version: '2.5.8',
+    })
+    expect(mocks.exportAppDataFile).not.toHaveBeenCalled()
+  })
+
+  it("offers a file named marubako-list with today's date, ending in .md", async () => {
+    await invoke('data-export', dataWithoutPasswords(), 'markdown')
+
+    const options = await saveDialogOptions()
+    expect(options.defaultPath).toMatch(
+      /^C:\\Docs[\\/]marubako-list-\d{4}-\d{2}-\d{2}\.md$/
+    )
+    expect(options.filters).toEqual([
+      { name: 'Markdown Files', extensions: ['md'] },
+    ])
+  })
+
+  it('writes the passwords into the list when the user chooses to', async () => {
+    mocks.messageBoxAnswers = [1]
+
+    const result = await invoke('data-export', dataWithPassword(), 'markdown')
+
+    expect(mocks.exportMarkdownFile).toHaveBeenCalledWith(
+      expect.anything(),
+      'C:\\out\\list.md',
+      expect.objectContaining({ includePasswords: true })
+    )
+    expect(result).toMatchObject({ data: { passwordsIncluded: true } })
+  })
+
+  it('writes nothing, and does not even show the save dialog, after Cancel', async () => {
+    mocks.messageBoxAnswers = [2]
+
+    const result = await invoke('data-export', dataWithPassword(), 'markdown')
+
+    expect(result).toEqual({ ok: true, data: { canceled: true } })
+    expect(mocks.exportMarkdownFile).not.toHaveBeenCalled()
+    const { dialog } = await import('electron')
+    expect(dialog.showSaveDialog).not.toHaveBeenCalled()
+  })
+
+  it('does not ask when there is no password to protect', async () => {
+    await invoke('data-export', dataWithoutPasswords(), 'markdown')
+
+    expect(mocks.messageBoxes).toHaveLength(0)
+    expect(mocks.exportMarkdownFile).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the file untouched when the save dialog is canceled', async () => {
+    mocks.saveDialog = { canceled: true }
+
+    expect(
+      await invoke('data-export', dataWithoutPasswords(), 'markdown')
+    ).toEqual({ ok: true, data: { canceled: true } })
+    expect(mocks.exportMarkdownFile).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['zh', 'Markdown 文件', '导出的清单是明文'],
+    ['ja', 'Markdown ファイル', '一覧は平文です'],
+  ] as const)(
+    'asks, names the file type and writes the list in %s',
+    async (lang, filter, detail) => {
+      mocks.lang = lang
+      mocks.messageBoxAnswers = [0]
+
+      await invoke('data-export', dataWithPassword(), 'markdown')
+
+      expect(String(mocks.messageBoxes[0]?.detail)).toContain(detail)
+      expect((await saveDialogOptions()).filters?.[0]?.name).toBe(filter)
+      expect(mocks.exportMarkdownFile).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.anything(),
+        expect.objectContaining({ lang })
+      )
+    }
+  )
+
+  it('reports a list that could not be written', async () => {
+    mocks.exportMarkdownFile.mockRejectedValueOnce(
+      Object.assign(new Error('EACCES: permission denied'), { code: 'EACCES' })
+    )
+
+    const result = await invoke(
+      'data-export',
+      dataWithoutPasswords(),
+      'markdown'
+    )
+
+    expect(result).toEqual({ ok: false, error: 'EACCES: permission denied' })
+  })
+
+  it.each([
+    ['no format', undefined],
+    ['"json"', 'json'],
+    ['a format nobody knows', 'yaml'],
+    ['another spelling', 'Markdown'],
+    ['a number', 1],
+    ['an object', { format: 'markdown' }],
+  ])('writes the backup for %s', async (_name, format) => {
+    mocks.messageBoxAnswers = [0]
+    mocks.saveDialog = { canceled: false, filePath: 'C:\\out\\export.json' }
+
+    await invoke('data-export', dataWithPassword(), format)
+
+    expect(mocks.exportMarkdownFile).not.toHaveBeenCalled()
+    expect(mocks.exportAppDataFile).toHaveBeenCalledWith(
+      expect.anything(),
+      'C:\\out\\export.json',
+      { includePasswords: false }
+    )
+    // The question and the file are those of the backup.
+    expect(String(mocks.messageBoxes[0]?.detail)).toContain('another computer')
+    const options = await saveDialogOptions()
+    expect(options.defaultPath).toMatch(
+      /marubako-export-\d{4}-\d{2}-\d{2}\.json$/
+    )
+    expect(options.filters).toEqual([
+      { name: 'JSON Files', extensions: ['json'] },
+    ])
+  })
+})
+
+describe('dismissing a notice', () => {
+  it.each(['reset', 'restored', 'passwordsLost', 'updateAvailable'])(
+    'dismisses %s',
+    async (kind) => {
+      const status = { writeError: null, notices: [] }
+      mocks.dismissNotice.mockReturnValueOnce(status)
+
+      expect(await invoke('data-dismiss-notice', kind)).toEqual({
+        ok: true,
+        data: status,
+      })
+      expect(mocks.dismissNotice).toHaveBeenCalledWith(kind)
+    }
+  )
+
+  it.each([
+    ['a kind nobody knows', 'updateReady'],
+    ['nothing', undefined],
+  ])('refuses %s', async (_name, kind) => {
+    expect((await invoke('data-dismiss-notice', kind)).ok).toBe(false)
+    expect(mocks.dismissNotice).not.toHaveBeenCalled()
   })
 })
 
@@ -873,15 +1209,25 @@ describe('the dialogs of the main process speak the saved language (i18n-copy-6)
   })
 })
 
-describe('the version, the update check and the issue page', () => {
+describe('the version, the update check, the issue page and the download page', () => {
   const dockEvent = { sender: mocks.dockContents }
   const issuesUrl = /^https:\/\/github\.com\/[A-Za-z0-9_-]+\/marubako\/issues$/
 
-  it('tells the panel the version of the running program', async () => {
+  it('tells the panel the version of the running program and the folder its data is in', async () => {
     expect(await invoke('app-get-info')).toEqual({
       ok: true,
-      data: { version: '2.5.8' },
+      data: {
+        version: '2.5.8',
+        dataFolder: 'C:\\Users\\me\\Data\\marubako',
+        portable: false,
+      },
     })
+  })
+
+  it('tells the panel when the program is a portable copy', async () => {
+    mocks.portable = true
+
+    expect((await invoke('app-get-info')).data.portable).toBe(true)
   })
 
   it('passes the answer of the update check on, whatever it is', async () => {
@@ -890,6 +1236,8 @@ describe('the version, the update check and the issue page', () => {
       { status: 'latest', version: '2.5.8' },
       { status: 'downloading', version: '2.6.0' },
       { status: 'ready', version: '2.6.0' },
+      // What a portable copy finds: a version to download by hand.
+      { status: 'available', version: '2.6.0' },
       { status: 'error' },
     ]) {
       mocks.checkForUpdatesNow.mockResolvedValueOnce(answer)
@@ -919,16 +1267,38 @@ describe('the version, the update check and the issue page', () => {
     expect(browser).toBe('edge')
   })
 
-  it('reports a page that would not open', async () => {
-    mocks.browser.openUrl.mockRejectedValueOnce(
-      new AppError('open_failed', 'no browser')
-    )
-
-    expect(await invoke('app-open-issues')).toMatchObject({
-      ok: false,
-      code: 'open_failed',
+  it('opens the page of the newest release in the browser the user chose, and no other address', async () => {
+    mocks.loadAppData.mockImplementation(async () => {
+      const data = createDefaultAppData()
+      data.prefs.browser = 'chrome'
+      return data
     })
+
+    expect(await invoke('app-open-releases', 'https://evil.example')).toEqual({
+      ok: true,
+      data: undefined,
+    })
+
+    expect(mocks.browser.openUrl).toHaveBeenCalledTimes(1)
+    expect(mocks.browser.openUrl).toHaveBeenCalledWith(RELEASES_URL, 'chrome')
+    expect(RELEASES_URL).toMatch(
+      /^https:\/\/github\.com\/[A-Za-z0-9_-]+\/marubako\/releases\/latest$/
+    )
   })
+
+  it.each(['app-open-issues', 'app-open-releases'])(
+    '%s reports a page that would not open',
+    async (channel) => {
+      mocks.browser.openUrl.mockRejectedValueOnce(
+        new AppError('open_failed', 'no browser')
+      )
+
+      expect(await invoke(channel)).toMatchObject({
+        ok: false,
+        code: 'open_failed',
+      })
+    }
+  )
 
   it('writes the pending data first, then quits and installs the downloaded update', async () => {
     const order: string[] = []
@@ -965,14 +1335,26 @@ describe('the version, the update check and the issue page', () => {
     ['updater-check-now'],
     ['updater-install-now'],
     ['app-open-issues'],
+    ['app-open-releases'],
   ])(
     '%s is for the panel: the ball gets a refusal and nothing happens',
     async (channel) => {
       const result = await invokeFrom(dockEvent, channel)
 
       expect(result.ok).toBe(false)
+      expect(result).not.toHaveProperty('data')
       expect(mocks.checkForUpdatesNow).not.toHaveBeenCalled()
       expect(mocks.browser.openUrl).not.toHaveBeenCalled()
     }
   )
+
+  it('opens the download page for nobody while the panel does not exist', async () => {
+    mocks.windows.main = false
+
+    expect((await invoke('app-open-releases')).ok).toBe(false)
+    expect(
+      (await invokeFrom({ sender: { id: 99 } }, 'app-open-releases')).ok
+    ).toBe(false)
+    expect(mocks.browser.openUrl).not.toHaveBeenCalled()
+  })
 })

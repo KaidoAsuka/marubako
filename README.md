@@ -55,11 +55,11 @@ Windows 10 or 11, 64-bit. Download `Marubako-Setup-<version>.exe` from the [late
 
 The installer is not code-signed yet, so Windows will probably say **Windows protected your PC**: click **More info**, then **Run anyway**. It installs for your account only, without an administrator prompt, and starts Marubako. Updates arrive by themselves (**Settings > Language & data** shows the version and installs a downloaded update). To remove it, use **Settings > Apps** in Windows; your data is kept unless you say otherwise.
 
-**Without installing:** download `Marubako-<version>-portable.zip` instead, unpack it anywhere and run `Marubako.exe` in the folder. This copy keeps everything in a `data` folder beside it and does not update itself: for a new version, quit Marubako and unpack the new zip over the old folder (your `data` folder stays as it is).
+**Without installing:** download `Marubako-<version>-portable.zip` instead, unpack it anywhere and run `Marubako.exe` in the folder. This copy keeps everything in a `data` folder beside it and does not update itself: it tells you when there is a newer version, and you quit Marubako and unpack the new zip over the old folder (your `data` folder stays as it is).
 
 ## Your data
 
-Everything is in `%APPDATA%\marubako\` (the portable copy: in its `data` folder): one plain JSON file, with a backup for each of the last seven days. To move to another PC, use **Settings > Language & data > Export data** and **Import data** there (copying the folder does not carry the passwords, which are encrypted for one Windows account on one PC). An export with passwords holds them in plain text, and a password you copy stays on the Windows clipboard like any other copied text.
+Everything is in `%APPDATA%\marubako\` (the portable copy: in its `data` folder): one plain JSON file, with a backup for each of the last seven days. To move to another PC, use **Settings > Language & data > Export data** and **Import data** there (copying the folder does not carry the passwords, which are encrypted for one Windows account on one PC). An export with passwords holds them in plain text, and a password you copy stays on the Windows clipboard like any other copied text. **Export as Markdown** writes the same data as a list that reads in Notepad, for the day the program is not at hand; it cannot be imported again.
 
 The passwords page is a convenience for accounts you want at hand, such as those of test environments. It is not a password manager: anyone who can sign in to your Windows account can read them. Keep the passwords that matter in a real one.
 

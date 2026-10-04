@@ -12,10 +12,12 @@ import {
 import log from 'electron-log/main'
 
 import { validateContextMenu, validateMenuPoint } from '../shared/context-menu'
+import { clampBallSize } from '../shared/dock-size'
 import { IPC_CHANNELS } from '../shared/ipc-channels'
 import type {
   AppData,
   DockDrag,
+  ExportFormat,
   Prefs,
   QuickLaunchResult,
   StartupNoticeKind,
@@ -37,12 +39,15 @@ import {
   retryLaunchShortcut,
   setOpenAtLogin,
 } from './launch-settings'
-import { mainText } from './main-strings'
+import { getUiLang, mainText } from './main-strings'
+import { isPortable } from './portable'
+import { RELEASES_URL } from './portable-update'
 import { resolveThemeSetting } from './system-theme'
 import { getFileIcon, openApp, openPath, openUrl } from './browser'
 import {
   dismissNotice,
   exportAppDataFile,
+  exportMarkdownFile,
   getDataStatus,
   flushPendingWrite,
   hasStoredPasswords,
@@ -56,6 +61,7 @@ import {
 } from './data-store'
 import { refreshTrayMenu } from './tray'
 import {
+  applyBallSizePreference,
   closeWindow,
   acknowledgeWindowFrame,
   applyBubblePreference,
@@ -75,7 +81,12 @@ import {
 } from './window-manager'
 import { getMainWindow } from './window-manager'
 
-const NOTICE_KINDS: StartupNoticeKind[] = ['reset', 'restored', 'passwordsLost']
+const NOTICE_KINDS: StartupNoticeKind[] = [
+  'reset',
+  'restored',
+  'passwordsLost',
+  'updateAvailable',
+]
 
 /** The language changed: the tray menu is rebuilt in the background, a failure is only logged. */
 function refreshMenusSoon(): void {
@@ -170,6 +181,7 @@ export function registerIpcHandlers(): void {
       return toResult({
         lang: prefs.lang,
         theme: resolveThemeSetting(prefs.theme),
+        ballSize: clampBallSize(prefs.ballSize),
       })
     } catch (error) {
       return toError(error)
@@ -316,6 +328,7 @@ export function registerIpcHandlers(): void {
       // Saving the settings turns the ball off or on at once, without a restart, and registers a
       // changed launch shortcut (or lets go of it) in the same breath.
       await applyBubblePreference(saved.prefs.showBubble)
+      await applyBallSizePreference(saved.prefs.ballSize)
       applyLaunchShortcut(saved.prefs)
       // Another language (or zoom, or set of categories) must not leave the tabs without names.
       await keepTabNamesVisibleSafely(current.prefs, saved.prefs)
@@ -328,53 +341,72 @@ export function registerIpcHandlers(): void {
     }
   })
 
-  ipcMain.handle(IPC_CHANNELS.exportData, async (event, data: AppData) => {
-    try {
-      assertFromMainWindow(event)
-      const parentWindow = getMainWindow()
-      const exported = normalizeAppData(data)
-      // The file is plain text. Before one that would hold passwords is written, the user is told
-      // so and decides; "without passwords" is the default answer.
-      let includePasswords = true
-      if (hasStoredPasswords(exported)) {
-        const choice = await promptExportPasswords(parentWindow)
-        if (choice === 'cancel') return toResult({ canceled: true })
-        includePasswords = choice === 'with-passwords'
+  ipcMain.handle(
+    IPC_CHANNELS.exportData,
+    async (event, data: AppData, requested?: unknown) => {
+      try {
+        assertFromMainWindow(event)
+        const parentWindow = getMainWindow()
+        const exported = normalizeAppData(data)
+        // The backup that can be imported again, or the list a person reads (Markdown).
+        const format: ExportFormat =
+          requested === 'markdown' ? 'markdown' : 'json'
+        // The file is plain text. Before one that would hold passwords is written, the user is told
+        // so and decides; "without passwords" is the default answer.
+        let includePasswords = true
+        if (hasStoredPasswords(exported)) {
+          const choice = await promptExportPasswords(parentWindow, format)
+          if (choice === 'cancel') return toResult({ canceled: true })
+          includePasswords = choice === 'with-passwords'
+        }
+
+        const text = mainText()
+        const dateStamp = new Date().toISOString().slice(0, 10)
+        const options: SaveDialogOptions = {
+          title: text.exportDialogTitle,
+          buttonLabel: text.exportDialogButton,
+          defaultPath: path.join(
+            app.getPath('documents'),
+            format === 'markdown'
+              ? `marubako-list-${dateStamp}.md`
+              : `marubako-export-${dateStamp}.json`
+          ),
+          filters:
+            format === 'markdown'
+              ? [{ name: text.markdownFilesName, extensions: ['md'] }]
+              : [{ name: text.jsonFilesName, extensions: ['json'] }],
+        }
+        const dialogResult = parentWindow
+          ? await dialog.showSaveDialog(parentWindow, options)
+          : await dialog.showSaveDialog(options)
+
+        if (dialogResult.canceled || !dialogResult.filePath) {
+          return toResult({ canceled: true })
+        }
+
+        if (format === 'markdown')
+          await exportMarkdownFile(exported, dialogResult.filePath, {
+            lang: getUiLang(),
+            includePasswords,
+            exportedAt: new Date(),
+            version: app.getVersion(),
+          })
+        else
+          await exportAppDataFile(exported, dialogResult.filePath, {
+            includePasswords,
+          })
+
+        return toResult({
+          canceled: false,
+          filePath: dialogResult.filePath,
+          exportedAt: new Date().toISOString(),
+          passwordsIncluded: includePasswords,
+        })
+      } catch (error) {
+        return toError(error)
       }
-
-      const text = mainText()
-      const dateStamp = new Date().toISOString().slice(0, 10)
-      const options: SaveDialogOptions = {
-        title: text.exportDialogTitle,
-        buttonLabel: text.exportDialogButton,
-        defaultPath: path.join(
-          app.getPath('documents'),
-          `marubako-export-${dateStamp}.json`
-        ),
-        filters: [{ name: text.jsonFilesName, extensions: ['json'] }],
-      }
-      const dialogResult = parentWindow
-        ? await dialog.showSaveDialog(parentWindow, options)
-        : await dialog.showSaveDialog(options)
-
-      if (dialogResult.canceled || !dialogResult.filePath) {
-        return toResult({ canceled: true })
-      }
-
-      await exportAppDataFile(exported, dialogResult.filePath, {
-        includePasswords,
-      })
-
-      return toResult({
-        canceled: false,
-        filePath: dialogResult.filePath,
-        exportedAt: new Date().toISOString(),
-        passwordsIncluded: includePasswords,
-      })
-    } catch (error) {
-      return toError(error)
     }
-  })
+  )
 
   ipcMain.handle(IPC_CHANNELS.importData, async (event) => {
     try {
@@ -415,6 +447,7 @@ export function registerIpcHandlers(): void {
       // The window on this computer keeps its own transparency; apply the imported preference.
       await setWindowOpacity(imported.prefs.opacity)
       await applyBubblePreference(imported.prefs.showBubble)
+      await applyBallSizePreference(imported.prefs.ballSize)
       applyLaunchShortcut(imported.prefs)
       // The imported language may have longer category names than the window was sized for.
       await keepTabNamesVisibleSafely(prefsBefore, imported.prefs)
@@ -591,7 +624,11 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(IPC_CHANNELS.getAppInfo, (event) => {
     try {
       assertFromMainWindow(event)
-      return toResult({ version: app.getVersion() })
+      return toResult({
+        version: app.getVersion(),
+        dataFolder: app.getPath('userData'),
+        portable: isPortable(),
+      })
     } catch (error) {
       return toError(error)
     }
@@ -603,6 +640,18 @@ export function registerIpcHandlers(): void {
       assertFromMainWindow(event)
       const { prefs } = await loadAppData()
       await openUrl(ISSUES_URL, prefs.browser)
+      return toResult(undefined)
+    } catch (error) {
+      return toError(error)
+    }
+  })
+
+  // The same for the page of the newest release, where a portable copy is downloaded by hand.
+  ipcMain.handle(IPC_CHANNELS.openReleasesPage, async (event) => {
+    try {
+      assertFromMainWindow(event)
+      const { prefs } = await loadAppData()
+      await openUrl(RELEASES_URL, prefs.browser)
       return toResult(undefined)
     } catch (error) {
       return toError(error)

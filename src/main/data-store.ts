@@ -36,6 +36,7 @@ import {
   type ParsedDataFile,
 } from './data-file'
 import { normalizeAppData, UnsupportedSchemaError } from './data-normalize'
+import { buildMarkdown, type MarkdownOptions } from './markdown-export'
 import { DataDecryptError } from './encryption'
 import { starterLookOverride } from './first-run'
 import { detectInitialLang } from './initial-lang'
@@ -159,6 +160,11 @@ function syncLostNotice(allowCreate: boolean): void {
   if (!existing && !allowCreate) return
   if (existing?.kind === 'passwordsLost' && existing.count === count) return
   setNotice({ kind: 'passwordsLost', count })
+}
+
+/** A portable copy found a newer version: the panel says so until the notice is dismissed. */
+export function showUpdateNotice(version: string): void {
+  setNotice({ kind: 'updateAvailable', version })
 }
 
 export function dismissNotice(kind: StartupNoticeKind): DataStatus {
@@ -645,6 +651,18 @@ export async function exportAppDataFile(
   await atomicWriteFile(
     filePath,
     stringifyExport(normalizeAppData(data), includePasswords)
+  )
+}
+
+/** The list for reading (markdown-export.ts). It cannot be imported again. */
+export async function exportMarkdownFile(
+  data: AppData,
+  filePath: string,
+  options: MarkdownOptions
+): Promise<void> {
+  await atomicWriteFile(
+    filePath,
+    buildMarkdown(normalizeAppData(data), options)
   )
 }
 

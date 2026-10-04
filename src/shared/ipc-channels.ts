@@ -8,6 +8,7 @@ import type {
   DockAppearance,
   DockDrag,
   ExportDataResult,
+  ExportFormat,
   ImportDataResult,
   LaunchSettings,
   QuickLaunchResult,
@@ -40,6 +41,7 @@ export const IPC_CHANNELS = {
   installUpdate: 'updater-install-now',
   getAppInfo: 'app-get-info',
   openIssuesPage: 'app-open-issues',
+  openReleasesPage: 'app-open-releases',
   selectPath: 'system-select-path',
   getLaunchSettings: 'launch-get-settings',
   setOpenAtLogin: 'launch-set-login',
@@ -111,7 +113,7 @@ export interface IpcChannelMap {
     return: QuickLaunchResult<DataStatus>
   }
   'data-export': {
-    args: [AppData]
+    args: [AppData, ExportFormat?]
     return: QuickLaunchResult<ExportDataResult>
   }
   'data-import': {
@@ -183,6 +185,10 @@ export interface IpcChannelMap {
     return: QuickLaunchResult<AppInfo>
   }
   'app-open-issues': {
+    args: []
+    return: QuickLaunchResult<void>
+  }
+  'app-open-releases': {
     args: []
     return: QuickLaunchResult<void>
   }

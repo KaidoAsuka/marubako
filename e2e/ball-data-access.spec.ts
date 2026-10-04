@@ -3,6 +3,7 @@
 // password; the ball has one small channel of its own for how to look.
 import { test, expect, type Page } from '@playwright/test'
 
+import { DOCK_BALL_SIZE } from '../src/shared/dock-size'
 import { closeApp, launchApp, type AppContext } from './test-utils'
 
 const SECRET = 'ball-must-never-see-THIS'
@@ -86,9 +87,10 @@ test('the ball window cannot read, change or export the data, and still dresses 
     // Nothing the ball received contains the password, and the ball's page does not either.
     expect(JSON.stringify(fromBall)).not.toContain(SECRET)
     expect(await bubble.content()).not.toContain(SECRET)
+    // How to dress, and nothing else: the language, the theme and the size it is drawn at.
     expect(fromBall.appearance).toEqual({
       ok: true,
-      data: { lang: 'en', theme: 'light' },
+      data: { lang: 'en', theme: 'light', ballSize: DOCK_BALL_SIZE },
     })
 
     // The panel is not affected: it still reads its data, password included.

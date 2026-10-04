@@ -18,8 +18,8 @@
   outline: none;
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
+  width: var(--dock-ball-size, 30px);
+  height: var(--dock-ball-size, 30px);
   padding: 0;
   border: 0;
   /* The hit area follows the drawn shape of the ball. */
@@ -31,13 +31,15 @@
   -webkit-app-region: no-drag;
 }
 /* The ball is drawn in the shape of the app icon: three rounded corners, one round one, one white dot.
-   Nothing is drawn outside the 30px box: a spring may swell it. The native window around it is 40px,
-   the smallest Windows makes one (shared/dock-size.ts holds the same two numbers for the scripts). */
+   Its side is the size the user set, given to the window as --dock-ball-size (30px when nothing is
+   set). Nothing is drawn outside that box: a spring may swell it. The native window around it is
+   at least 10px larger, a multiple of 4px, and never smaller than 40px, the smallest Windows makes
+   one (shared/dock-size.ts works that out for the scripts). */
 .dock-bubble-surface {
   position: relative;
   display: block;
-  width: 30px;
-  height: 30px;
+  width: var(--dock-ball-size, 30px);
+  height: var(--dock-ball-size, 30px);
   border-radius: 28% 28% 28% 50%;
   background: linear-gradient(135deg, var(--brand-start), var(--brand-end));
   box-shadow:
@@ -52,12 +54,14 @@
     opacity 120ms ease-out,
     filter 120ms ease-out;
 }
+/* The dot is 8px in a ball of 30px, and grows with the ball. */
 .dock-bubble-dot {
+  --dock-dot-size: calc(var(--dock-ball-size, 30px) * 8 / 30);
   position: absolute;
-  left: calc(40.6% - 4px);
-  top: calc(59.4% - 4px);
-  width: 8px;
-  height: 8px;
+  left: calc(40.6% - var(--dock-dot-size) / 2);
+  top: calc(59.4% - var(--dock-dot-size) / 2);
+  width: var(--dock-dot-size);
+  height: var(--dock-dot-size);
   border-radius: 50%;
   background: #fff;
   opacity: 1;

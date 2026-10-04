@@ -6,7 +6,8 @@ import type { QuickLaunchApi } from '../shared/preload-api'
 const api: QuickLaunchApi = {
   loadData: () => ipcRenderer.invoke(IPC_CHANNELS.loadData),
   saveData: (data) => ipcRenderer.invoke(IPC_CHANNELS.saveData, data),
-  exportData: (data) => ipcRenderer.invoke(IPC_CHANNELS.exportData, data),
+  exportData: (data, format) =>
+    ipcRenderer.invoke(IPC_CHANNELS.exportData, data, format),
   importData: () => ipcRenderer.invoke(IPC_CHANNELS.importData),
   getDataStatus: () => ipcRenderer.invoke(IPC_CHANNELS.getDataStatus),
   dismissDataNotice: (kind) =>
@@ -32,6 +33,7 @@ const api: QuickLaunchApi = {
   installUpdate: () => ipcRenderer.invoke(IPC_CHANNELS.installUpdate),
   getAppInfo: () => ipcRenderer.invoke(IPC_CHANNELS.getAppInfo),
   openIssuesPage: () => ipcRenderer.invoke(IPC_CHANNELS.openIssuesPage),
+  openReleasesPage: () => ipcRenderer.invoke(IPC_CHANNELS.openReleasesPage),
   getDroppedPaths: (files) =>
     files
       .map((file) => {

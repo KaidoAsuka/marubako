@@ -14,6 +14,7 @@ const RESULT_KEYS: Record<UpdateCheckResult['status'], string> = {
   latest: 'update_latest',
   downloading: 'update_downloading',
   ready: 'update_ready',
+  available: 'update_available',
   error: 'update_error',
 }
 
@@ -67,6 +68,15 @@ export default function AboutSettings({
     }
   }
 
+  async function openDownloadPage(): Promise<void> {
+    try {
+      const answer = await window.quickLaunch.openReleasesPage()
+      if (!answer.ok) showToast(answer.error, 'danger')
+    } catch (error) {
+      showToast(String(error), 'danger')
+    }
+  }
+
   async function reportProblem(): Promise<void> {
     try {
       const answer = await window.quickLaunch.openIssuesPage()
@@ -112,6 +122,17 @@ export default function AboutSettings({
             onClick={() => void installUpdate()}
           >
             {t('update_install')}
+          </button>
+        )}
+        {/* A portable copy installs nothing: the new version is fetched by hand. */}
+        {check.phase === 'done' && check.result.status === 'available' && (
+          <button
+            className="primary-button"
+            type="button"
+            data-testid="settings-open-download"
+            onClick={() => void openDownloadPage()}
+          >
+            {t('update_open_download')}
           </button>
         )}
         <button

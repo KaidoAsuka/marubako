@@ -1,7 +1,21 @@
 import { DOCK_SIZE } from '../shared/dock-size'
 import type { DockPosition, DockEdge } from '../shared/types'
 
+/** The side of the window of a ball of the default size. */
 export { DOCK_SIZE }
+
+// The side of the ball's window right now. The user sets how large the ball is (Prefs.ballSize);
+// the window manager says so here, and everything below goes by it.
+let dockSize = DOCK_SIZE
+
+export function setDockSize(size: number): void {
+  dockSize = size
+}
+
+export function getDockSize(): number {
+  return dockSize
+}
+
 export const DOCK_MARGIN = 4
 export const DOCK_SNAP_DISTANCE = 24
 export const DOCK_PANEL_GAP = 8
@@ -13,22 +27,22 @@ export function getDockBounds(
   position: DockPosition,
   snap = false
 ): Area {
-  const right = area.x + area.width - DOCK_SIZE
+  const right = area.x + area.width - dockSize
   let x = Math.max(area.x, Math.min(right, position.x))
   if (snap && x - area.x <= DOCK_SNAP_DISTANCE) x = area.x + DOCK_MARGIN
   else if (snap && right - x <= DOCK_SNAP_DISTANCE) x = right - DOCK_MARGIN
   return {
     x,
-    y: Math.max(area.y, Math.min(area.y + area.height - DOCK_SIZE, position.y)),
-    width: DOCK_SIZE,
-    height: DOCK_SIZE,
+    y: Math.max(area.y, Math.min(area.y + area.height - dockSize, position.y)),
+    width: dockSize,
+    height: dockSize,
   }
 }
 
 export function getDockEdge(area: Area, position: DockPosition): DockEdge {
   if (Math.abs(position.x - area.x - DOCK_MARGIN) <= 1) return 'left'
   if (
-    Math.abs(position.x - (area.x + area.width - DOCK_SIZE - DOCK_MARGIN)) <= 1
+    Math.abs(position.x - (area.x + area.width - dockSize - DOCK_MARGIN)) <= 1
   )
     return 'right'
   return null
@@ -40,7 +54,7 @@ export function getExpandedPosition(
   size: { width: number; height: number },
   edge: DockEdge
 ): DockPosition {
-  const right = dock.x + DOCK_SIZE + DOCK_PANEL_GAP
+  const right = dock.x + dockSize + DOCK_PANEL_GAP
   const left = dock.x - size.width - DOCK_PANEL_GAP
   const fits = (x: number) =>
     x >= area.x && x + size.width <= area.x + area.width
@@ -51,12 +65,12 @@ export function getExpandedPosition(
     ? preferred
     : fits(alternate)
       ? alternate
-      : dock.x - area.x > area.x + area.width - dock.x - DOCK_SIZE
+      : dock.x - area.x > area.x + area.width - dock.x - dockSize
         ? left
         : right
   // Whole pixels: a panel of odd height would otherwise be centred on a half one, and a window
   // cannot be placed there.
-  const y = edge ? Math.round(dock.y + DOCK_SIZE / 2 - size.height / 2) : dock.y
+  const y = edge ? Math.round(dock.y + dockSize / 2 - size.height / 2) : dock.y
   return {
     x: Math.max(area.x, Math.min(area.x + area.width - size.width, x)),
     y: Math.max(area.y, Math.min(area.y + area.height - size.height, y)),
@@ -74,8 +88,8 @@ export function getFirstRunLayout(
   size: { width: number; height: number }
 ): { dock: DockPosition; panel: DockPosition; edge: 'right' } {
   const dock = {
-    x: area.x + area.width - DOCK_SIZE - DOCK_MARGIN,
-    y: area.y + Math.round((area.height - DOCK_SIZE) / 2),
+    x: area.x + area.width - dockSize - DOCK_MARGIN,
+    y: area.y + Math.round((area.height - dockSize) / 2),
   }
   return {
     dock,
@@ -105,11 +119,11 @@ export function standsBeside(
   slack = 2
 ): boolean {
   const apartX = Math.max(
-    panel.x - (dock.x + DOCK_SIZE),
+    panel.x - (dock.x + dockSize),
     dock.x - (panel.x + panel.width)
   )
   const apartY = Math.max(
-    panel.y - (dock.y + DOCK_SIZE),
+    panel.y - (dock.y + dockSize),
     dock.y - (panel.y + panel.height)
   )
   const reach = DOCK_PANEL_GAP + slack
@@ -133,7 +147,7 @@ export function redockToEdge(
   if (edge === 'left') return { x: area.x + DOCK_MARGIN, y: position.y }
   if (edge === 'right')
     return {
-      x: area.x + area.width - DOCK_SIZE - DOCK_MARGIN,
+      x: area.x + area.width - dockSize - DOCK_MARGIN,
       y: position.y,
     }
   return position

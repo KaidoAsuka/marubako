@@ -6,19 +6,18 @@ export const UPDATE_CHECK_DELAY_MS = 30_000
 export const UPDATE_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000
 
 /**
- * Whether the program asks for updates by itself. A development build has no installed feed, the
- * e2e runs must never reach for the network, and a portable copy does not update itself.
+ * Whether the program asks for updates by itself. A development build has no installed feed and
+ * the e2e runs must never reach for the network. (A portable copy asks as well: it installs
+ * nothing, but says when there is a newer version.)
  */
 export function shouldCheckForUpdates({
   isPackaged,
   isE2E,
-  isPortable = false,
 }: {
   isPackaged: boolean
   isE2E: boolean
-  isPortable?: boolean
 }): boolean {
-  return isPackaged && !isE2E && !isPortable
+  return isPackaged && !isE2E
 }
 
 /**
@@ -50,23 +49,21 @@ export function scheduleUpdateChecks(
 }
 
 /**
- * The start-up entry: schedules the checks unless this is a development build, an e2e run or a
- * portable copy. Returns the stop function, or null when nothing was scheduled.
+ * The start-up entry: schedules the checks unless this is a development build or an e2e run.
+ * Returns the stop function, or null when nothing was scheduled.
  */
 export function startUpdateChecks({
   isPackaged,
   isE2E,
-  isPortable = false,
   check,
   ...timing
 }: {
   isPackaged: boolean
   isE2E: boolean
-  isPortable?: boolean
   check: () => Promise<unknown>
   delayMs?: number
   intervalMs?: number
 }): (() => void) | null {
-  if (!shouldCheckForUpdates({ isPackaged, isE2E, isPortable })) return null
+  if (!shouldCheckForUpdates({ isPackaged, isE2E })) return null
   return scheduleUpdateChecks(check, timing)
 }

@@ -249,6 +249,76 @@ describe('promptExportPasswords', () => {
     expect(String(state.options?.message)).toContain(message)
     expect(String(state.options?.detail)).toContain(detail)
   })
+
+  // The list for reading (Markdown) cannot be imported again, so it cannot carry passwords to
+  // another computer: the question about it must not say that it can.
+  it('asks about the list for reading in words of its own, with the same three answers', async () => {
+    await promptExportPasswords(null, 'markdown')
+
+    const text = `${String(state.options?.message)} ${String(state.options?.detail)}`
+    expect(text).toContain('not encrypted')
+    expect(text).toContain('The list is plain text')
+    expect(text).toContain(
+      '“Export with passwords” writes every password into it'
+    )
+    expect(text).toContain('a folder that syncs to a cloud')
+    expect(text).toContain('do not send it to anyone')
+    expect(text).not.toContain('another computer')
+    expect(text).not.toContain('JSON')
+    expect(state.options?.buttons).toEqual([
+      'Export without passwords',
+      'Export with passwords',
+      'Cancel',
+    ])
+    expect(state.options?.defaultId).toBe(0)
+    expect(state.options?.cancelId).toBe(2)
+  })
+
+  it('asks about the backup when it is told "json", as when it is told nothing', async () => {
+    await promptExportPasswords(null)
+    const untold = state.options?.detail
+
+    await promptExportPasswords(null, 'json')
+
+    expect(state.options?.detail).toBe(untold)
+    expect(String(untold)).toContain('another computer')
+  })
+
+  it.each([
+    [0, 'without-passwords'],
+    [1, 'with-passwords'],
+    [2, 'cancel'],
+  ] as const)(
+    'answer %i about the list means %s',
+    async (response, expected) => {
+      state.response = response
+
+      expect(await promptExportPasswords(null, 'markdown')).toBe(expected)
+    }
+  )
+
+  it.each([
+    ['zh', '导出的清单是明文', '另一台电脑', '含密码导出'],
+    [
+      'ja',
+      '一覧は平文です',
+      '別のコンピューター',
+      'パスワードを含めて書き出す',
+    ],
+  ] as const)(
+    'asks about the list in %s',
+    async (lang, detail, anotherComputer, withPasswords) => {
+      state.lang = lang
+
+      await promptExportPasswords(null, 'markdown')
+
+      expect(String(state.options?.detail)).toContain(detail)
+      // The answer it speaks of is called what its button is called.
+      expect(String(state.options?.detail)).toContain(withPasswords)
+      expect((state.options?.buttons as string[])[1]).toBe(withPasswords)
+      expect(String(state.options?.detail)).not.toContain(anotherComputer)
+    }
+  )
 })
 
 describe('promptImportConfirm', () => {

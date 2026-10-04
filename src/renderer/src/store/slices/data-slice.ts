@@ -135,7 +135,10 @@ export const createDataSlice: AppStoreCreator<DataSliceState> = (set, get) => ({
 
     set({ saving: true, error: null })
 
-    const result = await window.quickLaunch.exportData(current)
+    const result = await window.quickLaunch.exportData(
+      current,
+      options?.format ?? 'json'
+    )
     if (!result.ok) {
       set({ saving: false, error: result.error })
       get().showToast(result.error, 'danger')

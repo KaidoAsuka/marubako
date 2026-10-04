@@ -1,6 +1,6 @@
 import { dialog, type BrowserWindow, type MessageBoxOptions } from 'electron'
 
-import type { Lang } from '../shared/types'
+import type { ExportFormat, Lang } from '../shared/types'
 import { InvalidBackupError, UnsupportedSchemaError } from './data-normalize'
 import { DataDecryptError } from './encryption'
 import { getUiLang, mainText } from './main-strings'
@@ -214,14 +214,19 @@ export type ExportChoice = 'without-passwords' | 'with-passwords' | 'cancel'
  * this call; the caller acts on the answer.
  */
 export async function promptExportPasswords(
-  parent: BrowserWindow | null
+  parent: BrowserWindow | null,
+  format: ExportFormat = 'json'
 ): Promise<ExportChoice> {
   const text = mainText()
   const { response } = await showMessageBox(parent, {
     type: 'warning',
     title: text.dialogTitle,
     message: text.exportPromptMessage,
-    detail: text.exportPromptDetail,
+    // The list for reading cannot carry passwords to another PC: it does not say that it can.
+    detail:
+      format === 'markdown'
+        ? text.exportMarkdownPromptDetail
+        : text.exportPromptDetail,
     buttons: [
       text.exportWithoutPasswords,
       text.exportWithPasswords,

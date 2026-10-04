@@ -1362,3 +1362,162 @@ describe('the window-state file', () => {
     })
   })
 })
+
+describe('the list for reading (Markdown)', () => {
+  const options = {
+    lang: 'en' as const,
+    exportedAt: new Date('2026-10-05T03:00:00Z'),
+    version: '3.1.1',
+  }
+
+  async function sessionWithSample(): Promise<Store> {
+    const session = await startSession()
+    await session.loadAppData()
+    await session.saveAppData(sampleData())
+    await session.flushPendingWrite()
+    return session
+  }
+
+  it('is written as a text a person reads, without the passwords when they are left out', async () => {
+    const session = await sessionWithSample()
+    const file = path.join(env.dir, 'marubako-list.md')
+
+    await session.exportMarkdownFile(await session.loadAppData(), file, {
+      ...options,
+      includePasswords: false,
+    })
+
+    const text = await fs.readFile(file, 'utf8')
+    // A heading first (after the mark that tells Notepad the text is UTF-8), not a data file.
+    expect(text.replace(/^﻿/, '').startsWith('# ')).toBe(true)
+    expect(() => JSON.parse(text)).toThrow()
+    expect(text).toContain('Mail')
+    expect(text).toContain('me@example.com')
+    expect(text).toContain('3.1.1')
+    expect(text).not.toContain('s3cret')
+    // Nothing of how the data file stores a password either.
+    expect(text).not.toContain('k1:')
+    // What was exported is a copy: the live data keeps its password.
+    expect((await session.loadAppData()).loose.passwords[0]?.password).toBe(
+      's3cret'
+    )
+  })
+
+  it('holds the passwords in plain text when the user chose to include them', async () => {
+    const session = await sessionWithSample()
+    const file = path.join(env.dir, 'marubako-list.md')
+
+    await session.exportMarkdownFile(await session.loadAppData(), file, {
+      ...options,
+      includePasswords: true,
+    })
+
+    expect(await fs.readFile(file, 'utf8')).toContain('s3cret')
+  })
+
+  it('leaves the data file, and the folder around the list, as they were', async () => {
+    const session = await sessionWithSample()
+    const before = await fs.readFile(dataFile(), 'utf8')
+    const folder = path.join(env.dir, 'out')
+    await fs.mkdir(folder)
+
+    await session.exportMarkdownFile(
+      await session.loadAppData(),
+      path.join(folder, 'marubako-list.md'),
+      { ...options, includePasswords: true }
+    )
+
+    // The list alone: no temporary file is left beside it.
+    expect(await fs.readdir(folder)).toEqual(['marubako-list.md'])
+    expect(await fs.readFile(dataFile(), 'utf8')).toBe(before)
+  })
+
+  it('replaces a list that is already there', async () => {
+    const session = await sessionWithSample()
+    const file = path.join(env.dir, 'marubako-list.md')
+    await fs.writeFile(file, 'the list of last month')
+
+    await session.exportMarkdownFile(await session.loadAppData(), file, {
+      ...options,
+      includePasswords: false,
+    })
+
+    expect(await fs.readFile(file, 'utf8')).not.toContain('last month')
+  })
+
+  it('cleans what it is given like every export: data that was never normalized does not break it', async () => {
+    const session = await sessionWithSample()
+    const file = path.join(env.dir, 'marubako-list.md')
+
+    await session.exportMarkdownFile({ prefs: {} } as never, file, {
+      ...options,
+      includePasswords: true,
+    })
+
+    expect(
+      (await fs.readFile(file, 'utf8')).replace(/^﻿/, '').startsWith('# ')
+    ).toBe(true)
+  })
+})
+
+describe('the notice of a newer version', () => {
+  const update = (version: string) => ({
+    kind: 'updateAvailable' as const,
+    version,
+  })
+
+  it('is listed with the version, and listeners are told', async () => {
+    const session = await startSession()
+    await session.loadAppData()
+    const seen: DataStatus[] = []
+    session.onDataStatusChange((status) => seen.push(status))
+
+    session.showUpdateNotice('3.2.0')
+
+    expect(session.getDataStatus().notices).toEqual([update('3.2.0')])
+    expect(seen).toHaveLength(1)
+    expect(seen[0]?.notices).toEqual([update('3.2.0')])
+  })
+
+  it('is listed once: a later check replaces the version, it does not add a second notice', async () => {
+    const session = await startSession()
+    await session.loadAppData()
+
+    session.showUpdateNotice('3.2.0')
+    session.showUpdateNotice('3.2.0')
+    session.showUpdateNotice('3.3.0')
+
+    expect(session.getDataStatus().notices).toEqual([update('3.3.0')])
+  })
+
+  it('goes away when it is dismissed, and comes back with the next check that finds a version', async () => {
+    const session = await startSession()
+    await session.loadAppData()
+    session.showUpdateNotice('3.2.0')
+
+    expect(session.dismissNotice('updateAvailable').notices).toEqual([])
+
+    // Whether the window shows it again is for the window to say: it remembers what was dismissed.
+    session.showUpdateNotice('3.2.0')
+    expect(session.getDataStatus().notices).toEqual([update('3.2.0')])
+  })
+
+  it('stands beside the notices about the data, and is dismissed without them', async () => {
+    await fs.writeFile(dataFile(), '{broken')
+    const session = await startSession()
+    await session.loadAppData()
+    expect(
+      session.getDataStatus().notices.map((notice) => notice.kind)
+    ).toEqual(['reset'])
+
+    session.showUpdateNotice('3.2.0')
+    expect(
+      session.getDataStatus().notices.map((notice) => notice.kind)
+    ).toEqual(['reset', 'updateAvailable'])
+
+    session.dismissNotice('updateAvailable')
+    expect(
+      session.getDataStatus().notices.map((notice) => notice.kind)
+    ).toEqual(['reset'])
+  })
+})

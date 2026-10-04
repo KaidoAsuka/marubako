@@ -3,6 +3,7 @@ import type { StateCreator } from 'zustand'
 import type {
   AppData,
   DataStatus,
+  ExportFormat,
   GridTab,
   GroupTab,
   Prefs,
@@ -80,7 +81,7 @@ export type ShowToastOptions = {
  * `data.prefs` where the interface reads them and are dropped when the dialog closes.
  */
 export type PreviewPrefs = Partial<
-  Pick<Prefs, 'theme' | 'background' | 'zoom' | 'motion'>
+  Pick<Prefs, 'theme' | 'background' | 'zoom' | 'motion' | 'fontFamily'>
 >
 
 type WidgetPopupState = {
@@ -95,6 +96,8 @@ export type UpdateDataOptions = {
 export type ExportDataOptions = UpdateDataOptions & {
   /** Said instead of `successMessage` when the file was written without passwords. */
   withoutPasswordsMessage?: string
+  /** The backup that can be imported again (the default), or the list for reading. */
+  format?: ExportFormat
 }
 
 export interface AppStore {

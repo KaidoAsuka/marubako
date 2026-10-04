@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createDefaultAppData } from '../../../../../shared/default-data'
 import type { Lang, UpdateCheckResult } from '../../../../../shared/types'
+import { extraStrings } from '../../../i18n/extras'
 import { updateStrings } from '../../../i18n/updates'
 import { useAppStore } from '../../../store/use-app-store'
 import SettingsForm from '../SettingsForm'
@@ -46,7 +47,14 @@ describe('the about block of the settings (product-ux-7)', () => {
     expect(await screen.findByTestId('settings-version')).toHaveTextContent(
       'Version 2.5.8'
     )
-    expect(window.quickLaunch.getAppInfo).toHaveBeenCalledTimes(1)
+    // Asked once by the about block, for the version, and once by the dialog, for the data folder
+    // of its "Open data folder" button. Neither asks again when it is drawn again.
+    expect(window.quickLaunch.getAppInfo).toHaveBeenCalledTimes(2)
+    fireEvent.click(screen.getByTestId('settings-check-updates'))
+    await vi.waitFor(() =>
+      expect(resultText()).toHaveTextContent('You’re up to date.')
+    )
+    expect(window.quickLaunch.getAppInfo).toHaveBeenCalledTimes(2)
   })
 
   it('leaves the version out when the main process does not tell it', async () => {
@@ -85,6 +93,11 @@ describe('the about block of the settings (product-ux-7)', () => {
     [
       { status: 'ready', version: '2.6.0' },
       'Version 2.6.0 is downloaded. Choose “Restart and update” to install it now; it is also installed when you quit Marubako from the tray menu (closing the window only hides it to the tray).',
+    ],
+    // What a portable copy finds. It installs nothing: the words say what to do by hand.
+    [
+      { status: 'available', version: '2.6.0' },
+      'Version 2.6.0 is available. The portable copy does not update itself: download the new zip and unpack it over this folder. Your data stays.',
     ],
     [
       { status: 'error' },
@@ -140,6 +153,106 @@ describe('the about block of the settings (product-ux-7)', () => {
       })
     )
   })
+
+  it('offers the download page only when a portable copy found a newer version, and opens it through the main process', async () => {
+    openDataPage('en')
+    expect(screen.queryByTestId('settings-open-download')).toBeNull()
+
+    answerWith({ status: 'latest', version: '2.5.8' })
+    fireEvent.click(screen.getByTestId('settings-check-updates'))
+    await vi.waitFor(() =>
+      expect(resultText()).toHaveTextContent('You’re up to date.')
+    )
+    expect(screen.queryByTestId('settings-open-download')).toBeNull()
+
+    answerWith({ status: 'available', version: '2.6.0' })
+    fireEvent.click(screen.getByTestId('settings-check-updates'))
+    const download = await screen.findByTestId('settings-open-download')
+    expect(download).toHaveTextContent('Open the download page')
+    // Nothing was downloaded, so there is nothing to restart into.
+    expect(screen.queryByTestId('settings-install-update')).toBeNull()
+
+    fireEvent.click(download)
+
+    expect(window.quickLaunch.openReleasesPage).toHaveBeenCalledTimes(1)
+    // The window passes no address: the main process knows the one page it may open.
+    expect(
+      vi.mocked(window.quickLaunch.openReleasesPage).mock.calls[0]
+    ).toEqual([])
+    expect(window.quickLaunch.openUrl).not.toHaveBeenCalled()
+    expect(window.quickLaunch.installUpdate).not.toHaveBeenCalled()
+  })
+
+  it('does not offer the download page for a version that is downloading or downloaded by itself', async () => {
+    openDataPage('en')
+
+    for (const status of ['downloading', 'ready'] as const) {
+      answerWith({ status, version: '2.6.0' })
+      fireEvent.click(screen.getByTestId('settings-check-updates'))
+      await vi.waitFor(() => expect(resultText()).toHaveTextContent('2.6.0'))
+      await vi.waitFor(() =>
+        expect(screen.getByTestId('settings-check-updates')).toBeEnabled()
+      )
+      expect(screen.queryByTestId('settings-open-download')).toBeNull()
+    }
+  })
+
+  it.each([
+    [
+      'is refused',
+      () =>
+        vi.mocked(window.quickLaunch.openReleasesPage).mockResolvedValueOnce({
+          ok: false,
+          error: 'no browser',
+        }),
+      'no browser',
+    ],
+    [
+      'fails',
+      () =>
+        vi
+          .mocked(window.quickLaunch.openReleasesPage)
+          .mockRejectedValueOnce(new Error('channel closed')),
+      'Error: channel closed',
+    ],
+  ])(
+    'tells the user when opening the download page %s',
+    async (_name, arrange, message) => {
+      arrange()
+      openDataPage('en')
+      answerWith({ status: 'available', version: '2.6.0' })
+      fireEvent.click(screen.getByTestId('settings-check-updates'))
+
+      fireEvent.click(await screen.findByTestId('settings-open-download'))
+
+      await vi.waitFor(() =>
+        expect(useAppStore.getState().toast).toMatchObject({
+          message,
+          tone: 'danger',
+        })
+      )
+    }
+  )
+
+  it.each(['zh', 'en', 'ja'] as const)(
+    'speaks %s about a newer version for a portable copy: the answer and the button',
+    async (lang) => {
+      answerWith({ status: 'available', version: '2.6.0' })
+      openDataPage(lang)
+      const strings = extraStrings[lang]
+
+      fireEvent.click(screen.getByTestId('settings-check-updates'))
+
+      expect(
+        await screen.findByTestId('settings-open-download')
+      ).toHaveTextContent(strings.update_open_download ?? '')
+      expect(strings.update_available).toContain('{version}')
+      expect(resultText()).toHaveTextContent(
+        strings.update_available?.replace('{version}', '2.6.0') ?? ''
+      )
+      expect(resultText()).not.toHaveTextContent('{version}')
+    }
+  )
 
   it('shows that it is checking, and cannot be started twice meanwhile', async () => {
     let answer: (value: unknown) => void = () => undefined

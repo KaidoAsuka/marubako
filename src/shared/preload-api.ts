@@ -11,6 +11,7 @@ import type {
   StartupNoticeKind,
   UpdateCheckResult,
   ExportDataResult,
+  ExportFormat,
   ImportDataResult,
   LaunchSettings,
   QuickLaunchResult,
@@ -23,7 +24,10 @@ import type {
 export interface QuickLaunchApi {
   loadData: () => Promise<QuickLaunchResult<AppData>>
   saveData: (data: AppData) => Promise<QuickLaunchResult<SaveDataResult>>
-  exportData: (data: AppData) => Promise<QuickLaunchResult<ExportDataResult>>
+  exportData: (
+    data: AppData,
+    format?: ExportFormat
+  ) => Promise<QuickLaunchResult<ExportDataResult>>
   importData: () => Promise<QuickLaunchResult<ImportDataResult>>
   getDataStatus: () => Promise<QuickLaunchResult<DataStatus>>
   dismissDataNotice: (
@@ -45,6 +49,8 @@ export interface QuickLaunchApi {
   getAppInfo: () => Promise<QuickLaunchResult<AppInfo>>
   /** Opens the project's issue page in the browser the user chose. */
   openIssuesPage: () => Promise<QuickLaunchResult<void>>
+  /** Opens the page of the newest release, where a portable copy is downloaded by hand. */
+  openReleasesPage: () => Promise<QuickLaunchResult<void>>
   /**
    * The path on disk of each dropped or pasted file (File objects; the type is loose because the
    * main and preload projects have no DOM types). Files with no path (an image from a web page)

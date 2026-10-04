@@ -15,7 +15,7 @@ This is a small project with one maintainer, so there is no service-level promis
 
 ## What the app sends
 
-Marubako has no sign-up, no cloud sync and no telemetry. The only internet connection it makes by itself is to GitHub, to check for a new version and download it (shortly after it starts, then once a day). Those requests carry a random installation ID made by the updater and nothing you stored: no password, user name, site address, path, command or note is ever part of them. GitHub sees your IP address, as any server does. The portable copy does not check for updates, so it does not make that connection either. If an app you added is on a network share, Marubako reads its icon from that share when the Apps page is shown, as Explorer does.
+Marubako has no sign-up, no cloud sync and no telemetry. The only internet connection it makes by itself is to GitHub, to check for a new version and download it (shortly after it starts, then once a day). Those requests carry a random installation ID made by the updater and nothing you stored: no password, user name, site address, path, command or note is ever part of them. GitHub sees your IP address, as any server does. The portable copy asks GitHub at the same times, but only for the small file that names the newest version: it sends no ID and downloads nothing else, and tells you when there is a newer version. If an app you added is on a network share, Marubako reads its icon from that share when the Apps page is shown, as Explorer does.
 
 ## What counts
 

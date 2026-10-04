@@ -69,6 +69,8 @@ describe('normalizeAppData: prefs', () => {
       shortcutEnabled: false,
       hideAfterLaunch: true,
       showBubble: false,
+      ballSize: 48,
+      fontFamily: 'Yu Gothic UI',
     }
 
     expect(prefsOf(valid)).toEqual(valid)
@@ -309,6 +311,70 @@ describe('normalizeAppData: prefs', () => {
       ['an object', {}],
     ])('falls back to on for %s', (_label, value) => {
       expect(prefsOf({ showBubble: value }).showBubble).toBe(true)
+    })
+  })
+
+  describe('ballSize', () => {
+    it('is 30 px for data without one, as the ball was before it could be set', () => {
+      expect(defaultPrefs.ballSize).toBe(30)
+      expect(prefsOf({ lang: 'en' }).ballSize).toBe(30)
+    })
+
+    it.each([
+      [24, 24],
+      [30, 30],
+      [48, 48],
+      [64, 64],
+      // Out of the range of the setting.
+      [8, 24],
+      [-40, 24],
+      [65, 64],
+      [5000, 64],
+      // Between two steps of the setting: an odd ball would stand between two pixels.
+      [31, 32],
+      [30.4, 30],
+    ])('makes %s the size %s, one the setting offers', (input, expected) => {
+      expect(prefsOf({ ballSize: input }).ballSize).toBe(expected)
+    })
+
+    it.each([
+      ['NaN', Number.NaN],
+      ['Infinity', Number.POSITIVE_INFINITY],
+      ['a numeric string', '48'],
+      ['null', null],
+      ['an object', {}],
+    ])('falls back to the default for %s', (_label, ballSize) => {
+      expect(prefsOf({ ballSize }).ballSize).toBe(30)
+    })
+  })
+
+  describe('fontFamily', () => {
+    it('is empty for data without one: the fonts the language comes with', () => {
+      expect(defaultPrefs.fontFamily).toBe('')
+      expect(prefsOf({ lang: 'en' }).fontFamily).toBe('')
+    })
+
+    it.each(['Segoe UI', 'Microsoft YaHei UI', '游ゴシック', '思源黑体 CN'])(
+      'keeps the family name %s',
+      (fontFamily) => {
+        expect(prefsOf({ fontFamily }).fontFamily).toBe(fontFamily)
+      }
+    )
+
+    it('takes out what could end the quoted name in a stylesheet', () => {
+      expect(
+        prefsOf({ fontFamily: 'Arial"; } body { display: none' }).fontFamily
+      ).toBe('Arial  body  display: none')
+    })
+
+    it.each([
+      ['a number', 12],
+      ['null', null],
+      ['a list', ['Arial']],
+      ['an object', { family: 'Arial' }],
+      ['only spaces', '   '],
+    ])('falls back to the default for %s', (_label, fontFamily) => {
+      expect(prefsOf({ fontFamily }).fontFamily).toBe('')
     })
   })
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { DOCK_SIZE } from '../../../../shared/dock-size'
+import { DOCK_SIZE, dockWindowSize } from '../../../../shared/dock-size'
 import { currentScale, panelGeometry } from '../window-motion'
 
 // The ball window sits 8px left of the panel (DOCK_PANEL_GAP in the main process), so its top-left
@@ -23,6 +23,20 @@ describe('panelGeometry', () => {
     )
     expect(panelGeometry({ x: 428, y: 332 }, 420, 700).origin).toBe(
       `${428 + CENTER}px ${332 + CENTER}px`
+    )
+  })
+
+  it('goes by the side of the ball window it is told: a larger ball has a larger window', () => {
+    // The window of the largest ball the setting offers, 8px left of the panel and 100px down.
+    const side = dockWindowSize(64)
+    expect(side).toBeGreaterThan(DOCK_SIZE)
+
+    expect(
+      panelGeometry({ x: -(side + GAP), y: 100 }, 760, 720, side).origin
+    ).toBe(`${-GAP - side / 2}px ${100 + side / 2}px`)
+    // A presentation that does not say (the field is optional) means the default ball.
+    expect(panelGeometry({ x: 0, y: 0 }, 760, 720, undefined).origin).toBe(
+      `${CENTER}px ${CENTER}px`
     )
   })
 

@@ -19,6 +19,8 @@ export interface MainStrings {
   // The question before an export that would hold passwords in plain text.
   exportPromptMessage: string
   exportPromptDetail: string
+  /** The same question before the list for reading (Markdown) is written. */
+  exportMarkdownPromptDetail: string
   exportWithoutPasswords: string
   exportWithPasswords: string
   cancel: string
@@ -33,6 +35,7 @@ export interface MainStrings {
   importDialogTitle: string
   importDialogButton: string
   jsonFilesName: string
+  markdownFilesName: string
   allFilesName: string
   selectFolderTitle: string
   selectAppTitle: string
@@ -53,6 +56,8 @@ export const mainStrings: Record<Lang, MainStrings> = {
     exportPromptMessage: '导出文件不加密',
     exportPromptDetail:
       '导出的文件是明文 JSON，包含全部密码，任何拿到这个文件的人都能直接看到。请不要把它放进网盘同步目录，也不要发给别人。\n\n要把密码迁移到另一台电脑，必须选“含密码导出”。',
+    exportMarkdownPromptDetail:
+      '导出的清单是明文。选“含密码导出”会把全部密码写进去，任何拿到这个文件的人都能直接看到。请不要把它放进会同步到网盘的文件夹，也不要发给别人。',
     exportWithoutPasswords: '不含密码导出',
     exportWithPasswords: '含密码导出',
     cancel: '取消',
@@ -67,6 +72,7 @@ export const mainStrings: Record<Lang, MainStrings> = {
     importDialogTitle: '导入 Marubako 数据',
     importDialogButton: '导入',
     jsonFilesName: 'JSON 文件',
+    markdownFilesName: 'Markdown 文件',
     allFilesName: '所有文件',
     selectFolderTitle: '选择文件夹',
     selectAppTitle: '选择程序或快捷方式',
@@ -84,6 +90,8 @@ export const mainStrings: Record<Lang, MainStrings> = {
     exportPromptMessage: 'The export file is not encrypted',
     exportPromptDetail:
       'The file is plain JSON and holds every password in plain text, so anyone who gets it can read them. Do not put it in a cloud-synced folder or send it to others.\n\nTo move your passwords to another computer you need “Export with passwords”.',
+    exportMarkdownPromptDetail:
+      'The list is plain text. “Export with passwords” writes every password into it, for anyone who gets the file to read. Do not keep it in a folder that syncs to a cloud, and do not send it to anyone.',
     exportWithoutPasswords: 'Export without passwords',
     exportWithPasswords: 'Export with passwords',
     cancel: 'Cancel',
@@ -98,6 +106,7 @@ export const mainStrings: Record<Lang, MainStrings> = {
     importDialogTitle: 'Import Marubako Data',
     importDialogButton: 'Import',
     jsonFilesName: 'JSON Files',
+    markdownFilesName: 'Markdown Files',
     allFilesName: 'All Files',
     selectFolderTitle: 'Choose a folder',
     selectAppTitle: 'Choose a program or shortcut',
@@ -115,6 +124,8 @@ export const mainStrings: Record<Lang, MainStrings> = {
     exportPromptMessage: 'エクスポートファイルは暗号化されません',
     exportPromptDetail:
       'ファイルはプレーンテキストの JSON で、すべてのパスワードがそのまま含まれます。入手した人は誰でも読めるため、クラウド同期フォルダーに置いたり、他の人に送ったりしないでください。\n\nパスワードを別のコンピューターへ移すには「パスワードを含めて書き出す」を選ぶ必要があります。',
+    exportMarkdownPromptDetail:
+      '一覧は平文です。「パスワードを含めて書き出す」を選ぶと、すべてのパスワードが書き込まれ、ファイルを手に入れた人は誰でも読めます。クラウドと同期するフォルダには置かず、他人にも送らないでください。',
     exportWithoutPasswords: 'パスワードなしで書き出す',
     exportWithPasswords: 'パスワードを含めて書き出す',
     cancel: 'キャンセル',
@@ -130,6 +141,7 @@ export const mainStrings: Record<Lang, MainStrings> = {
     importDialogTitle: 'Marubako のデータを読み込む',
     importDialogButton: '読み込む',
     jsonFilesName: 'JSON ファイル',
+    markdownFilesName: 'Markdown ファイル',
     allFilesName: 'すべてのファイル',
     selectFolderTitle: 'フォルダーを選択',
     selectAppTitle: 'プログラムまたはショートカットを選択',
