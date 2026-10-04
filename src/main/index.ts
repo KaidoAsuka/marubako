@@ -1,11 +1,14 @@
+import path from 'node:path'
+
 import { app, globalShortcut } from 'electron'
 import log from 'electron-log/main'
 
 import { checkForUpdatesNow, configureAutoUpdater } from './auto-updater'
-import { APP_ID, getLogFilePath } from './config'
+import { APP_ID, getLogFilePath, PORTABLE_APP_ID } from './config'
 import {
   promptRecovery,
   promptSaveFailure,
+  showPortableKeyFailure,
   showStartupFailure,
 } from './data-prompts'
 import {
@@ -15,9 +18,14 @@ import {
 } from './data-store'
 import { registerIpcHandlers } from './ipc-handlers'
 import { registerLaunchShortcut } from './launch-settings'
+import { getPortableDataDir, guardPortableKey, isPortable } from './portable'
+import { PortableKeyError } from './portable-key'
 import { createTray, showTrayHint } from './tray'
 import { startUpdateChecks } from './update-schedule'
-import { resolveUserDataOverride } from './user-data-path'
+import {
+  NOT_STARTED_USER_DATA_DIRNAME,
+  resolveUserDataOverride,
+} from './user-data-path'
 import {
   createMainWindow,
   prepareToQuit,
@@ -26,24 +34,59 @@ import {
 } from './window-manager'
 
 const isE2E = process.env.QUICKLAUNCH_E2E === '1'
+// The smoke test of the portable copy runs without a data folder of its own to point at.
+const mustBePortable = process.env.QUICKLAUNCH_REQUIRE_PORTABLE === '1'
+
+/**
+ * Ends the program before Chromium has read a single file. Whatever of this file still runs before
+ * the exit takes effect is pointed at a folder of its own, away from anybody's data.
+ */
+function stopBeforeStart(exitCode: number): void {
+  app.setPath(
+    'userData',
+    path.join(app.getPath('temp'), NOT_STARTED_USER_DATA_DIRNAME)
+  )
+  app.exit(exitCode)
+}
+
+// A copy that had to be portable and does not find itself so must not go on to the data of an
+// installed one.
+if (mustBePortable && !isPortable()) stopBeforeStart(2)
 
 // Must run before the logger and the single-instance lock: both are keyed on userData.
 const userDataOverride = resolveUserDataOverride({
   envUserData: process.env.QUICKLAUNCH_USER_DATA,
   isPackaged: app.isPackaged,
   appDataDir: app.getPath('appData'),
+  portableDataDir: getPortableDataDir() ?? undefined,
 })
 if (userDataOverride) {
   app.setPath('userData', userDataOverride)
 }
+// Also before Chromium reads its files: a portable folder may have been on another PC meanwhile.
+const portableKey = guardPortableKey(userDataOverride)
 
 function configureLogger(): void {
   log.initialize()
   log.transports.file.resolvePathFn = () => getLogFilePath()
 }
 
-app.setAppUserModelId(APP_ID)
+app.setAppUserModelId(isPortable() ? PORTABLE_APP_ID : APP_ID)
 configureLogger()
+if (portableKey instanceof PortableKeyError && portableKey.fatal) {
+  // Chromium would replace the key of the other PC as soon as it starts.
+  log.error(
+    'Not starting: the key of another PC in the data folder could not be kept safe',
+    portableKey
+  )
+  // Under test nobody is there to close the box.
+  if (!isE2E && !mustBePortable) showPortableKeyFailure(portableKey)
+  stopBeforeStart(3)
+} else if (portableKey instanceof PortableKeyError) {
+  log.warn('Could not keep a copy of the key in the data folder', portableKey)
+} else if (portableKey !== null && portableKey !== 'unchanged') {
+  log.info(`Portable data folder, key of this PC: ${portableKey}`)
+}
 
 if (!isE2E && !app.requestSingleInstanceLock()) {
   app.quit()
@@ -86,6 +129,7 @@ if (!isE2E && !app.requestSingleInstanceLock()) {
       startUpdateChecks({
         isPackaged: app.isPackaged,
         isE2E,
+        isPortable: isPortable(),
         check: checkForUpdatesNow,
       })
 

@@ -25,7 +25,7 @@ Run everything from the repository root, in PowerShell or Git Bash. Node.js 22.1
 | Repository scripts    | `node --test "tools/**/*.test.cjs"`                                                                    |
 | Build                 | `npm run build` (typecheck, then `electron-vite build` into `out/`)                                    |
 | UI tests (Playwright) | `npm run build`, then `npx playwright test e2e/<name>.spec.ts`; everything: `npm run test:e2e`         |
-| Installer             | `npm run dist` writes `release/<version>/`. Do not run it unless the task is about packaging           |
+| Installer, portable   | `npm run dist` writes both into `release/<version>/`. Do not run it unless the task is about packaging |
 
 **UI tests run on the CI only. Cloud agents run lint, typecheck and unit tests only** (and the formatting check and the repository scripts, which are quick). The UI tests open real windows and move the real mouse; they need an interactive Windows desktop. If you do have one, never run more than one Playwright run at a time.
 
@@ -82,10 +82,10 @@ docs/            behavior.zh-CN.md (what the app does, in detail), images
 
 ## Data safety
 
-Marubako keeps the user's own data, including passwords, in `%APPDATA%\marubako\` (development builds use `%APPDATA%\marubako-dev\`).
+Marubako keeps the user's own data, including passwords, in `%APPDATA%\marubako\` (development builds use `%APPDATA%\marubako-dev\`; the portable copy uses the `data` folder beside its `Marubako.exe`).
 
 - Never read, write, copy or delete anything in those folders, and never start the app against them.
-- Tests use temporary folders. Point the app at one with the `QUICKLAUNCH_USER_DATA` environment variable (`e2e/test-utils.ts` does it for you). `QUICKLAUNCH_E2E=1` makes the app run under test: no single-instance lock, no global shortcut and no recovery dialogs.
+- Tests use temporary folders. Point the app at one with the `QUICKLAUNCH_USER_DATA` environment variable (`e2e/test-utils.ts` does it for you). `QUICKLAUNCH_E2E=1` makes the app run under test: no single-instance lock, no global shortcut and no recovery dialogs. The one test that starts the app without a folder of its own, `scripts/smoke-portable.cjs`, sets `QUICKLAUNCH_REQUIRE_PORTABLE=1`: the app then stops at once unless it is a portable copy.
 - Never commit a data file (`quicklaunch-data.json`, backups, `.recovery-*`, exports) or real passwords. Sample data in tests is made up.
 
 ## Pull requests

@@ -282,3 +282,15 @@ export function showStartupFailure(error: unknown, logPath: string): void {
     )
   )
 }
+
+/**
+ * A portable folder that comes from another PC and whose key could not be kept safe: the program
+ * says why it does not start. Safe to call before the app is ready.
+ */
+export function showPortableKeyFailure(error: Error): void {
+  const text = mainText()
+  dialog.showErrorBox(
+    text.startupFailedTitle,
+    text.portableKeyFailedDetail(error.message)
+  )
+}

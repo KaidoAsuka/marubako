@@ -2,6 +2,10 @@ import { app } from 'electron'
 import path from 'node:path'
 
 export const APP_ID = 'io.github.KaidoAsuka.marubako'
+// A portable copy is its own application to Windows. "Start with Windows" is stored under this id:
+// with the id of the installed copy, each of the two would overwrite the other's entry, and
+// uninstalling the installed copy would delete the portable one's (build/installer.nsh).
+export const PORTABLE_APP_ID = `${APP_ID}.portable`
 export const APP_NAME = 'Marubako'
 // Where the project lives; the owner is filled in by scripts/set-github-owner.cjs. The issue page is
 // what the settings dialog links to, the releases are the update feed of electron-builder.config.cjs.

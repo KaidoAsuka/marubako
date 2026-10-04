@@ -6,6 +6,7 @@ import log from 'electron-log/main'
 import { autoUpdater } from 'electron-updater'
 
 import type { UpdateCheckResult } from '../shared/types'
+import { isPortable } from './portable'
 
 let configured = false
 let missingUpdateFeedLogged = false
@@ -67,7 +68,13 @@ function hasConfiguredUpdateFeed(): boolean {
 }
 
 export function configureAutoUpdater(): void {
-  if (configured || !app.isPackaged || !hasConfiguredUpdateFeed()) {
+  // A portable copy carries the same feed file as an installed one, and must not use it.
+  if (
+    configured ||
+    !app.isPackaged ||
+    isPortable() ||
+    !hasConfiguredUpdateFeed()
+  ) {
     return
   }
 
@@ -120,6 +127,11 @@ export function installDownloadedUpdate(): boolean {
 async function runUpdateCheck(): Promise<UpdateCheckResult> {
   if (!app.isPackaged) {
     log.info('Skipped update check in development')
+    return { status: 'disabled' }
+  }
+
+  if (isPortable()) {
+    log.info('Skipped update check: a portable copy does not update itself')
     return { status: 'disabled' }
   }
 
