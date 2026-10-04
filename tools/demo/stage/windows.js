@@ -167,10 +167,10 @@
         win.appear(t)
         const prompt = '<span class="prompt">PS C:\\Users\\dev&gt;</span> '
         const typed = t >= paste ? command : ''
-        // The first line comes a quarter of a second after the command was run, then one by one.
+        // The first line comes a moment after the command was run, then one by one.
         const shown = lines.slice(
           0,
-          Math.max(0, Math.floor((t - run - 250) / 230) + 1)
+          Math.max(0, Math.floor((t - run - 200) / 150) + 1)
         )
         const caret = t < run ? '<span class="caret"></span>' : ''
         body.innerHTML = `${prompt}${typed}${caret}\n${shown.join('\n')}`

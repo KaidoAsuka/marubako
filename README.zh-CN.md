@@ -8,7 +8,7 @@
 Windows 上的一个小面板：把工作里要反复打开的东西收在一处，按一下快捷键就出来。
 
 <p align="center">
-  <img src="docs/images/demo-open.gif" width="880" alt="按下快捷键，面板从悬浮球里展开；点一下，设计文档的文件夹在资源管理器里打开；再点一下，测试环境的登录页在浏览器里打开">
+  <img src="docs/images/demo-open.webp" width="880" alt="按下快捷键，面板从悬浮球里展开；点一下，设计文档的文件夹在资源管理器里打开；再点一下，测试环境的登录页在浏览器里打开">
 </p>
 
 ## 为什么做这个
@@ -24,25 +24,25 @@ Windows 上的一个小面板：把工作里要反复打开的东西收在一处
 **点一下就复制。** 每个环境的账号、密码，还有那些反复要敲的命令。
 
 <p align="center">
-  <img src="docs/images/demo-copy.gif" width="880" alt="点一下复制测试账号的用户名，粘贴到登录页，再复制密码；复制的命令粘贴到终端里运行">
+  <img src="docs/images/demo-copy.webp" width="880" alt="点一下复制测试账号的用户名，粘贴到登录页，再复制密码；复制的命令粘贴到终端里运行">
 </p>
 
 **什么都能搜到。** `Ctrl + K` 搜索所有分类。
 
 <p align="center">
-  <img src="docs/images/demo-search.gif" width="880" alt="按 Ctrl + K，输入 test，回车：搜到的文件夹打开了">
+  <img src="docs/images/demo-search.webp" width="880" alt="按 Ctrl + K，输入 test，回车：搜到的文件夹打开了">
 </p>
 
 **列表和网格一键切换。** 文件夹、网站、软件三页都有；网格里每个分组是一块磁贴，点开就是里面的条目。
 
 <p align="center">
-  <img src="docs/images/demo-view.gif" width="880" alt="点一下，网站列表变成磁贴网格；点开一块磁贴，是这个分组里的条目；再点一下，回到列表">
+  <img src="docs/images/demo-view.webp" width="880" alt="点一下，网站列表变成磁贴网格；点开一块磁贴，是这个分组里的条目；再点一下，回到列表">
 </p>
 
 **不用的时候不碍事。** 面板收成屏幕边上的一个小球，球和面板一起移动。
 
 <p align="center">
-  <img src="docs/images/demo-ball.gif" width="880" alt="面板收成悬浮球，桌面空了；双击球，面板回来；拖动面板，球跟着走">
+  <img src="docs/images/demo-ball.webp" width="880" alt="面板收成悬浮球，桌面空了；双击球，面板回来；拖动面板，球跟着走">
 </p>
 
 **密码只保存在你的电脑上，Marubako 绝不会把它们发送到任何地方。** 密码用你的 Windows 账号加密。不用注册账号，没有云同步，也不上报任何使用数据；应用自己唯一会联网做的事，是从 GitHub 检查并下载自身的更新，其中不带你存的任何内容。

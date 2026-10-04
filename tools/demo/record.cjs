@@ -3,12 +3,12 @@
 // It drives the built app with made-up data (demo-data.cjs), saves what the panel and the ball draw
 // frame by frame, and writes down where the pointer was, what was clicked, which keys were pressed
 // and when each beat of the story happened. Step 2 (render.cjs) puts those recordings on a staged
-// desktop with a camera; step 3 (make-gifs.py) writes the GIFs.
+// desktop with a camera; step 3 (make-films.py) writes the films as animated WebP.
 //
 //   npm run build
 //   node tools/demo/record.cjs artifacts/demo
 //   node tools/demo/render.cjs artifacts/demo
-//   python tools/demo/make-gifs.py artifacts/demo docs/images
+//   python tools/demo/make-films.py artifacts/demo docs/images
 //
 // record.cjs and render.cjs take the name of one scene as a last argument (open, copy, search,
 // view, ball) and then leave the other scenes as they are.
@@ -28,6 +28,7 @@ const ROOT = path.resolve(__dirname, '../..')
 const PANEL_HEIGHT = 600
 const SHORTCUT = 'Ctrl + Shift + Space'
 // The windows are drawn at twice their size, so that the camera of the stage can move in on them.
+// (More would not fit: a 2560 by 1440 screen is 1280 by 720 at this scale, and the panel is 600 high.)
 const SCALE = 2
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -68,29 +69,41 @@ class Session {
     return found.bounds
   }
 
-  /** What both windows show right now, as PNG, with where they are. */
-  capture() {
-    return this.app.evaluate(async ({ BrowserWindow }) => {
-      const shots = []
-      for (const window of BrowserWindow.getAllWindows()) {
-        const shot = {
-          role: window.isResizable() ? 'panel' : 'ball',
-          visible: window.isVisible(),
-          bounds: window.getBounds(),
-          opacity: window.getOpacity(),
-          png: null,
-        }
-        if (shot.visible && shot.opacity > 0) {
-          try {
-            shot.png = (await window.capturePage()).toPNG().toString('base64')
-          } catch {
-            // The window went away in between: the frame simply has no picture of it.
+  /**
+   * Takes a picture of both windows and says where they are. The pictures are written into `dir`
+   * by the app's own main process: handing every one of them over to this script would halve the
+   * number of pictures a second.
+   */
+  capture(dir, index) {
+    return this.app.evaluate(
+      async ({ BrowserWindow }, { dir, name }) => {
+        const { writeFile } = process.getBuiltinModule('node:fs/promises')
+        const { join } = process.getBuiltinModule('node:path')
+        const shots = []
+        for (const window of BrowserWindow.getAllWindows()) {
+          const shot = {
+            role: window.isResizable() ? 'panel' : 'ball',
+            visible: window.isVisible(),
+            bounds: window.getBounds(),
+            opacity: window.getOpacity(),
+            file: null,
           }
+          if (shot.visible && shot.opacity > 0) {
+            try {
+              const picture = await window.capturePage()
+              const file = `${name}-${shot.role}.png`
+              await writeFile(join(dir, file), picture.toPNG())
+              shot.file = file
+            } catch {
+              // The window went away in between: the frame simply has no picture of it.
+            }
+          }
+          shots.push(shot)
         }
-        shots.push(shot)
-      }
-      return shots
-    })
+        return shots
+      },
+      { dir, name: `f${String(index).padStart(4, '0')}` }
+    )
   }
 
   async begin(name) {
@@ -113,26 +126,7 @@ class Session {
       let index = 0
       while (scene.running) {
         const t = Date.now() - scene.start
-        const shots = await this.capture()
-        const frame = { t, windows: [] }
-        for (const shot of shots) {
-          let file = null
-          if (shot.png) {
-            file = `f${String(index).padStart(4, '0')}-${shot.role}.png`
-            await fs.writeFile(
-              path.join(dir, file),
-              Buffer.from(shot.png, 'base64')
-            )
-          }
-          frame.windows.push({
-            role: shot.role,
-            visible: shot.visible,
-            bounds: shot.bounds,
-            opacity: shot.opacity,
-            file,
-          })
-        }
-        scene.frames.push(frame)
+        scene.frames.push({ t, windows: await this.capture(dir, index) })
         index += 1
       }
     })()
@@ -166,7 +160,7 @@ class Session {
   }
 
   /** Shows a key combination under the windows for a moment. */
-  key(text, duration = 1100) {
+  key(text, duration = 800) {
     this.scene.keys.push({ t: this.now(), text, duration })
   }
 
@@ -174,7 +168,7 @@ class Session {
   async glide(target, page, origin) {
     const from = { ...this.cursor }
     const distance = Math.hypot(target.x - from.x, target.y - from.y)
-    const duration = Math.min(700, Math.max(240, distance * 1.7))
+    const duration = Math.min(450, Math.max(180, distance * 1.1))
     const begin = Date.now()
     for (;;) {
       const progress = Math.min(1, (Date.now() - begin) / duration)
@@ -186,7 +180,7 @@ class Session {
       this.note(point)
       await page.mouse.move(point.x - origin.x, point.y - origin.y)
       if (progress >= 1) break
-      await sleep(12)
+      await sleep(8)
     }
   }
 
@@ -214,11 +208,11 @@ class Session {
   async click(locator, { mark, ...where } = {}) {
     const page = where.page ?? this.page
     const target = await this.point(locator, where)
-    await sleep(160)
+    await sleep(110)
     this.scene?.clicks.push({ t: this.now(), ...target })
     if (mark) this.mark(mark)
     await page.mouse.down()
-    await sleep(70)
+    await sleep(60)
     await page.mouse.up()
   }
 
@@ -387,30 +381,30 @@ async function sceneOpen(s) {
   await s.untilPanel(false)
   await sleep(700)
   const ball = await s.bounds('ball')
-  s.cursor = { x: ball.x - 330, y: ball.y + 140 }
+  s.cursor = { x: ball.x - 210, y: ball.y + 90 }
 
   await s.begin('open')
-  await sleep(1100)
-  s.key(SHORTCUT, 1500)
+  await sleep(500)
+  s.key(SHORTCUT, 1400)
   s.mark('summon')
-  await sleep(450)
+  await sleep(350)
   await s.summon()
   await s.untilPanel(true)
-  await sleep(1300)
+  await sleep(650)
   await s.click(page.getByTestId('item-row-f-detail'), {
     mark: 'open-folder',
     at: ROW,
   })
   // The stage shows the folder opening in a file manager during this pause.
-  await sleep(3800)
+  await sleep(2300)
   s.mark('folder-shown')
   await s.click(page.getByTestId('tab-websites'), { at: TAB })
-  await sleep(700)
+  await sleep(400)
   await s.click(page.getByTestId('item-row-s-test-admin'), {
     mark: 'open-site',
     at: ROW,
   })
-  await sleep(2700)
+  await sleep(1900)
   await s.end()
 }
 
@@ -423,20 +417,20 @@ async function sceneCopy(s) {
   await s.park()
 
   await s.begin('copy')
-  await sleep(1500)
+  await sleep(800)
   await s.click(page.getByTestId('copy-username-p-admin'), {
     mark: 'copy-user',
   })
   // The stage pastes into the sign-in page of its browser during these pauses.
-  await sleep(2900)
+  await sleep(2300)
   s.mark('copy-user-end')
   await s.click(page.getByTestId('copy-item-p-admin'), { mark: 'copy-pass' })
-  await sleep(4900)
+  await sleep(3300)
   s.mark('copy-pass-end')
   await s.click(page.getByTestId('tab-commands'), { at: TAB })
-  await sleep(800)
+  await sleep(450)
   await s.click(page.getByTestId('copy-item-c-logs'), { mark: 'copy-cmd' })
-  await sleep(4300)
+  await sleep(2700)
   await s.end()
 }
 
@@ -449,25 +443,25 @@ async function sceneSearch(s) {
   await s.park()
 
   await s.begin('search')
-  await sleep(800)
-  s.key('Ctrl + K', 1200)
+  await sleep(450)
+  s.key('Ctrl + K', 800)
   s.mark('search')
-  await sleep(350)
+  await sleep(300)
   await page.keyboard.press('Control+k')
   await page.getByTestId('command-input').waitFor()
-  await sleep(700)
+  await sleep(400)
   s.mark('typing')
   for (const letter of 'test') {
     await page.keyboard.insertText(letter)
-    await sleep(190)
+    await sleep(120)
   }
-  await sleep(1500)
-  s.key('Enter', 900)
-  await sleep(300)
+  await sleep(900)
+  s.key('Enter', 600)
+  await sleep(220)
   await page.keyboard.press('Enter')
   s.mark('open-result')
   await s.blur()
-  await sleep(2900)
+  await sleep(1900)
   await s.end()
 }
 
@@ -481,28 +475,34 @@ async function sceneView(s) {
   await page.getByTestId('tab-websites').click()
   await sleep(500)
   await s.park()
-  // The pointer waits on the desktop, level with the window row: on its way to the button it
-  // crosses the search field and nothing else.
+  // The pointer waits at the end of the search field, a step from the button: nothing else lights
+  // up on its way, and the caption at the left of the picture stays clear.
   const panel = await s.bounds('panel')
-  s.cursor = { x: panel.x - 70, y: panel.y + 24 }
+  const search = await page.getByTestId('open-command').boundingBox()
+  const wait = {
+    x: Math.round(search.x + search.width - 14),
+    y: Math.round(search.y + search.height * 0.6),
+  }
+  s.cursor = { x: panel.x + wait.x, y: panel.y + wait.y }
+  await page.mouse.move(wait.x, wait.y)
 
   await s.begin('view')
-  await sleep(1700)
+  await sleep(900)
   await s.click(page.getByTestId('toggle-view-mode'), { mark: 'grid' })
-  await sleep(2300)
+  await sleep(1300)
   // Between the name of the tile and its right end, where its two small buttons come up.
   await s.click(page.getByTestId('folder-widget-g-docs'), {
     mark: 'group',
     at: [0.6, 0.56],
   })
   // The pointer goes on to one of the entries of the group, as a hand would.
-  await sleep(800)
+  await sleep(500)
   await s.point(page.getByTestId('grid-item-s-wiki'), { at: [0.5, 0.7] })
-  await sleep(1500)
-  await s.click(page.locator('.widget-popup-close'), { mark: 'close' })
   await sleep(900)
+  await s.click(page.locator('.widget-popup-close'), { mark: 'close' })
+  await sleep(450)
   await s.click(page.getByTestId('toggle-view-mode'), { mark: 'list' })
-  await sleep(2500)
+  await sleep(1500)
   await s.end()
 }
 
@@ -515,10 +515,10 @@ async function sceneBall(s) {
   await s.park()
 
   await s.begin('ball')
-  await sleep(1000)
+  await sleep(500)
   await s.click(page.getByTestId('dock-panel'), { mark: 'collapse' })
   await s.untilPanel(false)
-  await sleep(3900)
+  await sleep(2300)
 
   // A double click on the ball opens the panel to stay. The pointer stops with its tip just off
   // the middle of the ball, so that the ball is not hidden under it. The panel is brought up the
@@ -530,15 +530,15 @@ async function sceneBall(s) {
     y: Math.round(dock.y + dock.height / 2) + 7,
   }
   await s.glide(onBall, bubble, dock)
-  await sleep(600)
+  await sleep(350)
   s.mark('expand')
-  s.key('Double-click', 1000)
+  s.key('Double-click', 700)
   s.scene.clicks.push({ t: s.now(), ...onBall })
-  await sleep(170)
+  await sleep(150)
   s.scene.clicks.push({ t: s.now(), ...onBall })
   await s.summon()
   await s.untilPanel(true)
-  await sleep(1700)
+  await sleep(900)
 
   // Dragging the panel by its title bar takes the ball along. Windows moves a window itself while
   // it is dragged; here the same steps are reported to the app one by one.
@@ -547,12 +547,15 @@ async function sceneBall(s) {
   const grip = { x: panel.x + hold.x, y: panel.y + hold.y }
   await s.glide(grip, page, panel)
   // The camera pulls back to the whole screen before the drag begins.
-  await sleep(1300)
+  await sleep(650)
   s.mark('drag')
-  s.key('Drag', 1500)
+  s.key('Drag', 1000)
   await s.deaf(true)
+  // The pointer has been holding the title bar since it got there: written down once more, so
+  // that it does not start to drift towards the first step before the panel moves.
+  s.note(grip)
   const travel = { x: -520, y: 70 }
-  const steps = 44
+  const steps = 30
   for (let step = 1; step <= steps; step += 1) {
     const eased = 1 - (1 - step / steps) ** 2
     const dx = Math.round(travel.x * eased)
@@ -569,7 +572,7 @@ async function sceneBall(s) {
     )
     await page.mouse.move(hold.x, hold.y)
     s.note({ x: grip.x + dx, y: grip.y + dy })
-    await sleep(22)
+    await sleep(18)
   }
   await app.evaluate(({ BrowserWindow }) => {
     BrowserWindow.getAllWindows()
@@ -581,12 +584,12 @@ async function sceneBall(s) {
   await page.mouse.move(hold.x, hold.y + 1)
   await page.mouse.move(hold.x, hold.y)
   s.mark('drag-end')
-  await sleep(1000)
+  await sleep(600)
 
   // Collapsed where it was left: the ball stays there, and the desktop is empty again.
   await s.click(page.getByTestId('dock-panel'), { mark: 'collapse-again' })
   await s.untilPanel(false)
-  await sleep(2000)
+  await sleep(1400)
   await s.end()
 }
 

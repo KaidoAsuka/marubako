@@ -7,19 +7,23 @@
   const { fileManager, browser, terminal } = window.stageWindows
 
   // Camera positions: the centre of the view in the coordinates of the screen, and how close it is.
+  // The pictures of the app are taken at twice their size and the film is drawn at one and a half:
+  // up to 1.33 the camera shows them pixel for pixel, so the close shots stay near that.
   const SHOT = {
-    // The whole screen, with a little of the room around it.
-    screen: { cx: 720, cy: 450, s: 0.58 },
-    // The right edge with the ball, before anything is open.
-    edge: { cx: 1180, cy: 450, s: 1.25 },
-    // The panel and the ball beside it.
-    panel: { cx: 1010, cy: 450, s: 0.9 },
+    // The whole screen, with a little of the room around it. At this scale the edges of the screen
+    // fall on whole pixels of the film: on a fraction they shimmer from picture to picture.
+    screen: { cx: 720, cy: 445, s: 0.6 },
+    // The part of the screen the panel is dragged across, as close as it fits.
+    drag: { cx: 861, cy: 485, s: 0.76 },
     // Close on the ball, the edge of the screen beside it.
-    ball: { cx: 1291, cy: 450, s: 1.5 },
+    ball: { cx: 1230, cy: 450, s: 1.5 },
+    // Close on the panel, from its title bar down three quarters of it, the ball beside it. The
+    // panel stands at the right of the view: the left is free for the caption and the keys.
+    panel: { cx: 1073, cy: 375, s: 1.2 },
   }
 
   const FOLDER_WINDOW = { x: 110, y: 150, w: 760, h: 470 }
-  const FOLDER_SHOT = { cx: 490, cy: 385, s: 1.05 }
+  const FOLDER_SHOT = { cx: 490, cy: 385, s: 1.1 }
 
   /** A film is a list of camera positions in time; `to` holds the last one until `start`, then moves. */
   function film(first) {
@@ -27,7 +31,7 @@
     let last = first
     return {
       shots,
-      to(start, view, time = 800) {
+      to(start, view, time = 550) {
         shots.push({ t: start, ...last }, { t: start + time, ...view })
         last = view
         return this
@@ -125,9 +129,9 @@
       const site = marks['open-site']
       const files = fileManager({
         ...FOLDER_WINDOW,
-        open: folder + 250,
+        open: folder + 200,
         // It is put away as the camera goes back to the panel.
-        close: back - 650,
+        close: back - 450,
         name: 'detailed-design',
         crumbs: [
           'This PC',
@@ -143,7 +147,7 @@
         y: 130,
         w: 800,
         h: 500,
-        open: site + 250,
+        open: site + 200,
         title: 'Sign in · Acme Portal',
         address: 'test-admin.example.com/login',
       })
@@ -151,14 +155,14 @@
         duration: end,
         windows: [files, page],
         captions: [
-          { text: 'One shortcut. One click.', from: 300, to: folder + 900 },
+          { text: 'One shortcut. One click.', from: 250, to: folder + 500 },
         ],
-        camera: film(SHOT.edge)
-          .to(marks.summon + 350, SHOT.panel)
+        camera: film(SHOT.ball)
+          .to(marks.summon + 300, SHOT.panel)
           // Straight from the entry that was clicked to the folder it opened.
-          .to(folder + 200, FOLDER_SHOT, 900)
-          .to(back - 850, SHOT.panel)
-          .to(site + 200, { cx: 490, cy: 380, s: 1.05 }, 900).shots,
+          .to(folder + 150, FOLDER_SHOT, 600)
+          .to(back - 550, SHOT.panel, 500)
+          .to(site + 150, { cx: 490, cy: 380, s: 1.05 }, 600).shots,
       }
     },
 
@@ -177,15 +181,15 @@
         h: 450,
         open: -1000,
         // Signed in: the browser has done its part.
-        close: passEnd - 700,
+        close: passEnd - 450,
         title: 'Sign in · Acme Portal',
         address: 'test-admin.example.com/login',
         paste: {
-          userFocus: user + 1150,
-          user: user + 1550,
-          passFocus: pass + 1150,
-          pass: pass + 1550,
-          signIn: pass + 2450,
+          userFocus: user + 800,
+          user: user + 1100,
+          passFocus: pass + 800,
+          pass: pass + 1100,
+          signIn: pass + 1750,
         },
       })
       const shellWindow = { x: 330, y: 500, w: 560, h: 270 }
@@ -193,8 +197,8 @@
         ...shellWindow,
         open: -1000,
         command: 'kubectl logs -f deploy/backend -n test --tail=200',
-        paste: command + 1550,
-        run: command + 2300,
+        paste: command + 1100,
+        run: command + 1600,
         lines: LOG_LINES,
       })
       // The pointer goes to the free end of each field, clear of what is pasted into it.
@@ -203,64 +207,63 @@
       const button = spot(page, 'button', { x: 70, y: 5 })
       const prompt = { x: shellWindow.x + 420, y: shellWindow.y + 215 }
       const card = clickAt('copy-user')
-      const cardShot = { cx: card.x - 60, cy: card.y + 40, s: 1.2 }
-      const formShot = { cx: 480, cy: 300, s: 1.2 }
-      const bothShot = { cx: 883, cy: 470, s: 0.76 }
+      const cardShot = { cx: 1068, cy: card.y + 30, s: 1.3 }
+      const formShot = { cx: 480, cy: 290, s: 1.3 }
       return {
         duration: end,
         windows: [page, shell],
         captions: [
-          { text: 'Copy here, paste there.', from: 300, to: user + 2300 },
+          { text: 'Copy here, paste there.', from: 250, to: user + 1900 },
         ],
         // The windows step back while the camera is close on the panel.
         dimmed: [
-          [1100, user + 300],
-          [userEnd - 700, pass + 300],
+          [700, user + 250],
+          [userEnd - 450, pass + 250],
         ],
         pointer: [
           {
-            start: user + 300,
+            start: user + 200,
             end: userEnd,
             stops: [
-              { at: user + 1100, ...userField },
-              { at: userEnd - 60, back: true, travel: 620 },
+              { at: user + 750, ...userField },
+              { at: userEnd - 60, back: true, travel: 420 },
             ],
           },
           {
-            start: pass + 300,
+            start: pass + 200,
             end: passEnd,
             stops: [
-              { at: pass + 1100, ...passField },
-              { at: pass + 2400, ...button, travel: 460 },
-              { at: passEnd - 60, back: true, travel: 620 },
+              { at: pass + 750, ...passField },
+              { at: pass + 1700, ...button, travel: 360 },
+              { at: passEnd - 60, back: true, travel: 420 },
             ],
           },
           {
-            start: command + 300,
+            start: command + 200,
             end,
-            stops: [{ at: command + 1100, ...prompt }],
+            stops: [{ at: command + 750, ...prompt }],
           },
         ],
         clicks: [
-          { t: user + 1150, ...userField },
-          { t: pass + 1150, ...passField },
-          { t: pass + 2450, ...button },
-          { t: command + 1150, ...prompt },
+          { t: user + 800, ...userField },
+          { t: pass + 800, ...passField },
+          { t: pass + 1750, ...button },
+          { t: command + 800, ...prompt },
         ],
         keys: [
-          { t: user + 1400, text: 'Ctrl + V', duration: 800 },
-          { t: pass + 1400, text: 'Ctrl + V', duration: 800 },
-          { t: command + 1400, text: 'Ctrl + V', duration: 700 },
-          { t: command + 2200, text: 'Enter', duration: 700 },
+          { t: user + 1000, text: 'Ctrl + V', duration: 800 },
+          { t: pass + 1000, text: 'Ctrl + V', duration: 700 },
+          { t: command + 1000, text: 'Ctrl + V', duration: 500 },
+          { t: command + 1500, text: 'Enter', duration: 600 },
         ],
+        // The whole desk for a moment, then always close on what is being done.
         camera: film({ cx: 758, cy: 410, s: 0.63 })
-          .to(1000, cardShot)
-          .to(user + 250, formShot)
-          .to(userEnd - 850, cardShot, 750)
-          .to(pass + 250, formShot)
-          // The panel and the terminal together, for the command.
-          .to(passEnd - 850, bothShot, 750)
-          .to(command + 250, { cx: 610, cy: 630, s: 1.3 }).shots,
+          .to(450, cardShot)
+          .to(user + 200, formShot)
+          .to(userEnd - 550, cardShot, 500)
+          .to(pass + 200, formShot)
+          .to(passEnd - 550, SHOT.panel, 500)
+          .to(command + 200, { cx: 610, cy: 632, s: 1.3 }).shots,
       }
     },
 
@@ -269,7 +272,7 @@
       const result = marks['open-result']
       const files = fileManager({
         ...FOLDER_WINDOW,
-        open: result + 250,
+        open: result + 200,
         name: 'test-evidence',
         crumbs: ['This PC', 'Data (D:)', 'acme-portal', 'test-evidence'],
         files: EVIDENCE_FILES,
@@ -278,11 +281,12 @@
         duration: end,
         windows: [files],
         captions: [
-          { text: 'Find anything.', from: 300, to: marks.typing + 1300 },
+          { text: 'Find anything.', from: 250, to: marks.typing + 900 },
         ],
         camera: film(SHOT.panel)
-          .to(marks.search + 150, { cx: 1160, cy: 350, s: 1.25 }, 750)
-          .to(result + 200, FOLDER_SHOT, 900).shots,
+          // In on the search as it opens.
+          .to(marks.search + 250, { cx: 1100, cy: 335, s: 1.45 }, 500)
+          .to(result + 150, FOLDER_SHOT, 600).shots,
       }
     },
 
@@ -294,23 +298,19 @@
         captions: [
           {
             text: 'List or grid. One click.',
-            from: 300,
-            to: marks.group - 500,
+            from: 250,
+            to: marks.group - 350,
           },
           {
             text: 'A tile opens its group.',
-            from: marks.group + 300,
-            to: marks.close + 300,
+            from: marks.group + 250,
+            to: marks.close + 250,
           },
         ],
         camera: film(SHOT.panel)
-          // In on the top of the panel for the button, and for the tiles it brings. The camera
-          // moves with the pointer, not before it: a pointer at rest would drift into the caption.
-          .to(marks.grid - 850, { cx: 1075, cy: 350, s: 1.25 }, 700)
-          // Down with the group that opens.
-          .to(marks.group + 100, { cx: 1075, cy: 450, s: 1.15 })
-          // The whole panel again, to see the list come back.
-          .to(marks.close + 150, SHOT.panel, 900).shots,
+          // In on the group that opens, and out again for the list to come back.
+          .to(marks.group + 100, { cx: 1068, cy: 440, s: 1.3 }, 500)
+          .to(marks.close + 100, SHOT.panel, 500).shots,
       }
     },
 
@@ -322,27 +322,27 @@
         captions: [
           {
             text: 'Out of the way until you need it.',
-            from: marks.collapse + 900,
-            to: marks.expand - 400,
+            from: marks.collapse + 500,
+            to: marks.expand - 300,
           },
           {
             text: 'Drag it anywhere. The bubble follows.',
-            from: marks.drag - 300,
-            to: marks['drag-end'] + 900,
+            from: marks.drag - 250,
+            to: marks['collapse-again'] - 50,
           },
           {
             text: 'Out of the way until you need it.',
-            from: marks['collapse-again'] + 700,
+            from: marks['collapse-again'] + 450,
             to: end + 5000,
           },
         ],
         camera: film(SHOT.panel)
           // The panel is seen going into the ball; then the empty desktop.
-          .to(marks.collapse + 1000, SHOT.screen, 900)
-          .to(marks.expand - 1700, SHOT.ball)
-          .to(marks.expand - 150, SHOT.panel)
-          // The whole screen, and the camera still, for the drag.
-          .to(marks.drag - 1100, SHOT.screen, 800).shots,
+          .to(marks.collapse + 450, SHOT.screen, 600)
+          .to(marks.expand - 1150, SHOT.ball)
+          .to(marks.expand - 100, SHOT.panel, 500)
+          // Back far enough for the whole drag, and the camera still while it lasts.
+          .to(marks.drag - 750, SHOT.drag, 600).shots,
       }
     },
   }

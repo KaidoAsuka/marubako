@@ -1,5 +1,5 @@
 /* The stage of the README demos: a desktop that is drawn, the real app's windows on it as pictures,
-   and a camera. Flat colours on purpose: a GIF has 256 of them. */
+   and a camera. */
 * {
   box-sizing: border-box;
 }
@@ -9,7 +9,6 @@ body {
   background: #10131a;
   overflow: hidden;
   font-family: 'Segoe UI', system-ui, sans-serif;
-  -webkit-font-smoothing: antialiased;
 }
 #viewport {
   position: relative;
@@ -25,8 +24,9 @@ body {
   width: 1728px;
   height: 1080px;
   background: #10131a;
+  /* No `will-change` here: with it the world would be drawn once and then stretched, and every
+     close shot would be blurred. The film is taken picture by picture; nothing has to be fast. */
   transform-origin: 0 0;
-  will-change: transform;
 }
 /* The screen: everything on the desktop is placed in its coordinates (stage.js knows the margin). */
 #screen {
