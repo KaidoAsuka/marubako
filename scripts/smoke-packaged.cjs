@@ -1,8 +1,7 @@
 const fs = require('node:fs/promises')
 const os = require('node:os')
 const path = require('node:path')
-const { spawn, execFile } = require('node:child_process')
-const { promisify } = require('node:util')
+const { spawn } = require('node:child_process')
 const { _electron: electron, expect } = require('@playwright/test')
 const { version } = require('../package.json')
 
@@ -17,7 +16,12 @@ async function main() {
   const safeTempRoot = path.resolve(os.tmpdir()) + path.sep
   if (!path.resolve(userDataDir).startsWith(safeTempRoot))
     throw new Error('Unexpected test data path')
-  const env = { ...process.env, QUICKLAUNCH_USER_DATA: userDataDir }
+  // The first start follows the language of the computer; the checks below read the Chinese interface.
+  const env = {
+    ...process.env,
+    QUICKLAUNCH_USER_DATA: userDataDir,
+    QUICKLAUNCH_LOCALE: 'zh-CN',
+  }
   delete env.QUICKLAUNCH_E2E
   delete env.ELECTRON_RUN_AS_NODE
   let app
@@ -187,46 +191,8 @@ async function main() {
     const bubble = app.windows().find((window) => window !== page)
     await expect(bubble.getByTestId('dock-bubble')).toBeVisible()
     await bubble.screenshot({ path: 'artifacts/packaged-bubble.png' })
-    const drag = await app.evaluate(({ BrowserWindow, screen }) => {
-      const bounds = BrowserWindow.getAllWindows()
-        .find((window) => !window.isResizable())
-        .getBounds()
-      return {
-        bounds,
-        start: screen.dipToScreenPoint({ x: bounds.x + 28, y: bounds.y + 28 }),
-        end: screen.dipToScreenPoint({ x: bounds.x + 88, y: bounds.y + 58 }),
-      }
-    })
-    await promisify(execFile)(
-      'powershell.exe',
-      [
-        '-NoProfile',
-        '-NonInteractive',
-        '-ExecutionPolicy',
-        'Bypass',
-        '-File',
-        path.resolve('e2e/native-mouse.ps1'),
-        '-StartX',
-        String(drag.start.x),
-        '-StartY',
-        String(drag.start.y),
-        '-EndX',
-        String(drag.end.x),
-        '-EndY',
-        String(drag.end.y),
-      ],
-      { windowsHide: true }
-    )
-    await expect
-      .poll(() =>
-        app.evaluate(
-          ({ BrowserWindow }) =>
-            BrowserWindow.getAllWindows()
-              .find((window) => !window.isResizable())
-              .getBounds().x
-        )
-      )
-      .toBe(drag.bounds.x + 60)
+    // Dragging the ball with the real mouse is covered by the e2e suite; the real cursor is not
+    // reliable enough for a smoke test that also runs on a build server.
     await bubble.getByTestId('dock-bubble').dblclick()
     await expect
       .poll(() =>
@@ -275,7 +241,6 @@ async function main() {
           closeToTray: true,
           ballStays: true,
           panelPinning: true,
-          nativeBubbleDragging: true,
           duplicateLaunch: 'reused existing window',
           recallCollapsedWindow: true,
           compactWindow:

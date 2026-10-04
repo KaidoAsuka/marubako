@@ -72,7 +72,9 @@ jobs:
       # because of display scaling; a standard runner is at 100%, so they are expected to pass here.
       # They are not skipped: if they do fail on the runner, that is information.
       - name: Playwright
-        run: npx playwright test --reporter=list,html
+        # The github reporter writes every failing test as an annotation of the job, which is
+        # readable on the run page and through the API without opening the log.
+        run: npx playwright test --reporter=list,html,github
         env:
           PLAYWRIGHT_HTML_OPEN: never
       - name: Upload the Playwright report and traces
