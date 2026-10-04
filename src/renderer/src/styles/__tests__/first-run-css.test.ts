@@ -9,6 +9,10 @@ import { lastValue, loadCascade, readStyle } from './css-utils'
 
 const cascade = loadCascade()
 
+// The font the user chose (--font-user, set on the root element by App.tsx) stands in front of both
+// stacks; 'Segoe UI' takes its place while none is chosen.
+const USER_FONT = "var(--font-user, 'Segoe UI')"
+
 describe('the Japanese font stack', () => {
   it('puts the Japanese UI fonts before anything that would draw the kanji in Chinese forms', () => {
     const stack = lastValue(cascade, ':root:lang(ja)', '--sans') ?? ''
@@ -16,14 +20,35 @@ describe('the Japanese font stack', () => {
     expect(stack).toContain("'Yu Gothic UI'")
     expect(stack).toContain("'Meiryo UI'")
     expect(stack).not.toContain('YaHei')
-    // Latin text keeps the interface font.
-    expect(stack.startsWith("'Segoe UI'")).toBe(true)
+    // Only the user's own choice comes before them. After it Latin text keeps the interface font,
+    // and what the chosen font has no glyph for falls to the Japanese fonts, not to a Chinese one.
+    expect(stack).toBe(
+      `${USER_FONT}, 'Segoe UI', 'Yu Gothic UI', 'Meiryo UI', system-ui, sans-serif`
+    )
   })
 
-  it('beats the plain :root rule, and leaves the Chinese and English stack as it was', () => {
+  it('beats the plain :root rule, and leaves the Chinese and English stack as it was behind the font of the user', () => {
     expect(lastValue(cascade, ':root', '--sans')).toBe(
-      "'Segoe UI', 'Microsoft YaHei UI', system-ui, sans-serif"
+      `${USER_FONT}, 'Segoe UI', 'Microsoft YaHei UI', system-ui, sans-serif`
     )
+  })
+})
+
+describe('the font the user chose', () => {
+  it.each([':root', ':root:lang(ja)'])(
+    'is the first family of %s, with the interface font in its place when there is none',
+    (selector) => {
+      const stack = lastValue(cascade, selector, '--sans') ?? ''
+
+      expect(stack.startsWith(`${USER_FONT}, `)).toBe(true)
+      // Once, and nowhere else: a second mention would put it behind the fonts of the language.
+      expect(stack.split('--font-user')).toHaveLength(2)
+    }
+  )
+
+  it('is not given a value by any stylesheet: only the setting sets it', () => {
+    for (const rule of cascade)
+      expect(rule.body, rule.selector).not.toMatch(/--font-user\s*:/)
   })
 })
 

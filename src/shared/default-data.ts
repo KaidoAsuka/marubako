@@ -1,4 +1,5 @@
 import { DEFAULT_SHORTCUT } from './accelerator'
+import { DOCK_BALL_SIZE } from './dock-size'
 import { DEFAULT_PEEK_COLLAPSE_DELAY, DEFAULT_STARTUP_TAB } from './types'
 import type {
   AppData,
@@ -45,6 +46,8 @@ function starterPrefs(lang: Lang): Prefs {
     shortcutEnabled: true,
     hideAfterLaunch: false,
     showBubble: true,
+    ballSize: DOCK_BALL_SIZE,
+    fontFamily: '',
   }
 }
 

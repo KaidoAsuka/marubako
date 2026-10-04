@@ -1,7 +1,7 @@
 // Starts the portable copy, the way someone who downloaded the zip would: unpacks
 // release/<version>/Marubako-<version>-portable.zip into a temporary folder, runs the program in it
 // and checks that it really is a portable copy (its data is in the folder beside it, it does not
-// ask for updates, and it looks after the key of another PC).
+// update itself, and it looks after the key of another PC).
 //
 //   npm run dist
 //   node scripts/smoke-portable.cjs
@@ -96,11 +96,13 @@ async function main() {
       .poll(() => exists(path.join(dataDir, 'logs', 'main.log')))
       .toBe(true)
 
-    // It does not update itself, and says so when asked.
+    // It does not update itself. Asked for updates, it only finds out which version is the newest
+    // (or fails to, without a network): it never downloads one, as the installed copy would.
     const update = await page.evaluate(() =>
       globalThis.quickLaunch.checkForUpdates()
     )
-    expect(update).toEqual({ ok: true, data: { status: 'disabled' } })
+    expect(update.ok).toBe(true)
+    expect(['latest', 'available', 'error']).toContain(update.data.status)
 
     // The folder can be carried to another PC and back. Chromium replaces a key it cannot decrypt,
     // so the program has to take the key of the other PC out of its way, keep it, and bring the

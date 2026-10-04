@@ -226,11 +226,29 @@ describe('useAppStore', () => {
     await useAppStore.getState().exportData({ successMessage: 'Exported' })
 
     expect(window.quickLaunch.exportData).toHaveBeenCalledTimes(1)
+    // The backup that can be imported again, unless another format is asked for.
     expect(window.quickLaunch.exportData).toHaveBeenCalledWith(
-      useAppStore.getState().data
+      useAppStore.getState().data,
+      'json'
     )
     expect(useAppStore.getState().toast).toEqual({
       message: 'Exported',
+      tone: 'success',
+    })
+  })
+
+  it('asks for the list for reading when the export is to be Markdown', async () => {
+    await useAppStore
+      .getState()
+      .exportData({ format: 'markdown', successMessage: 'List exported' })
+
+    expect(window.quickLaunch.exportData).toHaveBeenCalledTimes(1)
+    expect(window.quickLaunch.exportData).toHaveBeenCalledWith(
+      useAppStore.getState().data,
+      'markdown'
+    )
+    expect(useAppStore.getState().toast).toEqual({
+      message: 'List exported',
       tone: 'success',
     })
   })

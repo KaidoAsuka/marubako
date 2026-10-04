@@ -90,6 +90,8 @@ export interface WindowPresentation {
   /** Multiplier for the animation durations; 1 matches the default motion preference. */
   timeScale: number
   stationary?: boolean
+  /** Side of the ball's window, for the panel to find the ball's centre; the default when absent. */
+  dockSize?: number
 }
 
 /**
@@ -131,12 +133,21 @@ export interface Prefs {
    * shortcut and "close to tray" all leave it on screen. Off sends all of those to the tray.
    */
   showBubble: boolean
+  /** Side of the floating ball as drawn, in pixels (shared/dock-size.ts has the range). */
+  ballSize: number
+  /**
+   * The font of the interface, as the family name of a font installed on this PC. Empty: the
+   * fonts the language comes with (shared/font-family.ts).
+   */
+  fontFamily: string
 }
 
 /** All the ball's window is told about the user's data: how to dress itself. */
 export interface DockAppearance {
   lang: Lang
   theme: Theme
+  /** Side of the ball as drawn, in pixels; the default when the main process did not say. */
+  ballSize?: number
 }
 
 export interface LaunchSettings {
@@ -312,6 +323,11 @@ export type StartupNotice =
       kind: 'passwordsLost'
       count: number
     }
+  | {
+      /** A portable copy found a newer version. It does not update itself: the user downloads it. */
+      kind: 'updateAvailable'
+      version: string
+    }
 
 export type StartupNoticeKind = StartupNotice['kind']
 
@@ -320,6 +336,10 @@ export interface DataStatus {
   writeError: string | null
   notices: StartupNotice[]
 }
+
+/** What an export writes: the backup that can be imported again, or the list for reading. */
+export const EXPORT_FORMATS = ['json', 'markdown'] as const
+export type ExportFormat = (typeof EXPORT_FORMATS)[number]
 
 export type ExportDataResult =
   | {
@@ -374,6 +394,10 @@ export type ClassifiedPath =
 /** What the settings dialog shows about the program itself. */
 export interface AppInfo {
   version: string
+  /** The folder the data file, its backups and the log are in; absent when not told. */
+  dataFolder?: string
+  /** Whether this is a portable copy (data beside the program, no updates of its own). */
+  portable?: boolean
 }
 
 /**
@@ -383,6 +407,7 @@ export interface AppInfo {
  *  - latest: this is the newest version; `version` is the running one
  *  - downloading: a newer version was found and is being downloaded
  *  - ready: a newer version is downloaded and is installed when the program quits
+ *  - available: a portable copy found a newer version; it is for the user to download
  *  - error: the check (or an earlier download) failed, typically offline
  */
 export type UpdateCheckResult =
@@ -390,6 +415,7 @@ export type UpdateCheckResult =
   | { status: 'latest'; version: string }
   | { status: 'downloading'; version: string }
   | { status: 'ready'; version: string }
+  | { status: 'available'; version: string }
   | { status: 'error' }
 
 export type QuickLaunchResult<T> =

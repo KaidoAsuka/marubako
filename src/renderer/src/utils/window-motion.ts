@@ -2,8 +2,6 @@ import { DOCK_SIZE } from '../../../shared/dock-size'
 import type { DockPosition } from '../../../shared/types'
 import type { SpringOptions } from './spring'
 
-/** Half of the native ball window: the ball's centre relative to its corner. */
-const BALL_CENTER = DOCK_SIZE / 2
 /** How far the far edge of the panel travels while it scales in, in pixels. */
 const EXPAND_TRAVEL = 48
 /** How far the far edge travels while it scales out. */
@@ -32,17 +30,18 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 /**
- * `origin` is the ball window's top-left corner in the panel window's coordinates.
- * The scales are chosen so the farthest panel edge always travels the same
- * number of pixels, whatever the panel size.
+ * `origin` is the ball window's top-left corner in the panel window's coordinates, and `dockSize`
+ * the side of that window: the ball's centre is in its middle. The scales are chosen so the
+ * farthest panel edge always travels the same number of pixels, whatever the panel size.
  */
 export function panelGeometry(
   origin: DockPosition,
   width: number,
-  height: number
+  height: number,
+  dockSize = DOCK_SIZE
 ): PanelGeometry {
-  const x = origin.x + BALL_CENTER
-  const y = origin.y + BALL_CENTER
+  const x = origin.x + dockSize / 2
+  const y = origin.y + dockSize / 2
   const reach = Math.max(
     Math.abs(x),
     Math.abs(width - x),

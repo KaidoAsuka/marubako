@@ -117,7 +117,12 @@ export function useWindowPresentation(): void {
           }
           clearBody()
           if (panel) {
-            geometry = panelGeometry(origin, innerWidth, innerHeight)
+            geometry = panelGeometry(
+              origin,
+              innerWidth,
+              innerHeight,
+              presentation.dockSize
+            )
             if (document.activeElement instanceof HTMLButtonElement)
               document.activeElement.blur()
             Object.assign(surfaceRoot.style, {

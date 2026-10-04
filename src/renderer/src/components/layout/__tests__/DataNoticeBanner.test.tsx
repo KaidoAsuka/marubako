@@ -10,6 +10,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createDefaultAppData } from '../../../../../shared/default-data'
 import type { DataStatus, Lang } from '../../../../../shared/types'
+import { extraStrings } from '../../../i18n/extras'
+import { workspaceStrings } from '../../../i18n/workspace'
 import { useAppStore } from '../../../store/use-app-store'
 import DataNoticeBanner from '../DataNoticeBanner'
 
@@ -345,4 +347,265 @@ describe('DataNoticeBanner', () => {
     )
     expect(screen.getByRole('button', { name: '知道了' })).toBeInTheDocument()
   })
+})
+
+// A portable copy does not update itself. When it finds a newer version it says so here, once per
+// version: what was dismissed is remembered in the storage of the window, across restarts.
+describe('the notice of a newer version in a portable copy', () => {
+  const DISMISSED_KEY = 'update-notice-dismissed'
+
+  const update = (version: string): DataStatus => ({
+    writeError: null,
+    notices: [{ kind: 'updateAvailable', version }],
+  })
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    localStorage.removeItem(DISMISSED_KEY)
+    setStatus(emptyStatus)
+  })
+
+  afterEach(async () => {
+    // Let the busy flag of the last click settle inside act().
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+    cleanup()
+    vi.restoreAllMocks()
+    localStorage.removeItem(DISMISSED_KEY)
+  })
+
+  it('names the version and says what to do, with a button for the download page and one to dismiss', () => {
+    setStatus(update('3.2.0'))
+    render(<DataNoticeBanner />)
+
+    const notice = screen.getByTestId('data-notice-update')
+    expect(notice).toHaveAttribute('role', 'status')
+    expect(notice).toHaveTextContent(
+      'Version 3.2.0 is available. The portable copy does not update itself: download the new zip and unpack it over this folder. Your data stays.'
+    )
+    expect(notice).not.toHaveTextContent('{version}')
+    expect(screen.getByTestId('data-notice-open-download')).toHaveTextContent(
+      'Open the download page'
+    )
+    expect(
+      screen.getByTestId('data-notice-dismiss-updateAvailable')
+    ).toHaveTextContent('Dismiss')
+    expect(notice).toContainElement(
+      screen.getByTestId('data-notice-open-download')
+    )
+    expect(notice).toContainElement(
+      screen.getByTestId('data-notice-dismiss-updateAvailable')
+    )
+  })
+
+  it('is news, not a warning: nothing is wrong with the data', () => {
+    setStatus(update('3.2.0'))
+    render(<DataNoticeBanner />)
+
+    const notice = screen.getByTestId('data-notice-update')
+    expect(notice).toHaveClass('data-notice-info')
+    expect(notice).not.toHaveClass('data-notice-danger')
+    expect(notice).not.toHaveClass('data-notice-warning')
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('opens the download page through the main process, and stays until it is dismissed', async () => {
+    setStatus(update('3.2.0'))
+    render(<DataNoticeBanner />)
+
+    fireEvent.click(screen.getByTestId('data-notice-open-download'))
+
+    await waitFor(() =>
+      expect(window.quickLaunch.openReleasesPage).toHaveBeenCalledTimes(1)
+    )
+    // The window passes no address: the main process knows the one page it may open.
+    expect(
+      vi.mocked(window.quickLaunch.openReleasesPage).mock.calls[0]
+    ).toEqual([])
+    expect(window.quickLaunch.openUrl).not.toHaveBeenCalled()
+    expect(screen.getByTestId('data-notice-update')).toBeInTheDocument()
+    expect(localStorage.getItem(DISMISSED_KEY)).toBeNull()
+    expect(window.quickLaunch.dismissDataNotice).not.toHaveBeenCalled()
+  })
+
+  it('shows a toast when the download page cannot be opened', async () => {
+    vi.mocked(window.quickLaunch.openReleasesPage).mockResolvedValueOnce({
+      ok: false,
+      error: 'no browser',
+    })
+    setStatus(update('3.2.0'))
+    render(<DataNoticeBanner />)
+
+    fireEvent.click(screen.getByTestId('data-notice-open-download'))
+
+    await waitFor(() =>
+      expect(useAppStore.getState().toast).toMatchObject({
+        message: 'no browser',
+        tone: 'danger',
+      })
+    )
+  })
+
+  it('remembers the dismissed version, tells the main process and goes away', async () => {
+    setStatus(update('3.2.0'))
+    render(<DataNoticeBanner />)
+
+    fireEvent.click(screen.getByTestId('data-notice-dismiss-updateAvailable'))
+
+    expect(localStorage.getItem(DISMISSED_KEY)).toBe('3.2.0')
+    await waitFor(() =>
+      expect(window.quickLaunch.dismissDataNotice).toHaveBeenCalledWith(
+        'updateAvailable'
+      )
+    )
+    expect(window.quickLaunch.dismissDataNotice).toHaveBeenCalledTimes(1)
+    await waitFor(() =>
+      expect(screen.queryByTestId('data-notice-update')).toBeNull()
+    )
+  })
+
+  it('is gone at once, also when the main process could not take it off its list', async () => {
+    vi.mocked(window.quickLaunch.dismissDataNotice).mockResolvedValueOnce({
+      ok: false,
+      error: 'Invalid data request',
+    })
+    setStatus(update('3.2.0'))
+    render(<DataNoticeBanner />)
+
+    fireEvent.click(screen.getByTestId('data-notice-dismiss-updateAvailable'))
+
+    // The status still lists the notice; the window knows that this version was dismissed.
+    expect(screen.queryByTestId('data-notice-update')).toBeNull()
+    await waitFor(() =>
+      expect(window.quickLaunch.dismissDataNotice).toHaveBeenCalledTimes(1)
+    )
+    expect(useAppStore.getState().dataStatus.notices).toHaveLength(1)
+    expect(screen.queryByTestId('data-notice-update')).toBeNull()
+  })
+
+  it('does not come back for the same version after a restart, or with the next check', () => {
+    localStorage.setItem(DISMISSED_KEY, '3.2.0')
+    setStatus(update('3.2.0'))
+
+    const { container } = render(<DataNoticeBanner />)
+
+    expect(container).toBeEmptyDOMElement()
+
+    // The check of the next day finds the same version again.
+    act(() => setStatus(update('3.2.0')))
+    expect(container).toBeEmptyDOMElement()
+  })
+
+  it('comes back for a later version', () => {
+    localStorage.setItem(DISMISSED_KEY, '3.2.0')
+    setStatus(update('3.3.0'))
+
+    render(<DataNoticeBanner />)
+
+    expect(screen.getByTestId('data-notice-update')).toHaveTextContent(
+      'Version 3.3.0 is available.'
+    )
+  })
+
+  it('comes back for a later version found while the window stays open', async () => {
+    setStatus(update('3.2.0'))
+    render(<DataNoticeBanner />)
+    // The click, and the answer of the main process to it, inside act().
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('data-notice-dismiss-updateAvailable'))
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+    expect(screen.queryByTestId('data-notice-update')).toBeNull()
+
+    act(() => setStatus(update('3.3.0')))
+
+    expect(screen.getByTestId('data-notice-update')).toHaveTextContent(
+      'Version 3.3.0 is available.'
+    )
+    // Dismissing that one replaces what is remembered.
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('data-notice-dismiss-updateAvailable'))
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+    expect(localStorage.getItem(DISMISSED_KEY)).toBe('3.3.0')
+    expect(window.quickLaunch.dismissDataNotice).toHaveBeenCalledTimes(2)
+  })
+
+  it('leaves the other notices where they are when it is not shown', () => {
+    localStorage.setItem(DISMISSED_KEY, '3.2.0')
+    setStatus({
+      writeError: null,
+      notices: [
+        { kind: 'passwordsLost', count: 2 },
+        { kind: 'updateAvailable', version: '3.2.0' },
+      ],
+    })
+
+    render(<DataNoticeBanner />)
+
+    expect(screen.getByTestId('data-notice-passwords-lost')).toBeInTheDocument()
+    expect(screen.queryByTestId('data-notice-update')).toBeNull()
+    expect(screen.getByTestId('data-notice-stack').children).toHaveLength(1)
+  })
+
+  it('stands in the list with the notices about the data', () => {
+    setStatus({
+      writeError: null,
+      notices: [
+        { kind: 'passwordsLost', count: 2 },
+        { kind: 'updateAvailable', version: '3.2.0' },
+      ],
+    })
+
+    render(<DataNoticeBanner />)
+
+    expect(screen.getByTestId('data-notice-stack').children).toHaveLength(2)
+    expect(screen.getByTestId('data-notice-stack')).toContainElement(
+      screen.getByTestId('data-notice-update')
+    )
+  })
+
+  it('is shown, and can be dismissed, when the storage of the window cannot be used', async () => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new DOMException('The operation is insecure.', 'SecurityError')
+    })
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException(
+        'The quota has been exceeded.',
+        'QuotaExceededError'
+      )
+    })
+    setStatus(update('3.2.0'))
+
+    render(<DataNoticeBanner />)
+    fireEvent.click(screen.getByTestId('data-notice-dismiss-updateAvailable'))
+
+    // Nothing is remembered: it comes back with the next start, and is gone for now.
+    await waitFor(() =>
+      expect(window.quickLaunch.dismissDataNotice).toHaveBeenCalledWith(
+        'updateAvailable'
+      )
+    )
+    expect(screen.queryByTestId('data-notice-update')).toBeNull()
+  })
+
+  it.each(['zh', 'en', 'ja'] as const)(
+    'speaks %s: the sentence with the version in it, and both buttons',
+    (lang) => {
+      setStatus(update('3.2.0'), lang)
+      render(<DataNoticeBanner />)
+      const strings = extraStrings[lang]
+
+      expect(screen.getByTestId('data-notice-update')).toHaveTextContent(
+        strings.update_available!.replace('{version}', '3.2.0')
+      )
+      expect(screen.getByTestId('data-notice-open-download')).toHaveTextContent(
+        strings.update_open_download!
+      )
+      expect(
+        screen.getByTestId('data-notice-dismiss-updateAvailable')
+      ).toHaveTextContent(workspaceStrings[lang].data_dismiss!)
+    }
+  )
 })

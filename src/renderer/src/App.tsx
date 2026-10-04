@@ -1,5 +1,7 @@
 import { useEffect } from 'react'
 
+import { fontFamilyCss } from '../../shared/font-family'
+
 import ErrorBoundary from './components/common/ErrorBoundary'
 import CommandPalette from './components/common/CommandPalette'
 import { IconErrorMark } from './components/common/icons'
@@ -63,6 +65,16 @@ export default function App(): JSX.Element {
   useEffect(() => {
     document.documentElement.lang = HTML_LANG[lang]
   }, [lang])
+
+  // The font the user chose goes in front of the fonts of the language (workspace.css). On the
+  // root element, so that dialogs and menus mounted beside the panel follow as well.
+  const fontFamily = preview?.fontFamily ?? data?.prefs.fontFamily ?? ''
+  useEffect(() => {
+    const family = fontFamilyCss(fontFamily)
+    if (family)
+      document.documentElement.style.setProperty('--font-user', family)
+    else document.documentElement.style.removeProperty('--font-user')
+  }, [fontFamily])
 
   useEffect(() => {
     if (motion === undefined) {

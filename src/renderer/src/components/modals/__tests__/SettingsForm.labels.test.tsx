@@ -28,13 +28,17 @@ describe('SettingsForm field labels', () => {
     cleanup()
   })
 
-  it('does not export the data when the data management title or notice is clicked', () => {
+  it('does not export the data when the data management title or one of the lines that explain the buttons is clicked', () => {
     render(<SettingsForm />)
     fireEvent.click(screen.getByTestId('settings-tab-data'))
 
     const title = screen.getByText(t('data_management'))
     fireEvent.click(title)
-    fireEvent.click(screen.getByText(t('import_notice')))
+    const help = screen.getByTestId('settings-data-help')
+    fireEvent.click(help)
+    const lines = help.querySelectorAll('li')
+    expect(lines.length).toBeGreaterThan(0)
+    for (const line of lines) fireEvent.click(line)
     fireEvent.click(title.closest('.form-field')!)
     fireEvent.click(
       screen.getByTestId('settings-export').parentElement as HTMLElement

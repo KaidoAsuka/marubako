@@ -180,6 +180,127 @@ describe('App', () => {
     expect(root.style.getPropertyValue('--motion-normal')).toBe(standard)
   })
 
+  // workspace.css puts --font-user in front of the fonts of the language. It is set on the root
+  // element, so that dialogs and menus mounted beside the panel follow as well.
+  describe('the font the user chose', () => {
+    const userFont = () =>
+      document.documentElement.style.getPropertyValue('--font-user')
+
+    afterEach(() => {
+      document.documentElement.style.removeProperty('--font-user')
+    })
+
+    it('is set on the root element, as one quoted family', async () => {
+      mockLoadedData((data) => {
+        data.prefs.fontFamily = 'Yu Gothic UI'
+      })
+
+      render(<App />)
+      await screen.findByTestId('app-root')
+
+      expect(userFont()).toBe('"Yu Gothic UI"')
+      // On the root only: the panel and what is mounted beside it inherit it from there.
+      expect(document.body.style.getPropertyValue('--font-user')).toBe('')
+      expect(
+        screen.getByTestId('app-root').style.getPropertyValue('--font-user')
+      ).toBe('')
+    })
+
+    it('is not set for the default, which leaves the fonts of the language', async () => {
+      mockLoadedData(() => {})
+
+      render(<App />)
+      await screen.findByTestId('app-root')
+
+      expect(userFont()).toBe('')
+    })
+
+    it('is not set before the data has arrived', () => {
+      vi.mocked(window.quickLaunch.loadData).mockReturnValue(
+        new Promise(() => {})
+      )
+
+      render(<App />)
+
+      expect(screen.getByTestId('loading-screen')).toBeInTheDocument()
+      expect(userFont()).toBe('')
+    })
+
+    it('follows the font the settings dialog previews, and the saved one again when the preview ends', async () => {
+      mockLoadedData((data) => {
+        data.prefs.fontFamily = 'Yu Gothic UI'
+      })
+      render(<App />)
+      await screen.findByTestId('app-root')
+
+      act(() => useAppStore.getState().setPreviewPrefs({ fontFamily: 'Arial' }))
+
+      expect(userFont()).toBe('"Arial"')
+      // Nothing was saved: the stored choice is untouched.
+      expect(useAppStore.getState().data?.prefs.fontFamily).toBe('Yu Gothic UI')
+      expect(window.quickLaunch.saveData).not.toHaveBeenCalled()
+
+      act(() => useAppStore.getState().setPreviewPrefs(null))
+
+      expect(userFont()).toBe('"Yu Gothic UI"')
+    })
+
+    it('is removed while the dialog previews the default, though a font is saved', async () => {
+      mockLoadedData((data) => {
+        data.prefs.fontFamily = 'Yu Gothic UI'
+      })
+      render(<App />)
+      await screen.findByTestId('app-root')
+      expect(userFont()).toBe('"Yu Gothic UI"')
+
+      act(() => useAppStore.getState().setPreviewPrefs({ fontFamily: '' }))
+
+      expect(userFont()).toBe('')
+      expect(
+        document.documentElement.style.cssText.includes('--font-user')
+      ).toBe(false)
+    })
+
+    it('keeps the saved font while the dialog previews something else', async () => {
+      mockLoadedData((data) => {
+        data.prefs.fontFamily = 'Yu Gothic UI'
+      })
+      render(<App />)
+      await screen.findByTestId('app-root')
+
+      act(() => useAppStore.getState().setPreviewPrefs({ theme: 'dark' }))
+
+      expect(userFont()).toBe('"Yu Gothic UI"')
+    })
+
+    it('is removed when the saved font goes back to the default', async () => {
+      mockLoadedData((data) => {
+        data.prefs.fontFamily = 'Yu Gothic UI'
+      })
+      render(<App />)
+      await screen.findByTestId('app-root')
+
+      act(() => {
+        const data = structuredClone(useAppStore.getState().data!)
+        data.prefs.fontFamily = ''
+        useAppStore.setState({ data })
+      })
+
+      expect(userFont()).toBe('')
+    })
+
+    it('never lets a name out of its quotes, even one that was not cleaned', async () => {
+      mockLoadedData((data) => {
+        data.prefs.fontFamily = 'Arial"; } body { display: none'
+      })
+
+      render(<App />)
+      await screen.findByTestId('app-root')
+
+      expect(userFont()).toBe('"Arial  body  display: none"')
+    })
+  })
+
   it('has no blob layer behind the opaque canvas, and still sets the accent from the stored choice', async () => {
     mockLoadedData((data) => {
       data.prefs.theme = 'dark'

@@ -1,4 +1,5 @@
 import { useAppStore } from '../store/use-app-store'
+import { extraStrings } from '../i18n/extras'
 import { resolveLang } from '../i18n/resolve-lang'
 import { safetyStrings } from '../i18n/safety'
 import { translations } from '../i18n/translations'
@@ -20,6 +21,7 @@ export function useI18n() {
     t: (key: string) =>
       safetyStrings[lang][key] ??
       updateStrings[lang][key] ??
+      extraStrings[lang][key] ??
       workspaceStrings[lang][key] ??
       active.strings[key] ??
       translations.zh.strings[key] ??

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   DOCK_MARGIN,
   DOCK_PANEL_GAP,
@@ -7,15 +7,18 @@ import {
   fitsInArea,
   getDockBounds,
   getDockEdge,
+  getDockSize,
   getExpandedPosition,
   getFirstRunLayout,
   isAtScreenEdge,
   redockToEdge,
+  setDockSize,
   standsBeside,
 } from '../dock-geometry'
 import {
   DOCK_BALL_SIZE,
   DOCK_SIZE as SHARED_DOCK_SIZE,
+  dockWindowSize,
 } from '../../shared/dock-size'
 
 // Every expectation below is written in terms of DOCK_SIZE, so that the size of the ball can be
@@ -440,5 +443,126 @@ describe('redockToEdge', () => {
     expect(redockToEdge(area, { x: 30, y: 500 }, 'left').x).toBe(
       getDockBounds(area, { x: 10, y: 500 }, true).x
     )
+  })
+})
+
+describe('a ball of the size the user set', () => {
+  const area = { x: 0, y: 0, width: 1920, height: 1040 }
+  // The window of the largest ball the setting offers.
+  const LARGE = dockWindowSize(64)
+
+  beforeEach(() => {
+    setDockSize(LARGE)
+  })
+
+  // The size is kept by the module: the tests around this block go by the default.
+  afterEach(() => {
+    setDockSize(DOCK_SIZE)
+  })
+
+  it('starts at the default size, and keeps the size it is told', () => {
+    setDockSize(DOCK_SIZE)
+    expect(getDockSize()).toBe(DOCK_SIZE)
+
+    setDockSize(LARGE)
+    expect(getDockSize()).toBe(LARGE)
+    expect(LARGE).toBeGreaterThan(DOCK_SIZE)
+  })
+
+  it('gives the window of the ball that size and keeps all of it in the work area', () => {
+    expect(getDockBounds(area, { x: 120, y: 300 })).toEqual({
+      x: 120,
+      y: 300,
+      width: LARGE,
+      height: LARGE,
+    })
+    expect(getDockBounds(area, { x: 5000, y: 2000 })).toEqual({
+      x: 1920 - LARGE,
+      y: 1040 - LARGE,
+      width: LARGE,
+      height: LARGE,
+    })
+  })
+
+  it('snaps and docks 4 px off the right edge for that size', () => {
+    const right = 1920 - LARGE
+
+    expect(getDockBounds(area, { x: right - 24, y: 300 }, true).x).toBe(
+      right - 4
+    )
+    expect(getDockBounds(area, { x: right - 25, y: 300 }, true).x).toBe(
+      right - 25
+    )
+    expect(getDockEdge(area, { x: right - 4, y: 300 })).toBe('right')
+    // Where the default ball is docked is not the edge for this one.
+    expect(getDockEdge(area, { x: 1920 - DOCK_SIZE - 4, y: 300 })).toBeNull()
+    expect(
+      redockToEdge(area, { x: 1920 - DOCK_SIZE - 4, y: 300 }, 'right')
+    ).toEqual({ x: right - 4, y: 300 })
+    // The left edge does not depend on the size.
+    expect(getDockEdge(area, { x: 4, y: 300 })).toBe('left')
+    expect(redockToEdge(area, { x: 30, y: 300 }, 'left')).toEqual({
+      x: 4,
+      y: 300,
+    })
+  })
+
+  it('opens the panel 8 px from the window of that size', () => {
+    const size = { width: 400, height: 600 }
+
+    // To the right of a free ball, at its top.
+    expect(getExpandedPosition(area, { x: 300, y: 150 }, size, null)).toEqual({
+      x: 300 + LARGE + 8,
+      y: 150,
+    })
+    // Centred on the middle of a docked ball.
+    expect(getExpandedPosition(area, { x: 4, y: 500 }, size, 'left')).toEqual({
+      x: 4 + LARGE + 8,
+      y: Math.round(500 + LARGE / 2 - 300),
+    })
+    expect(
+      getExpandedPosition(area, { x: 1920 - LARGE - 4, y: 500 }, size, 'right')
+    ).toEqual({
+      x: 1920 - LARGE - 4 - 8 - 400,
+      y: Math.round(500 + LARGE / 2 - 300),
+    })
+  })
+
+  it('lays out a new installation for that size', () => {
+    const size = { width: 400, height: 720 }
+    const { dock, panel } = getFirstRunLayout(area, size)
+
+    expect(dock).toEqual({
+      x: 1920 - 4 - LARGE,
+      y: Math.round((1040 - LARGE) / 2),
+    })
+    expect(panel).toEqual({
+      x: dock.x - 8 - 400,
+      y: Math.round(dock.y + LARGE / 2 - 360),
+    })
+    expect(getDockEdge(area, dock)).toBe('right')
+  })
+
+  it('measures "beside the ball" from the window of that size', () => {
+    const dock = { x: 1000, y: 500 }
+    const size = { width: 400, height: 600 }
+
+    expect(
+      standsBeside(
+        { x: dock.x + LARGE + DOCK_PANEL_GAP, y: dock.y, ...size },
+        dock
+      )
+    ).toBe(true)
+    // Where the panel of the default ball stands, this ball reaches into it.
+    expect(
+      standsBeside(
+        { x: dock.x + DOCK_SIZE + DOCK_PANEL_GAP, y: dock.y, ...size },
+        dock
+      )
+    ).toBe(false)
+    // Under the ball, the gap below its window.
+    expect(
+      standsBeside({ x: dock.x - 100, y: dock.y + LARGE + 8, ...size }, dock)
+    ).toBe(true)
   })
 })

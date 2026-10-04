@@ -1,11 +1,17 @@
 /* Workspace shell. Shared controls also apply to portals mounted in body. */
+/* The font the user chose (--font-user, set on the root by App.tsx) comes first; what it has no
+   glyph for, and everything when no font is chosen, falls to the fonts of the language. */
 :root {
-  --sans: 'Segoe UI', 'Microsoft YaHei UI', system-ui, sans-serif;
+  --sans:
+    var(--font-user, 'Segoe UI'), 'Segoe UI', 'Microsoft YaHei UI', system-ui,
+    sans-serif;
 }
 /* A kanji drawn in the Chinese letterforms of Microsoft YaHei UI reads as wrong to a Japanese
    reader, so in a Japanese interface the Japanese UI fonts come before it. */
 :root:lang(ja) {
-  --sans: 'Segoe UI', 'Yu Gothic UI', 'Meiryo UI', system-ui, sans-serif;
+  --sans:
+    var(--font-user, 'Segoe UI'), 'Segoe UI', 'Yu Gothic UI', 'Meiryo UI',
+    system-ui, sans-serif;
 }
 .app-root {
   padding: 0;
@@ -385,6 +391,33 @@ kbd {
 }
 .settings-data-note svg {
   color: var(--success);
+}
+/* What each of the buttons above is for, and what the automatic backups are not. */
+.settings-data-help {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--text-dim);
+}
+.settings-data-help li:first-child {
+  color: var(--text-mid);
+}
+/* Two buttons to a row: what goes out and what comes in, then the list and the folder. */
+.settings-transfer-actions {
+  flex-wrap: wrap;
+}
+.settings-transfer-actions .secondary-button {
+  flex: 1 1 40%;
+}
+/* "48 px" stays on one line beside its slider. */
+.ball-size-range span {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 /* The about block: version, the update check and the way to report a problem. */
 .settings-about {

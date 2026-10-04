@@ -11,6 +11,12 @@ import {
 
 import { DEFAULT_SHORTCUT } from '../../../../shared/accelerator'
 import {
+  BALL_SIZE_STEP,
+  DOCK_BALL_SIZE,
+  MAX_BALL_SIZE,
+  MIN_BALL_SIZE,
+} from '../../../../shared/dock-size'
+import {
   DEFAULT_MOTION,
   MOTION_PERCENT_MAX,
   MOTION_PERCENT_MIN,
@@ -27,6 +33,7 @@ import {
   MIN_OPACITY,
   THEME_SETTINGS,
   VIEW_MODES,
+  type ExportFormat,
   type LaunchSettings,
   type Tab,
   type ThemeSetting,
@@ -38,11 +45,13 @@ import { useShortcutCheck } from '../../hooks/use-shortcut-check'
 import { useSystemDark } from '../../hooks/use-system-dark'
 import { useAppStore } from '../../store/use-app-store'
 import { resolveTheme } from '../../styles/background-theme'
+import { describeOpenFailure } from '../../utils/open-errors'
 import { rangeFill } from '../../utils/range-fill'
 import FormField from '../common/FormField'
 import { TAB_ICONS } from '../common/tab-icons'
 import AboutSettings from './AboutSettings'
 import AccentDots from './AccentDots'
+import FontFamilyField from './FontFamilyField'
 import ShortcutSettings from './ShortcutSettings'
 
 const settingsTabIcons: Record<'appearance' | 'behavior' | 'data', Icon> = {
@@ -57,7 +66,7 @@ const viewModeIcons: Record<ViewMode, Icon> = {
 }
 
 export default function SettingsForm(): JSX.Element | null {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const data = useAppStore((state) => state.data)
   const saving = useAppStore((state) => state.saving)
   const updateData = useAppStore((state) => state.updateData)
@@ -83,6 +92,12 @@ export default function SettingsForm(): JSX.Element | null {
     data?.prefs.hideAfterLaunch ?? false
   )
   const [showBubble, setShowBubble] = useState(data?.prefs.showBubble ?? true)
+  const [ballSize, setBallSize] = useState(
+    data?.prefs.ballSize ?? DOCK_BALL_SIZE
+  )
+  const [fontFamily, setFontFamily] = useState(data?.prefs.fontFamily ?? '')
+  // The folder the data is in, for the button that opens it.
+  const [dataFolder, setDataFolder] = useState<string | null>(null)
   const [theme, setTheme] = useState<ThemeSetting>(data?.prefs.theme ?? 'light')
   const themeKeys = useRadioKeys(THEME_SETTINGS, setTheme)
   // The accent dots are drawn in the theme the setting comes to right now.
@@ -131,6 +146,19 @@ export default function SettingsForm(): JSX.Element | null {
   useEffect(() => {
     let active = true
     void window.quickLaunch
+      .getAppInfo()
+      .then((result) => {
+        if (active && result.ok) setDataFolder(result.data.dataFolder ?? null)
+      })
+      .catch(() => undefined)
+    return () => {
+      active = false
+    }
+  }, [])
+
+  useEffect(() => {
+    let active = true
+    void window.quickLaunch
       .getLaunchSettings()
       .then((result) => {
         if (!active) return
@@ -174,6 +202,8 @@ export default function SettingsForm(): JSX.Element | null {
     setPeekCollapseDelay(data.prefs.peekCollapseDelay)
     setHideAfterLaunch(data.prefs.hideAfterLaunch)
     setShowBubble(data.prefs.showBubble)
+    setBallSize(data.prefs.ballSize)
+    setFontFamily(data.prefs.fontFamily)
     setHiddenTabs(normalizeHiddenTabs(data.prefs.hiddenTabs))
     setShortcut(data.prefs.shortcut)
     setShortcutOn(data.prefs.shortcutEnabled)
@@ -197,8 +227,17 @@ export default function SettingsForm(): JSX.Element | null {
       background,
       zoom: zoom / 100,
       motion: motionValue,
+      fontFamily,
     })
-  }, [isOpen, theme, background, zoom, motionValue, setPreviewPrefs])
+  }, [
+    isOpen,
+    theme,
+    background,
+    zoom,
+    motionValue,
+    fontFamily,
+    setPreviewPrefs,
+  ])
   useEffect(() => {
     if (!isOpen) return undefined
     return () => setPreviewPrefs(null)
@@ -271,6 +310,8 @@ export default function SettingsForm(): JSX.Element | null {
       draft.prefs.peekCollapseDelay = peekCollapseDelay
       draft.prefs.hideAfterLaunch = hideAfterLaunch
       draft.prefs.showBubble = showBubble
+      draft.prefs.ballSize = ballSize
+      draft.prefs.fontFamily = fontFamily
       draft.prefs.hiddenTabs = hiddenTabs
       draft.prefs.shortcut = shortcut
       draft.prefs.shortcutEnabled = shortcutOn
@@ -297,7 +338,7 @@ export default function SettingsForm(): JSX.Element | null {
     if (shortcutRefused) showToast(t('shortcut_unavailable'), 'danger')
   }
 
-  const handleExport = async () => {
+  const handleExport = async (format: ExportFormat = 'json') => {
     if (controlsDisabled) {
       return
     }
@@ -305,13 +346,31 @@ export default function SettingsForm(): JSX.Element | null {
     setTransferAction('export')
 
     try {
-      await exportData({
-        successMessage: t('export_success'),
-        withoutPasswordsMessage: t('export_success_no_passwords'),
-      })
+      await exportData(
+        format === 'markdown'
+          ? {
+              format,
+              successMessage: t('export_markdown_success'),
+              withoutPasswordsMessage: t(
+                'export_markdown_success_no_passwords'
+              ),
+            }
+          : {
+              successMessage: t('export_success'),
+              withoutPasswordsMessage: t('export_success_no_passwords'),
+            }
+      )
     } finally {
       setTransferAction(null)
     }
+  }
+
+  const openDataFolder = async () => {
+    if (!dataFolder) return
+    const result = await window.quickLaunch.openPath(dataFolder)
+    // In the window's language, not the raw English error of the main process.
+    if (!result.ok)
+      showToast(describeOpenFailure(result.code, dataFolder, lang), 'danger')
   }
 
   const handleImport = async () => {
@@ -418,6 +477,27 @@ export default function SettingsForm(): JSX.Element | null {
               onChange={(event) => setShowBubble(event.target.checked)}
             />
           </label>
+          <FormField
+            label={t('ball_size')}
+            hint={t('ball_size_hint')}
+            htmlFor="settings-ball-size"
+          >
+            <div className="range-row ball-size-range">
+              <input
+                id="settings-ball-size"
+                type="range"
+                min={MIN_BALL_SIZE}
+                max={MAX_BALL_SIZE}
+                step={BALL_SIZE_STEP}
+                value={ballSize}
+                style={rangeFill(ballSize, MIN_BALL_SIZE, MAX_BALL_SIZE)}
+                data-testid="ball-size"
+                disabled={controlsDisabled || !showBubble}
+                onChange={(event) => setBallSize(Number(event.target.value))}
+              />
+              <span>{ballSize} px</span>
+            </div>
+          </FormField>
           <ShortcutSettings
             accelerator={shortcut}
             enabled={shortcutOn}
@@ -530,6 +610,11 @@ export default function SettingsForm(): JSX.Element | null {
               onChange={setBackground}
             />
           </FormField>
+          <FontFamilyField
+            value={fontFamily}
+            disabled={controlsDisabled}
+            onChange={setFontFamily}
+          />
           <FormField
             label={t('font_size')}
             hint={t('font_size_hint')}
@@ -713,8 +798,34 @@ export default function SettingsForm(): JSX.Element | null {
               >
                 {t('import_data')}
               </button>
+              <button
+                className="secondary-button"
+                type="button"
+                data-testid="settings-export-markdown"
+                disabled={controlsDisabled}
+                onClick={() => void handleExport('markdown')}
+              >
+                {t('export_markdown')}
+              </button>
+              {dataFolder && (
+                <button
+                  className="secondary-button"
+                  type="button"
+                  data-testid="settings-open-data-folder"
+                  onClick={() => void openDataFolder()}
+                >
+                  {t('open_data_folder')}
+                </button>
+              )}
             </div>
-            <span className="form-field-note">{t('import_notice')}</span>
+            {/* The data is all there is of it: what each button is for, said where they are. */}
+            <ul className="settings-data-help" data-testid="settings-data-help">
+              <li>{t('data_help_keep')}</li>
+              <li>{t('data_help_export')}</li>
+              <li>{t('data_help_markdown')}</li>
+              <li>{t('data_help_import')}</li>
+              <li>{t('data_help_backups')}</li>
+            </ul>
           </FormField>
           <FormField label={t('about_title')} group>
             <AboutSettings disabled={controlsDisabled} />

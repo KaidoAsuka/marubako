@@ -29,11 +29,17 @@ describe('when the program asks for updates by itself', () => {
     [{ isPackaged: false, isE2E: false }, false],
     [{ isPackaged: true, isE2E: true }, false],
     [{ isPackaged: false, isE2E: true }, false],
-    // A portable copy does not update itself.
-    [{ isPackaged: true, isE2E: false, isPortable: true }, false],
-    [{ isPackaged: true, isE2E: false, isPortable: false }, true],
   ])('%j: %s', (state, expected) => {
     expect(shouldCheckForUpdates(state)).toBe(expected)
+  })
+
+  // A portable copy installs nothing, but it says when there is a newer version: it asks on the
+  // same schedule. What its check does is for auto-updater.ts to say; nothing here tells the two
+  // kinds of copy apart, and a caller that still says "portable" is not held back by it.
+  it('asks from a portable copy as from an installed one', () => {
+    const portable = { isPackaged: true, isE2E: false, isPortable: true }
+
+    expect(shouldCheckForUpdates(portable)).toBe(true)
   })
 
   it('waits about half a minute after start-up and then a day', () => {
@@ -137,10 +143,22 @@ describe('starting the checks at start-up', () => {
     expect(check).toHaveBeenCalledTimes(1)
   })
 
+  it('schedules them for a portable copy as well, which then finds out about newer versions', () => {
+    const check = vi.fn(async () => undefined)
+    const portable = { isPackaged: true, isE2E: false, isPortable: true }
+
+    const stop = startUpdateChecks({ ...portable, check })
+    vi.advanceTimersByTime(UPDATE_CHECK_DELAY_MS)
+    expect(check).toHaveBeenCalledTimes(1)
+    vi.advanceTimersByTime(UPDATE_CHECK_INTERVAL_MS)
+
+    expect(stop).toBeTypeOf('function')
+    expect(check).toHaveBeenCalledTimes(2)
+  })
+
   it.each([
     ['a development build', { isPackaged: false, isE2E: false }],
     ['an e2e run', { isPackaged: true, isE2E: true }],
-    ['a portable copy', { isPackaged: true, isE2E: false, isPortable: true }],
   ])('never schedules anything for %s', (_name, state) => {
     const check = vi.fn(async () => undefined)
 

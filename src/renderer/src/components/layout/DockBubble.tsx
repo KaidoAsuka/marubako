@@ -3,9 +3,11 @@ import {
   useEffect,
   useRef,
   useState,
+  type CSSProperties,
   type PointerEvent,
 } from 'react'
 
+import { clampBallSize } from '../../../../shared/dock-size'
 import type {
   DockAppearance,
   QuickLaunchResult,
@@ -28,9 +30,12 @@ const COLLAPSE_DELAY_MS = 250
 /** The main process puts the saved appearance in the URL, so the first frame is already right. */
 function initialAppearance(): DockAppearance {
   const query = new URLSearchParams(window.location.search)
+  const ball = query.get('ball')
   return {
     lang: resolveLang(query.get('lang')),
     theme: query.get('theme') === 'dark' ? 'dark' : 'light',
+    // Without a size in the address (or with an empty one) the ball has the default size.
+    ballSize: clampBallSize(ball ? Number(ball) : undefined),
   }
 }
 
@@ -295,7 +300,15 @@ export default function DockBubble(): JSX.Element {
   }
 
   return (
-    <div className={`dock-root theme-${appearance.theme}`}>
+    <div
+      className={`dock-root theme-${appearance.theme}`}
+      // The stylesheet draws the ball, and the dot in it, from this one length.
+      style={
+        {
+          '--dock-ball-size': `${clampBallSize(appearance.ballSize)}px`,
+        } as CSSProperties
+      }
+    >
       <button
         ref={button}
         className={`dock-bubble${dragging ? ' dragging' : ''}`}

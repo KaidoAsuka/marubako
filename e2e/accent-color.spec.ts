@@ -163,10 +163,11 @@ test('the dots are one stop in the tab order and the arrow keys move the choice'
     await page.keyboard.press('ArrowRight')
     await expect(page.getByTestId('background-aurora')).toBeFocused()
 
-    // Tab leaves the group in one step instead of walking every dot.
+    // Tab leaves the group in one step instead of walking every dot: to the next control of the
+    // page, the font.
     await page.keyboard.press('Tab')
     await expect(page.getByTestId('background-sunset')).not.toBeFocused()
-    await expect(page.getByLabel('界面大小')).toBeFocused()
+    await expect(page.getByTestId('settings-font-family')).toBeFocused()
   } finally {
     await closeApp(context)
   }

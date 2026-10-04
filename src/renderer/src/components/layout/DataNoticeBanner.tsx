@@ -1,4 +1,4 @@
-import { IconError, IconWarning } from '../common/icons'
+import { IconError, IconInfo, IconWarning } from '../common/icons'
 import { useState, type ReactNode } from 'react'
 
 import type { StartupNotice } from '../../../../shared/types'
@@ -27,21 +27,52 @@ function parentDirectory(filePath: string): string {
   return directory || filePath.slice(0, index + 1)
 }
 
+// The version of the newest "there is a newer version" notice the user dismissed. That notice is
+// for one version: it comes back with the next one, not with the next start.
+const UPDATE_DISMISSED_KEY = 'update-notice-dismissed'
+
+function dismissedUpdate(): string {
+  try {
+    return localStorage.getItem(UPDATE_DISMISSED_KEY) ?? ''
+  } catch {
+    return ''
+  }
+}
+
+function rememberDismissedUpdate(version: string): void {
+  try {
+    localStorage.setItem(UPDATE_DISMISSED_KEY, version)
+  } catch {
+    // Storage is not there: the notice comes back with the next start.
+  }
+}
+
 /**
- * Startup notices that need reading: the data was reset or restored, or passwords could not be
- * decrypted. They wait here until dismissed. A failed disk write is not one of them: it is the
- * error line of the feedback strip at the bottom, with its Retry button.
+ * Notices that need reading: the data was reset or restored, passwords could not be decrypted, or
+ * (in a portable copy) there is a newer version. They wait here until dismissed. A failed disk
+ * write is not one of them: it is the error line of the feedback strip at the bottom, with its
+ * Retry button.
  */
 export default function DataNoticeBanner(): JSX.Element | null {
   const { t, lang } = useI18n()
-  const notices = useAppStore((state) => state.dataStatus.notices)
+  const allNotices = useAppStore((state) => state.dataStatus.notices)
   const dismissNotice = useAppStore((state) => state.dismissNotice)
   const importData = useAppStore((state) => state.importData)
   const showToast = useAppStore((state) => state.showToast)
   const [busy, setBusy] = useState(false)
+  const [skippedUpdate, setSkippedUpdate] = useState(dismissedUpdate)
+  const notices = allNotices.filter(
+    (notice) =>
+      notice.kind !== 'updateAvailable' || notice.version !== skippedUpdate
+  )
 
   if (notices.length === 0) {
     return null
+  }
+
+  const openDownloadPage = async (): Promise<void> => {
+    const result = await window.quickLaunch.openReleasesPage()
+    if (!result.ok) showToast(result.error, 'danger')
   }
 
   const run = async (action: () => Promise<void>): Promise<void> => {
@@ -183,6 +214,38 @@ export default function DataNoticeBanner(): JSX.Element | null {
               </p>
             </div>
             <div className="data-notice-actions">{dismissButton(notice)}</div>
+          </div>
+        )
+      case 'updateAvailable':
+        return (
+          <div
+            key={notice.kind}
+            className="data-notice data-notice-info"
+            role="status"
+            data-testid="data-notice-update"
+          >
+            <IconInfo className="data-notice-icon" size={16} aria-hidden />
+            <div className="data-notice-body">
+              <p className="data-notice-line">
+                {t('update_available').replace('{version}', notice.version)}
+              </p>
+            </div>
+            <div className="data-notice-actions">
+              {actionButton(
+                t('update_open_download'),
+                () => void run(openDownloadPage),
+                'data-notice-open-download'
+              )}
+              {actionButton(
+                t('data_dismiss'),
+                () => {
+                  rememberDismissedUpdate(notice.version)
+                  setSkippedUpdate(notice.version)
+                  void run(() => dismissNotice(notice.kind))
+                },
+                'data-notice-dismiss-updateAvailable'
+              )}
+            </div>
           </div>
         )
     }

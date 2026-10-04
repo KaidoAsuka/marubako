@@ -33,6 +33,8 @@ import type {
   TopOrderCollections,
 } from '../shared/types'
 import { normalizeAccelerator } from '../shared/accelerator'
+import { clampBallSize } from '../shared/dock-size'
+import { normalizeFontFamily } from '../shared/font-family'
 import { normalizeHiddenTabs, resolveVisibleTab } from '../shared/tabs'
 import {
   clampOpacity,
@@ -144,6 +146,8 @@ function normalizePrefs(
       typeof prefs.showBubble === 'boolean'
         ? prefs.showBubble
         : fallback.showBubble,
+    ballSize: clampBallSize(prefs.ballSize, fallback.ballSize),
+    fontFamily: normalizeFontFamily(prefs.fontFamily),
   }
 }
 

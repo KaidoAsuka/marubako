@@ -63,6 +63,7 @@ Object.assign(window, {
     installUpdate: vi.fn(async () => ({ ok: true, data: undefined })),
     getAppInfo: vi.fn(async () => ({ ok: true, data: { version: '2.5.8' } })),
     openIssuesPage: vi.fn(async () => ({ ok: true, data: undefined })),
+    openReleasesPage: vi.fn(async () => ({ ok: true, data: undefined })),
     selectPath: vi.fn(async () => ({ ok: true, data: null })),
     getLaunchSettings: vi.fn(async () => ({
       ok: true,

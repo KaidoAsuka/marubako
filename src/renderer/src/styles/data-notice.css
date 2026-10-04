@@ -24,6 +24,10 @@
 .data-notice-warning {
   --tone: var(--warning);
 }
+/* Something to know, with nothing wrong: a newer version for a portable copy. */
+.data-notice-info {
+  --tone: var(--accent);
+}
 .data-notice-icon {
   flex-shrink: 0;
   margin-top: 2px;

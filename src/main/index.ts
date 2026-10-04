@@ -15,6 +15,7 @@ import {
   DataLoadAbortedError,
   flushPendingWrite,
   loadAppData,
+  showUpdateNotice,
 } from './data-store'
 import { registerIpcHandlers } from './ipc-handlers'
 import { registerLaunchShortcut } from './launch-settings'
@@ -129,8 +130,13 @@ if (!isE2E && !app.requestSingleInstanceLock()) {
       startUpdateChecks({
         isPackaged: app.isPackaged,
         isE2E,
-        isPortable: isPortable(),
-        check: checkForUpdatesNow,
+        // The installed copy downloads what it finds. A portable copy cannot: it says so in the
+        // panel, once, and the user fetches the new version.
+        check: async () => {
+          const result = await checkForUpdatesNow()
+          if (result.status === 'available') showUpdateNotice(result.version)
+          return result
+        },
       })
 
       started = true

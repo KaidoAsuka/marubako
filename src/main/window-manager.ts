@@ -16,6 +16,7 @@ import type {
   WindowPresentation,
   WindowState,
 } from '../shared/types'
+import { clampBallSize, dockWindowSize } from '../shared/dock-size'
 import { IPC_CHANNELS } from '../shared/ipc-channels'
 import {
   DEFAULT_PANEL_WIDTH,
@@ -44,15 +45,16 @@ import { createLauncherMenu } from './launcher-menu'
 import { motionTimeScale } from './motion-scale'
 import { onSystemThemeChange, resolveThemeSetting } from './system-theme'
 import {
-  DOCK_SIZE,
   DOCK_SNAP_DISTANCE,
   fitsInArea,
   getDockBounds,
   getDockEdge,
+  getDockSize,
   getExpandedPosition,
   getFirstRunLayout,
   isAtScreenEdge,
   redockToEdge,
+  setDockSize,
   standsBeside,
 } from './dock-geometry'
 
@@ -283,6 +285,7 @@ async function animateMode(
       y: bubbleBounds.y - panelBounds.y,
     },
     timeScale,
+    dockSize: getDockSize(),
   }
   const bubblePresentation: WindowPresentation = {
     ...panelPresentation,
@@ -433,8 +436,8 @@ function ballBesideDraggedPanel(
   return getDockBounds(
     screen.getDisplayMatching({
       ...position,
-      width: DOCK_SIZE,
-      height: DOCK_SIZE,
+      width: getDockSize(),
+      height: getDockSize(),
     }).workArea,
     position
   )
@@ -458,8 +461,8 @@ function withRedockedBall(
   if (!dockPosition || !dockEdge) return state
   const area = screen.getDisplayMatching({
     ...dockPosition,
-    width: DOCK_SIZE,
-    height: DOCK_SIZE,
+    width: getDockSize(),
+    height: getDockSize(),
   }).workArea
   const dock = redockToEdge(area, dockPosition, dockEdge)
   if (dock.x === dockPosition.x) return state
@@ -608,6 +611,8 @@ function withFirstRunLayout(state: WindowState, lang: Lang): WindowState {
 async function buildMainWindow(): Promise<BrowserWindow> {
   const data = await loadAppData()
   showBubblePref = data.prefs.showBubble
+  // Before anything is placed: where the ball and the panel stand depends on the ball's size.
+  setDockSize(dockWindowSize(data.prefs.ballSize))
   const hiddenLaunch = process.argv.includes('--hidden')
   const repairedState = getLaunchWindowState(data.window)
   // The ball comes back when it was the last state. An auto-start (--hidden) brings it up as well,
@@ -800,8 +805,8 @@ async function buildMainWindow(): Promise<BrowserWindow> {
         x:
           Math.abs(bounds.x - area.x) <= DOCK_SNAP_DISTANCE
             ? area.x
-            : area.x + area.width - DOCK_SIZE,
-        y: Math.round(bounds.y + bounds.height / 2 - DOCK_SIZE / 2),
+            : area.x + area.width - getDockSize(),
+        y: Math.round(bounds.y + bounds.height / 2 - getDockSize() / 2),
       })
     }
   })
@@ -908,8 +913,8 @@ async function createDockWindow(): Promise<BrowserWindow> {
     const bounds = getDockBounds(
       screen.getDisplayMatching({
         ...position,
-        width: DOCK_SIZE,
-        height: DOCK_SIZE,
+        width: getDockSize(),
+        height: getDockSize(),
       }).workArea,
       position
     )
@@ -1007,6 +1012,7 @@ async function createDockWindow(): Promise<BrowserWindow> {
         loadRenderer(window, true, {
           theme: resolveThemeSetting(data.prefs.theme),
           lang: data.prefs.lang,
+          ball: String(clampBallSize(data.prefs.ballSize)),
         }),
         ready,
       ])
@@ -1025,14 +1031,18 @@ export function getDockWindow(): BrowserWindow | null {
   return dockWindow
 }
 
-/** Tells the ball how to dress: the language, and the theme the setting comes to right now. */
+/**
+ * Tells the ball how to dress: the language, the theme the setting comes to right now, and how
+ * large it is drawn.
+ */
 function sendDockAppearance(
   window: BrowserWindow,
-  prefs: Pick<Prefs, 'lang' | 'theme'>
+  prefs: Pick<Prefs, 'lang' | 'theme' | 'ballSize'>
 ): void {
   window.webContents.send(IPC_CHANNELS.dockAppearance, {
     theme: resolveThemeSetting(prefs.theme),
     lang: prefs.lang,
+    ballSize: clampBallSize(prefs.ballSize),
   })
 }
 
@@ -1197,6 +1207,127 @@ export async function applyBubblePreference(show: boolean): Promise<void> {
     })
   } catch (error) {
     log.warn('Could not apply the floating ball preference', error)
+  }
+}
+
+/**
+ * Applies a changed ball size at once. The ball keeps its place (its centre, to within two pixels)
+ * or the edge it is docked to; a panel that stood beside it is laid out beside it again, and one
+ * that stood elsewhere stays.
+ */
+export async function applyBallSizePreference(ballSize: number): Promise<void> {
+  const size = dockWindowSize(ballSize)
+  try {
+    await runWindowTransition(async () => {
+      if (isQuitting) return
+      const data = await loadAppData()
+      const ball = dockWindow && !dockWindow.isDestroyed() ? dockWindow : null
+      const previous = getDockSize()
+      if (size !== previous) {
+        const saved = ball?.getBounds() ?? data.window.dockPosition
+        const edge = ball ? dockEdge : (data.window.dockEdge ?? null)
+        const panel =
+          mainWindow && !mainWindow.isDestroyed()
+            ? mainWindow.getBounds()
+            : null
+        // Asked while the ball still has its old size: that is the ball the panel stood beside.
+        const besideBall = !!saved && !!panel && standsBeside(panel, saved)
+        setDockSize(size)
+        if (saved) {
+          const area = screen.getDisplayMatching({
+            x: saved.x,
+            y: saved.y,
+            width: previous,
+            height: previous,
+          }).workArea
+          // Both windows move in steps of four pixels. A window that stood on whole screen
+          // pixels at a display scale of 125% or 150% then still does; one that does not is made
+          // a pixel larger by Windows. So the ball's centre is where it was to within two pixels.
+          // (A distance half-way between two steps takes the shorter one.)
+          const inSteps = (distance: number): number =>
+            Math.sign(distance) * Math.floor((Math.abs(distance) + 1) / 4) * 4
+          const shift = inSteps((previous - size) / 2)
+          const bounds = getDockBounds(
+            area,
+            redockToEdge(area, { x: saved.x + shift, y: saved.y + shift }, edge)
+          )
+          ball?.setBounds(bounds)
+          let movedPanel: WindowBounds | undefined
+          if (
+            panel &&
+            besideBall &&
+            showBubblePref &&
+            mainWindow?.isVisible() &&
+            !collapsedState
+          ) {
+            // The size the panel was saved with: what the window reports can be a pixel more, and
+            // must not become the size it is given.
+            const panelSize = {
+              width: data.window.bounds?.w ?? panel.width,
+              height: data.window.bounds?.h ?? panel.height,
+            }
+            // On the side of the ball it stood on, as far from it as it was. Where it stood
+            // neither left nor right (above or below) of the ball, it follows the ball's centre.
+            const along = (
+              panelStart: number,
+              panelLength: number,
+              ballStart: number,
+              newBallStart: number
+            ): number => {
+              if (panelStart >= ballStart + previous)
+                return newBallStart + size + (panelStart - ballStart - previous)
+              if (panelStart + panelLength <= ballStart)
+                return newBallStart - (ballStart - panelStart)
+              return (
+                panelStart +
+                (newBallStart + size / 2 - ballStart - previous / 2)
+              )
+            }
+            const kept = {
+              x:
+                panel.x +
+                inSteps(
+                  along(panel.x, panelSize.width, saved.x, bounds.x) - panel.x
+                ),
+              y:
+                panel.y +
+                inSteps(
+                  along(panel.y, panelSize.height, saved.y, bounds.y) - panel.y
+                ),
+            }
+            // Where the screen has no room for that, the panel is laid out afresh beside the ball.
+            const placed = {
+              ...(fitsInArea({ ...kept, ...panelSize }, area)
+                ? kept
+                : getExpandedPosition(area, bounds, panelSize, edge)),
+              ...panelSize,
+            }
+            mainWindow.setBounds(placed)
+            expandedAnchor = {
+              dock: { x: bounds.x, y: bounds.y },
+              edge,
+              panel: placed,
+            }
+            movedPanel = {
+              x: placed.x,
+              y: placed.y,
+              w: placed.width,
+              h: placed.height,
+            }
+          }
+          await updateWindowData((state) => ({
+            ...state,
+            ...(movedPanel ? { bounds: movedPanel } : {}),
+            dockPosition: { x: bounds.x, y: bounds.y },
+            dockEdge: edge,
+          }))
+        }
+      }
+      // The same window can hold a ball that is drawn larger or smaller.
+      if (ball) sendDockAppearance(ball, { ...data.prefs, ballSize })
+    })
+  } catch (error) {
+    log.warn('Could not apply the size of the floating ball', error)
   }
 }
 
@@ -1399,8 +1530,8 @@ export async function collapseWindow(
     const bounds = getDockBounds(
       screen.getDisplayMatching({
         ...target,
-        width: DOCK_SIZE,
-        height: DOCK_SIZE,
+        width: getDockSize(),
+        height: getDockSize(),
       }).workArea,
       target,
       !!position

@@ -8,6 +8,7 @@ import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 import { GROUP_TABS, LANGS, type Lang } from '../../../../shared/types'
+import { extraStrings } from '../extras'
 import { translations } from '../translations'
 import { updateStrings } from '../updates'
 import { workspaceStrings } from '../workspace'
@@ -18,6 +19,7 @@ function allStrings(lang: Lang): Array<[string, string]> {
     ...translations[lang].strings,
     ...workspaceStrings[lang],
     ...updateStrings[lang],
+    ...extraStrings[lang],
   })
 }
 
