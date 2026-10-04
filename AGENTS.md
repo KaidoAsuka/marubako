@@ -52,7 +52,7 @@ src/renderer/src/
   utils/         pure helpers
   test/          setup.ts stubs `window.quickLaunch` for unit tests
 e2e/             Playwright tests that launch the built app (`out/`) with temporary data
-tools/           repository scripts and their tests (Node's test runner)
+tools/           repository scripts and their tests (Node's test runner); tools/demo records the README demos
 scripts/         build and release helper scripts
 docs/            behavior.zh-CN.md (what the app does, in detail), images
 ```
@@ -69,7 +69,7 @@ docs/            behavior.zh-CN.md (what the app does, in detail), images
 - The interface talks to the main process only through `window.quickLaunch` (`src/preload/index.ts`, `src/shared/preload-api.ts`, channel names in `src/shared/ipc-channels.ts`). A new channel needs all three plus the stub in `src/renderer/src/test/setup.ts`.
 - **Every text a person can see exists in zh, en and ja**: the string tables in `src/renderer/src/i18n/`, the sentences in `src/main/main-strings.ts`, window titles, tray, dialogs, errors. Follow the glossary at the top of `src/renderer/src/i18n/translations.ts`; `glossary.test.ts` fails on banned wording. The product name is Marubako in every language.
 - Some internal names deliberately keep the old project name and must not be renamed: `window.quickLaunch`, the IPC channel names, the `QUICKLAUNCH_*` environment variables and the data file name `quicklaunch-data.json`.
-- Generated files, never edit by hand: `src/renderer/src/assets/tiles.generated.ts` (`node scripts/generate-tiles.cjs`), `THIRD-PARTY-NOTICES.md` (`node tools/third-party-notices.cjs --write`), icons (`npm run icons`, needs Windows PowerShell). Line endings are LF, except `.bat`, `.cmd`, `.vbs` and `.ps1`, which are CRLF (`.gitattributes`).
+- Generated files, never edit by hand: `src/renderer/src/assets/tiles.generated.ts` (`node scripts/generate-tiles.cjs`), `THIRD-PARTY-NOTICES.md` (`node tools/third-party-notices.cjs --write`), icons (`npm run icons`, needs Windows PowerShell), and the demo GIFs in `docs/images/demo-*.gif` (recorded from the built app with `tools/demo/record.cjs`, then `tools/demo/make-gifs.py`, which needs Python with Pillow; the steps are at the top of `record.cjs`). Record them again when a change makes them show something the app no longer does. Line endings are LF, except `.bat`, `.cmd`, `.vbs` and `.ps1`, which are CRLF (`.gitattributes`).
 
 ## Do not
 
