@@ -4,7 +4,7 @@
 // drawn at a steady 20 pictures a second, each one saved as a PNG. The stage draws a moment purely
 // from its time, so the film is as smooth as the script, whatever this computer is busy with.
 //
-//   node tools/demo/render.cjs artifacts/demo
+//   node tools/demo/render.cjs artifacts/demo [scene]
 const fs = require('node:fs/promises')
 const path = require('node:path')
 const { pathToFileURL } = require('node:url')

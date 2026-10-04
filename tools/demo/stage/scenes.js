@@ -1,4 +1,4 @@
-// The four films of the README, as scripts: what the staged desktop adds to each recording (the
+// The five films of the README, as scripts: what the staged desktop adds to each recording (the
 // windows the real app would have opened, what happens in them) and where the camera looks. Every
 // time is relative to a moment the recorder named (`marks`), so a new recording needs no retiming.
 
@@ -283,6 +283,34 @@
         camera: film(SHOT.panel)
           .to(marks.search + 150, { cx: 1160, cy: 350, s: 1.25 }, 750)
           .to(result + 200, FOLDER_SHOT, 900).shots,
+      }
+    },
+
+    /** One button turns the list into a grid of tiles and back; a tile opens its group. */
+    view({ marks, end }) {
+      return {
+        duration: end,
+        windows: [],
+        captions: [
+          {
+            text: 'List or grid. One click.',
+            from: 300,
+            to: marks.group - 500,
+          },
+          {
+            text: 'A tile opens its group.',
+            from: marks.group + 300,
+            to: marks.close + 300,
+          },
+        ],
+        camera: film(SHOT.panel)
+          // In on the top of the panel for the button, and for the tiles it brings. The camera
+          // moves with the pointer, not before it: a pointer at rest would drift into the caption.
+          .to(marks.grid - 850, { cx: 1075, cy: 350, s: 1.25 }, 700)
+          // Down with the group that opens.
+          .to(marks.group + 100, { cx: 1075, cy: 450, s: 1.15 })
+          // The whole panel again, to see the list come back.
+          .to(marks.close + 150, SHOT.panel, 900).shots,
       }
     },
 

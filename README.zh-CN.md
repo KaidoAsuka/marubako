@@ -33,6 +33,12 @@ Windows 上的一个小面板：把工作里要反复打开的东西收在一处
   <img src="docs/images/demo-search.gif" width="880" alt="按 Ctrl + K，输入 test，回车：搜到的文件夹打开了">
 </p>
 
+**列表和网格一键切换。** 文件夹、网站、软件三页都有；网格里每个分组是一块磁贴，点开就是里面的条目。
+
+<p align="center">
+  <img src="docs/images/demo-view.gif" width="880" alt="点一下，网站列表变成磁贴网格；点开一块磁贴，是这个分组里的条目；再点一下，回到列表">
+</p>
+
 **不用的时候不碍事。** 面板收成屏幕边上的一个小球，球和面板一起移动。
 
 <p align="center">

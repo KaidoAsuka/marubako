@@ -10,6 +10,9 @@
 //   node tools/demo/render.cjs artifacts/demo
 //   python tools/demo/make-gifs.py artifacts/demo docs/images
 //
+// record.cjs and render.cjs take the name of one scene as a last argument (open, copy, search,
+// view, ball) and then leave the other scenes as they are.
+//
 // The app runs on a temporary data folder and opens nothing: the three "open" requests are answered
 // without starting a program, and nothing is written to the clipboard. The windows do appear on the
 // screen while it records; leave the mouse alone until it has finished.
@@ -188,13 +191,13 @@ class Session {
   }
 
   /**
-   * Moves the pointer onto an element of the panel (or of the ball) and clicks it. `mark` names
-   * the moment of the click; `at` says where in the element, as shares of its width and height
-   * (the middle by default: a row is clicked beside its text, a tab on its icon).
+   * Moves the pointer onto an element of the panel (or of the ball). `at` says where in the
+   * element, as shares of its width and height (the middle by default: a row is pointed at beside
+   * its text, a tab on its icon).
    */
-  async click(
+  async point(
     locator,
-    { page = this.page, role = 'panel', mark, at = [0.5, 0.5] } = {}
+    { page = this.page, role = 'panel', at = [0.5, 0.5] } = {}
   ) {
     await locator.scrollIntoViewIfNeeded()
     const box = await locator.boundingBox()
@@ -204,6 +207,13 @@ class Session {
       y: Math.round(origin.y + box.y + box.height * at[1]),
     }
     await this.glide(target, page, origin)
+    return target
+  }
+
+  /** Points at an element and clicks it. `mark` names the moment of the click. */
+  async click(locator, { mark, ...where } = {}) {
+    const page = where.page ?? this.page
+    const target = await this.point(locator, where)
     await sleep(160)
     this.scene?.clicks.push({ t: this.now(), ...target })
     if (mark) this.mark(mark)
@@ -261,6 +271,13 @@ class Session {
         .find((window) => window.isResizable())
         .isVisible()
     )
+  }
+
+  /** Every scene starts from the open panel, whatever the scene before it left. */
+  async ensurePanel() {
+    if (await this.panelVisible()) return
+    await this.summon()
+    await this.untilPanel(true)
   }
 
   async untilPanel(visible) {
@@ -363,6 +380,7 @@ const TAB = [0.5, 0.32]
 /** The shortcut brings the panel out of the ball; a folder and a test page are one click each. */
 async function sceneOpen(s) {
   const { page } = s
+  await s.ensurePanel()
   await page.getByTestId('tab-folders').click()
   await s.blur()
   await page.getByTestId('dock-panel').click()
@@ -399,6 +417,7 @@ async function sceneOpen(s) {
 /** Accounts of every environment: user name, password and a command are one click each. */
 async function sceneCopy(s) {
   const { page } = s
+  await s.ensurePanel()
   await page.getByTestId('tab-passwords').click()
   await sleep(500)
   await s.park()
@@ -424,6 +443,7 @@ async function sceneCopy(s) {
 /** Ctrl+K finds anything in any category. */
 async function sceneSearch(s) {
   const { page } = s
+  await s.ensurePanel()
   await page.getByTestId('tab-folders').click()
   await sleep(500)
   await s.park()
@@ -451,13 +471,45 @@ async function sceneSearch(s) {
   await s.end()
 }
 
+/**
+ * One button shows the entries as a grid: the groups become tiles, and a tile opens its group. The
+ * same button brings the list back.
+ */
+async function sceneView(s) {
+  const { page } = s
+  await s.ensurePanel()
+  await page.getByTestId('tab-websites').click()
+  await sleep(500)
+  await s.park()
+  // The pointer waits on the desktop, level with the window row: on its way to the button it
+  // crosses the search field and nothing else.
+  const panel = await s.bounds('panel')
+  s.cursor = { x: panel.x - 70, y: panel.y + 24 }
+
+  await s.begin('view')
+  await sleep(1700)
+  await s.click(page.getByTestId('toggle-view-mode'), { mark: 'grid' })
+  await sleep(2300)
+  // Between the name of the tile and its right end, where its two small buttons come up.
+  await s.click(page.getByTestId('folder-widget-g-docs'), {
+    mark: 'group',
+    at: [0.6, 0.56],
+  })
+  // The pointer goes on to one of the entries of the group, as a hand would.
+  await sleep(800)
+  await s.point(page.getByTestId('grid-item-s-wiki'), { at: [0.5, 0.7] })
+  await sleep(1500)
+  await s.click(page.locator('.widget-popup-close'), { mark: 'close' })
+  await sleep(900)
+  await s.click(page.getByTestId('toggle-view-mode'), { mark: 'list' })
+  await sleep(2500)
+  await s.end()
+}
+
 /** The panel folds into the ball, comes back, and the two move as one. */
 async function sceneBall(s) {
   const { page, app } = s
-  if (!(await s.panelVisible())) {
-    await s.summon()
-    await s.untilPanel(true)
-  }
+  await s.ensurePanel()
   await page.getByTestId('tab-folders').click()
   await sleep(600)
   await s.park()
@@ -538,14 +590,25 @@ async function sceneBall(s) {
   await s.end()
 }
 
+const SCENES = {
+  open: sceneOpen,
+  copy: sceneCopy,
+  search: sceneSearch,
+  view: sceneView,
+  ball: sceneBall,
+}
+
 async function main() {
   const outDir = path.resolve(process.argv[2] ?? 'artifacts/demo')
+  const only = process.argv[3]
+  if (only && !SCENES[only]) {
+    throw new Error(`no scene named ${only}: ${Object.keys(SCENES).join(', ')}`)
+  }
   const { session, userDataDir } = await prepare(outDir)
   try {
-    await sceneOpen(session)
-    await sceneCopy(session)
-    await sceneSearch(session)
-    await sceneBall(session)
+    for (const [name, scene] of Object.entries(SCENES)) {
+      if (!only || only === name) await scene(session)
+    }
   } finally {
     await session.app.close().catch(() => {})
     await fs.rm(userDataDir, { recursive: true, force: true }).catch(() => {})

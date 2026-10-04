@@ -33,6 +33,12 @@ Now they are all in one panel, and my desktop is empty.
   <img src="docs/images/demo-search.gif" width="880" alt="Ctrl + K, the word test, Enter: the folder that was found opens">
 </p>
 
+**Switches between list and grid.** One button on the Folders, Sites and Apps pages; in the grid, each group is a tile that opens to show its items.
+
+<p align="center">
+  <img src="docs/images/demo-view.gif" width="880" alt="One click turns the list of sites into a grid of tiles; a click on a tile shows the items of its group; another click brings the list back">
+</p>
+
 **Stays out of the way.** The panel collapses into a small bubble at the edge of the screen, and the two move together.
 
 <p align="center">
