@@ -5,7 +5,7 @@
 #
 # Outputs (names are referenced by tray.ts, window-manager.ts and electron-builder.config.cjs):
 #   resources/icons/marubako-<size>.png     for 16, 20, 24, 32, 40, 48, 64, 128 and 256 px
-#   icon.ico, icon-256.ico  multi-size icons holding the same nine PNG frames
+#   resources/icons/icon.ico, icon-256.ico  multi-size icons holding the same nine PNG frames
 #
 # The art is one gradient-filled path (M, L, H, V, circular A and Z commands only) plus one circle. Both are read from
 # the SVG files, drawn with GDI+ at 8x the target size, and box-filtered down so that edges are anti-aliased and the
@@ -200,7 +200,7 @@ $mainArt.Path.Dispose(); $smallArt.Path.Dispose()
 
 # ICO container with PNG-compressed frames; a 256 px frame is stored as 0 in the directory.
 foreach ($fileName in @('icon.ico', 'icon-256.ico')) {
-    $output = [System.IO.File]::Create((Join-Path $repoRoot $fileName))
+    $output = [System.IO.File]::Create((Join-Path $iconDirectory $fileName))
     $writer = [System.IO.BinaryWriter]::new($output)
     $writer.Write([uint16]0); $writer.Write([uint16]1); $writer.Write([uint16]$frames.Count)
     $offset = 6 + 16 * $frames.Count

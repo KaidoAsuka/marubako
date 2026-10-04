@@ -45,7 +45,7 @@
 - 标题栏、启动画面、托盘、窗口与安装图标采用统一的应用图标：紫色渐变的圆角方块，左下角是一个大圆角，里面一个白点。提供 16–256 像素多尺寸资源，16–24 像素使用白点更大的小尺寸版。修改 `src/renderer/src/assets/marubako.svg` 或 `marubako-small.svg` 后，运行 `npm run icons`（即 `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/generate-icons.ps1`，需要 Windows PowerShell 5.1；默认的执行策略会拒绝直接运行脚本）重新生成 PNG 和 ICO；托盘按显示缩放使用匹配的尺寸。
 - 「命令」独立于备忘，支持 PowerShell、Bash、Batch、Python、JavaScript、TypeScript、SQL、JSON、YAML 和纯文本。可填写用途说明、分组整理、搜索代码和一键复制原始脚本；只记录与复制，不执行脚本。
 - 代码编辑器提供等宽字体、行号、自动换行、两空格缩进与回车保持缩进；`Tab` 缩进、`Shift + Tab` 取消缩进、`Ctrl + S` 保存、`Ctrl + Tab` 移至保存按钮。代码卡片提供语法高亮和展开预览。旧版本数据和备忘会自动保留。
-- 在源码目录中双击 `Marubako.vbs` 或 `start.bat`，会无控制台启动。脚本会检查源码更新时间，优先使用最新的打包版本，必要时重建源码，避免启动旧界面。
+- 在源码目录的 `scripts` 文件夹里双击 `Marubako.vbs` 或 `start.bat`，会无控制台启动。脚本会检查源码更新时间，优先使用最新的打包版本，必要时重建源码，避免启动旧界面。
 
 ## 数据与备份
 

@@ -25,7 +25,7 @@ try {
         & node $electronInstaller *> $launchLogPath
     }
     if (!(Test-Path -LiteralPath $electronExe)) {
-        throw 'Dependencies are missing. Run install.bat once, or install the Marubako Setup executable.'
+        throw 'Dependencies are missing. Run scripts\install.bat once, or install the Marubako Setup executable.'
     }
     $mainOutput = Join-Path $workspacePath 'out\main\index.js'
     $needsBuild = !(Test-Path -LiteralPath $mainOutput)

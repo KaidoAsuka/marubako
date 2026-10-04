@@ -654,7 +654,7 @@ async function buildMainWindow(): Promise<BrowserWindow> {
   }
 
   mainWindow = new BrowserWindow({
-    icon: path.join(app.getAppPath(), 'icon.ico'),
+    icon: path.join(app.getAppPath(), 'resources', 'icons', 'icon.ico'),
     show: false,
     width: bounds.width,
     height: bounds.height,

@@ -28,7 +28,9 @@ function loadTrayIcon(): Electron.NativeImage {
       })
   }
   return icon.isEmpty()
-    ? nativeImage.createFromPath(path.join(app.getAppPath(), 'icon.ico'))
+    ? nativeImage.createFromPath(
+        path.join(app.getAppPath(), 'resources', 'icons', 'icon.ico')
+      )
     : icon
 }
 

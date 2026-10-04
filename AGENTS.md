@@ -53,7 +53,9 @@ src/renderer/src/
   test/          setup.ts stubs `window.quickLaunch` for unit tests
 e2e/             Playwright tests that launch the built app (`out/`) with temporary data
 tools/           repository scripts and their tests (Node's test runner); tools/demo records the README demos
-scripts/         build and release helper scripts
+scripts/         build and release helper scripts, and the scripts that start the app from source
+resources/icons/ the application icon in every size (PNG and ICO), made by `npm run icons`
+build/           what the installer is built with (installer.nsh, the splash picture)
 docs/            behavior.zh-CN.md (what the app does, in detail), images
 ```
 

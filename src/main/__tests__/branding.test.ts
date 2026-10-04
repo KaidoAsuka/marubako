@@ -72,12 +72,12 @@ describe('product identity', () => {
     for (const file of [
       'src/renderer/src/assets/marubako.svg',
       'src/renderer/src/assets/marubako-small.svg',
-      'Marubako.vbs',
-      'start.bat',
+      'scripts/Marubako.vbs',
+      'scripts/start.bat',
     ]) {
       expect(fs.existsSync(path.join(projectDir, file))).toBe(true)
     }
-    expect(read('start.bat')).toContain('Marubako.vbs')
+    expect(read('scripts/start.bat')).toContain('Marubako.vbs')
     expect(fs.existsSync(path.join(projectDir, 'QuickLaunch.vbs'))).toBe(false)
   })
 })
