@@ -6,6 +6,10 @@ import { closeApp, launchApp, type AppContext } from './test-utils'
 import { dragNativeMouse } from './native-mouse'
 import { getExpandedPosition } from '../src/main/dock-geometry'
 import { DOCK_BALL_SIZE, DOCK_SIZE } from '../src/shared/dock-size'
+import {
+  ROW_MIN_WIDTH,
+  SEARCH_ICON_BELOW_WIDTH,
+} from '../src/shared/layout-widths'
 
 async function getBubble(
   context: AppContext,
@@ -267,9 +271,10 @@ test('the window row keeps the search at the left and the buttons at the right, 
     await pin.click()
     expect((await windowState(context)).panelOnTop).toBe(false)
     await expect(context.page.getByTestId('toggle-collapse')).toHaveCount(0)
-    // In Chinese the tabs go side by side from 610px: below that "new group" and "add" sit beside the
-    // search, above it they are at the right end of the category row.
+    // In Chinese the tabs go side by side from ROW_MIN_WIDTH.zh: below that "new group" and "add" sit
+    // beside the search, above it they are at the right end of the category row.
     for (const width of [1100, 760, 420, 320]) {
+      const row = width >= ROW_MIN_WIDTH.zh
       await context.electronApp.evaluate(
         ({ BrowserWindow }, width) =>
           BrowserWindow.getAllWindows()
@@ -280,6 +285,11 @@ test('the window row keeps the search at the left and the buttons at the right, 
       await expect
         .poll(() => context.page.evaluate(() => innerWidth))
         .toBe(width)
+      // The row is laid out again a frame after the window has its new width: measure it then.
+      await expect(context.page.locator('.titlebar')).toHaveAttribute(
+        'data-search',
+        row ? 'full' : width < SEARCH_ICON_BELOW_WIDTH ? 'icon' : 'label'
+      )
       const where = async (testId: string) =>
         (await context.page.getByTestId(testId).boundingBox())!
       const search = await where('open-command')
@@ -297,7 +307,7 @@ test('the window row keeps the search at the left and the buttons at the right, 
       const beside = context.page
         .locator('.titlebar')
         .getByTestId('add-loose-item-folders')
-      if (width < 610) {
+      if (!row) {
         await expect(beside).toBeVisible()
         const add = (await beside.boundingBox())!
         expect(add.x).toBeGreaterThanOrEqual(search.x + search.width)
