@@ -333,11 +333,31 @@ describe('serializeDataFile', () => {
 
   it('handles data without any passwords', () => {
     const data = createDefaultAppData()
+    // The sample data of a new installation has one account; this is about a store with none.
+    data.passwords[0]!.items = []
+    const encrypt = vi.fn(codec.encrypt)
 
-    const file = readFile(serializeDataFile(data, codec))
+    const file = readFile(
+      serializeDataFile(data, { encrypt, decrypt: codec.decrypt })
+    )
 
     expect(file.data.passwords[0].items).toEqual([])
     expect(file.data.loose.passwords).toEqual([])
+    expect(encrypt).not.toHaveBeenCalled()
+  })
+
+  it('stores the sample account of a new installation as ciphertext, like any other', () => {
+    const data = createDefaultAppData()
+    const sample = data.passwords[0]!.items[0]!
+
+    const text = serializeDataFile(data, codec)
+    const written = readFile(text).data.passwords[0].items[0]
+
+    expect(sample.password).not.toBe('')
+    expect(written.id).toBe('password-example')
+    expect(written.passwordCiphertext).toBe(codec.encrypt(sample.password))
+    expect(written).not.toHaveProperty('password')
+    expect(text).not.toContain(sample.password)
   })
 
   it('uses the system codec (safeStorage) by default', () => {
@@ -1071,6 +1091,14 @@ describe('exporting without passwords (data-security-7)', () => {
     groupedPassword(none).password = ''
     none.loose.passwords.forEach((item) => (item.password = ''))
     expect(hasStoredPasswords(none)).toBe(false)
-    expect(hasStoredPasswords(createDefaultAppData())).toBe(false)
+  })
+
+  it('counts the sample account of a new installation as a stored password', () => {
+    const starter = createDefaultAppData()
+    expect(hasStoredPasswords(starter)).toBe(true)
+
+    // Once the user has deleted the sample, a new installation has nothing to protect.
+    starter.passwords[0]!.items = []
+    expect(hasStoredPasswords(starter)).toBe(false)
   })
 })

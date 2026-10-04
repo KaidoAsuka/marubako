@@ -24,6 +24,8 @@
   --accent: #a594ff;
   --accent-solid: #6553e4;
   --on-accent: #ffffff;
+  /* Text on the solid red of a destructive button: always white, also where --on-accent is dark. */
+  --on-danger: #ffffff;
   /* Derived, never hand-picked. Each theme block derives its own copy: a value derived here would
      be inherited as already computed, so the light accent would never reach it. The hover fill is
      one step lighter on the dark theme and one step darker on the light one; white text stays at
@@ -110,4 +112,45 @@
   --shadow-pop: 0 8px 24px rgba(15, 23, 42, 0.12);
   --shadow-modal: 0 24px 64px rgba(15, 23, 42, 0.18);
   color-scheme: light;
+}
+
+/* Monokai: the one accent choice that is a whole palette. It warms the three layers and the text,
+   as well as setting the accent (background-theme.ts): charcoal and yellow on the dark theme, the
+   paper tones of the same family on the light one. Yellow cannot carry white text, so the fills
+   take a dark one (--on-accent). Only base tokens are set here; the derived ones (hover, soft,
+   border) are worked out from them by the theme blocks above, on the same elements. */
+.theme-dark[data-background='monokai'] {
+  --sidebar-bg: #221f22;
+  --workspace-bg: #2d2a2e;
+  --card-bg: #363337;
+  --line: rgba(252, 252, 250, 0.1);
+  --line-strong: rgba(252, 252, 250, 0.18);
+  --text: #fcfcfa;
+  --text-mid: #c1c0c0;
+  /* Lighter than the plain greys would need: the yellow tints (hover, soft fill) lift the surface. */
+  --text-dim: #b4b3b4;
+  --on-accent: #2d2a2e;
+  --success: #a9dc76;
+  --warning: #fc9867;
+  --danger: #ff7a9c;
+  /* On the red tint of a destructive button the label needs a lighter red than the line. */
+  --danger-text: #ff96b0;
+}
+
+.theme-light[data-background='monokai'] {
+  --sidebar-bg: #ede7e5;
+  --workspace-bg: #faf4f2;
+  --card-bg: #fffdfc;
+  --line: rgba(41, 36, 42, 0.1);
+  --line-strong: rgba(41, 36, 42, 0.2);
+  --text: #29242a;
+  --text-mid: #5a5458;
+  --text-dim: #665f63;
+  --on-accent: #29242a;
+  /* The paper tones are darker than the plain light surfaces, so the status colours are a step
+     deeper to keep 4.5:1 on all three layers. */
+  --success: #0e6a49;
+  --warning: #805200;
+  --danger: #b72838;
+  --danger-text: #a82333;
 }

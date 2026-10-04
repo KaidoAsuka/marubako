@@ -1,12 +1,12 @@
 /**
  * The global shortcut that brings the panel up from any application. Electron names a shortcut by an
- * "accelerator" string such as `CommandOrControl+Alt+Space`; this module is the one place that knows
+ * "accelerator" string such as `CommandOrControl+Shift+Space`; this module is the one place that knows
  * which accelerators the app accepts, how they are written canonically, how they read to the user
- * (`Ctrl + Alt + Space`) and how a key press becomes one. Both processes use it: the main process to
+ * (`Ctrl + Shift + Space`) and how a key press becomes one. Both processes use it: the main process to
  * validate what is stored and registered, the settings dialog to record a new combination.
  */
 
-export const DEFAULT_SHORTCUT = 'CommandOrControl+Alt+Space'
+export const DEFAULT_SHORTCUT = 'CommandOrControl+Shift+Space'
 
 export type Modifier = 'CommandOrControl' | 'Alt' | 'Shift' | 'Super'
 
@@ -159,7 +159,7 @@ export function normalizeAccelerator(input: unknown): string | null {
   return check.ok ? check.accelerator : null
 }
 
-/** How the shortcut reads to the user: `Ctrl + Alt + Space`. Falls back to the text itself. */
+/** How the shortcut reads to the user: `Ctrl + Shift + Space`. Falls back to the text itself. */
 export function formatAccelerator(accelerator: string): string {
   const parsed = parseAccelerator(accelerator)
   if (!parsed) return accelerator

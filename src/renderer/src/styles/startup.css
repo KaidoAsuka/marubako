@@ -29,6 +29,16 @@ body {
     sans-serif
   );
 }
+/* The first frame is painted before any script has run, so it cannot ask for the theme. The main
+   process says it in the address instead: with #startup-light there, the loading screen takes the
+   light theme's values (the same as .theme-light in themes.css). */
+#startup-light:target ~ #root .startup-shell {
+  --workspace-bg: #f8f9fc;
+  --card-bg: #ffffff;
+  --line: rgba(37, 47, 68, 0.1);
+  --text: #0f172a;
+  --text-dim: #5b6577;
+}
 .startup-stack {
   display: grid;
   justify-items: center;

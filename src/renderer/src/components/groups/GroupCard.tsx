@@ -9,6 +9,7 @@ import type { SortableBindings } from '../../dnd/use-sortable-base'
 import { useSortableGroup } from '../../dnd/use-sortable-group'
 import { useDeleteEntity } from '../../hooks/use-delete-entity'
 import { useI18n } from '../../hooks/use-i18n'
+import { useOpenedByUser } from '../../hooks/use-opened-by-user'
 import { useAppStore } from '../../store/use-app-store'
 import ItemRow from '../items/ItemRow'
 
@@ -63,6 +64,7 @@ function GroupCardView({
   const updateData = useAppStore((state) => state.updateData)
   const deleteEntity = useDeleteEntity()
   const reorderItems = useAppStore((state) => state.reorderItems)
+  const unfold = useOpenedByUser(group.open)
   const dragBindings = sortable
     ? {
         ...sortable.listeners,
@@ -151,7 +153,7 @@ function GroupCardView({
         <IconExpandGroup size={14} className="group-card-chevron" />
       </div>
       {group.open && (
-        <div className="group-card-body">
+        <div className="group-card-body" data-unfold={unfold ? '' : undefined}>
           {sortable && !useExternalItemDnd ? (
             <DndProvider
               strategy={rectSortingStrategy}

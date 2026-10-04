@@ -8,6 +8,8 @@ const FRAME_KEYS = [
   'view_mode_hint',
   'view_mode_grid',
   'view_mode_list',
+  'view_switch_grid',
+  'view_switch_list',
   'tab_summary',
   'tab_summary_tasks',
 ]
@@ -41,7 +43,25 @@ describe('frame strings (layout, iteration 4)', () => {
     expect(workspaceStrings.ja.dock_guide).not.toContain('左上')
   })
 
-  it('has dropped the strings of the per-page switch and filter box', () => {
+  it('names the layout switch of a page by what a click does, not by the layout it is in', () => {
+    expect(workspaceStrings.zh.view_switch_grid).toBe('切换为网格')
+    expect(workspaceStrings.zh.view_switch_list).toBe('切换为列表')
+    expect(workspaceStrings.en.view_switch_grid).toBe('Show as grid')
+    expect(workspaceStrings.en.view_switch_list).toBe('Show as list')
+    expect(workspaceStrings.ja.view_switch_grid).toBe('グリッド表示に切り替え')
+    expect(workspaceStrings.ja.view_switch_list).toBe('リスト表示に切り替え')
+    for (const lang of LANGS) {
+      // Not the bare names of the two layouts, which the settings dialog uses for its options.
+      expect(workspaceStrings[lang].view_switch_grid).not.toBe(
+        workspaceStrings[lang].view_mode_grid
+      )
+      expect(workspaceStrings[lang].view_switch_list).not.toBe(
+        workspaceStrings[lang].view_mode_list
+      )
+    }
+  })
+
+  it('has dropped the old strings of the per-page switch and of the filter box', () => {
     for (const lang of LANGS) {
       expect(workspaceStrings[lang].view_grid).toBeUndefined()
       expect(workspaceStrings[lang].view_list).toBeUndefined()

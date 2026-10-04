@@ -2,8 +2,8 @@ import { test, expect, type Locator } from '@playwright/test'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import os from 'node:os'
-import { createDefaultAppData } from '../src/shared/default-data'
-import { closeApp, launchApp } from './test-utils'
+import { createDefaultAppData, closeApp, launchApp } from './test-utils'
+import { DOCK_BALL_SIZE, DOCK_SIZE } from '../src/shared/dock-size'
 
 async function expectActionsAtTheRight(card: Locator, actionsSelector: string) {
   const content = card.locator('.widget-label, .grid-copy')
@@ -229,8 +229,11 @@ test('floating bubble preserves panel dimensions and zoom across queued visibili
     await expect.poll(() => electronApp.windows().length).toBe(2)
     const bubble = electronApp.windows().find((window) => window !== page)!
     await expect(bubble.getByTestId('dock-bubble')).toBeVisible()
-    expect(await bubble.evaluate(() => innerWidth)).toBe(56)
-    await expect(bubble.getByTestId('dock-bubble')).toHaveCSS('width', '50px')
+    expect(await bubble.evaluate(() => innerWidth)).toBe(DOCK_SIZE)
+    await expect(bubble.getByTestId('dock-bubble')).toHaveCSS(
+      'width',
+      `${DOCK_BALL_SIZE}px`
+    )
     await bubble.getByTestId('dock-bubble').dblclick()
     await expect
       .poll(() =>

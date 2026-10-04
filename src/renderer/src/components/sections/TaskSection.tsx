@@ -9,8 +9,14 @@ import { todayKey } from '../../utils/date'
 import EmptyState from '../common/EmptyState'
 import DateBar from '../tasks/DateBar'
 import TaskCard from '../tasks/TaskCard'
+import type { PageEnter } from './page-enter'
 
-export default function TaskSection(): JSX.Element {
+type Props = {
+  /** Set when the page was switched to: the side it slides in from. */
+  enter?: PageEnter | null
+}
+
+export default function TaskSection({ enter }: Props = {}): JSX.Element {
   const { t } = useI18n()
   const data = useAppStore((state) => state.data)
   const selectedDate = useAppStore((state) => state.selectedDate)
@@ -30,6 +36,7 @@ export default function TaskSection(): JSX.Element {
     <section
       className="section-content task-section"
       data-testid="section-tasks"
+      data-enter={enter ?? undefined}
     >
       {/* The tab says where the user is; "add task" lives in the bar above. */}
       <h1 className="sr-only">{t('tab_tasks')}</h1>

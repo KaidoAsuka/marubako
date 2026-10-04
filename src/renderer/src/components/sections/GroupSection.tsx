@@ -20,6 +20,7 @@ import { useAppStore } from '@renderer/store/use-app-store'
 import DragOverlayPreview from './group-section/DragOverlayPreview'
 import GridView from './group-section/GridView'
 import ListView from './group-section/ListView'
+import type { PageEnter } from './page-enter'
 import PasswordSafetyNote from './PasswordSafetyNote'
 import {
   createActiveDragOverlay,
@@ -32,6 +33,8 @@ import {
 
 type Props = {
   tab: GroupTab
+  /** Set when the page was switched to: the side it slides in from. */
+  enter?: PageEnter | null
 }
 
 const tabIcons = {
@@ -43,7 +46,7 @@ const tabIcons = {
   commands: <IconTabCommand size={28} />,
 }
 
-export default function GroupSection({ tab }: Props): JSX.Element {
+export default function GroupSection({ tab, enter }: Props): JSX.Element {
   const { t } = useI18n()
   const data = useAppStore((state) => state.data)
   const setModal = useAppStore((state) => state.setModal)
@@ -72,7 +75,7 @@ export default function GroupSection({ tab }: Props): JSX.Element {
     void hydrateIcons(paths)
   }, [data, hydrateIcons, tab])
 
-  const currentView = data?.prefs.viewMode ?? 'grid'
+  const currentView = data?.prefs.viewMode ?? 'list'
   const effectiveView = currentView
   const isGridMode = isGridTab && effectiveView === 'grid'
 
@@ -140,6 +143,7 @@ export default function GroupSection({ tab }: Props): JSX.Element {
     <section
       className="section-content"
       data-testid={`section-${tab}`}
+      data-enter={enter ?? undefined}
       {...entryMenu}
     >
       {/* The tab says where the user is; the heading is for screen readers. The page-level actions

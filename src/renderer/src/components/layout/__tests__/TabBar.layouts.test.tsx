@@ -2,6 +2,10 @@ import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { createDefaultAppData } from '../../../../../shared/default-data'
+import {
+  ROW_MIN_WIDTH,
+  STACKED_MIN_WIDTH,
+} from '../../../../../shared/layout-widths'
 import type { Lang } from '../../../../../shared/types'
 import { useAppStore } from '../../../store/use-app-store'
 import { INITIAL_WINDOW_WIDTH, resizeWindow } from '../../../test/resize-window'
@@ -25,11 +29,13 @@ describe('TabBar layouts', () => {
     resizeWindow(INITIAL_WINDOW_WIDTH)
   })
 
+  // The widths at which the tabs change are constants per language (shared/layout-widths.ts).
   it.each([
-    [280, 'icons'],
+    [STACKED_MIN_WIDTH.zh - 1, 'icons'],
+    [STACKED_MIN_WIDTH.zh, 'stacked'],
     [400, 'stacked'],
-    [609, 'stacked'],
-    [610, 'row'],
+    [ROW_MIN_WIDTH.zh - 1, 'stacked'],
+    [ROW_MIN_WIDTH.zh, 'row'],
     [1000, 'row'],
   ] as const)('is %i px wide: the tabs are %s (Chinese)', (width, mode) => {
     resizeWindow(width)
@@ -100,6 +106,10 @@ describe('TabBar layouts', () => {
     expect(
       row().querySelector('[data-testid="add-loose-item-folders"]')
     ).not.toBeNull()
+    // The layout switch of the page travels with them.
+    expect(
+      row().querySelector('.section-actions [data-testid="toggle-view-mode"]')
+    ).not.toBeNull()
   })
 
   it('moves the actions into the row as the window widens, and out again', () => {
@@ -116,14 +126,26 @@ describe('TabBar layouts', () => {
 
   it('uses the English thresholds in English', () => {
     load('en')
-    resizeWindow(459)
+    expect(STACKED_MIN_WIDTH.en).toBeGreaterThan(STACKED_MIN_WIDTH.zh)
+    resizeWindow(STACKED_MIN_WIDTH.en - 1)
     const { unmount } = render(<TabBar />)
     expect(row()).toHaveAttribute('data-tab-mode', 'icons')
     unmount()
 
-    resizeWindow(460)
-    render(<TabBar />)
+    resizeWindow(STACKED_MIN_WIDTH.en)
+    const stacked = render(<TabBar />)
     expect(row()).toHaveAttribute('data-tab-mode', 'stacked')
+    stacked.unmount()
+
+    // The row of names beside their icons, with the three buttons of a page at its end.
+    resizeWindow(ROW_MIN_WIDTH.en - 1)
+    const narrow = render(<TabBar />)
+    expect(row()).toHaveAttribute('data-tab-mode', 'stacked')
+    narrow.unmount()
+
+    resizeWindow(ROW_MIN_WIDTH.en)
+    render(<TabBar />)
+    expect(row()).toHaveAttribute('data-tab-mode', 'row')
   })
 
   it('moves the marker to the new place when the layout changes', () => {

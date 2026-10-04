@@ -1,12 +1,19 @@
 import { describe, expect, it, vi } from 'vitest'
 
+import { DEFAULT_SHORTCUT } from '../../shared/accelerator'
 import { createDefaultAppData } from '../../shared/default-data'
 import {
   DEFAULT_GROUP_ICONS,
   DEFAULT_ITEM_ICONS,
   DEFAULT_TASK_ICON,
 } from '../../shared/default-icons'
-import { GROUP_TABS } from '../../shared/types'
+import {
+  BACKGROUNDS,
+  GROUP_TABS,
+  LANGS,
+  THEMES,
+  THEME_SETTINGS,
+} from '../../shared/types'
 import type { AppData } from '../../shared/types'
 import {
   CURRENT_SCHEMA_VERSION,
@@ -45,16 +52,17 @@ describe('normalizeAppData: prefs', () => {
   })
 
   it('keeps every valid value', () => {
+    // Each value differs from the default, so a default cannot pass for a kept value.
     const valid = {
       lang: 'ja',
-      theme: 'light',
+      theme: 'dark',
       background: 'forest',
       browser: 'edge',
       zoom: 1.2,
       opacity: 0.6,
       motion: 1.8,
       peekCollapseDelay: 400,
-      viewMode: 'list',
+      viewMode: 'grid',
       lastTab: 'tasks',
       hiddenTabs: ['apps', 'notes'],
       shortcut: 'CommandOrControl+Alt+Q',
@@ -86,10 +94,10 @@ describe('normalizeAppData: prefs', () => {
   })
 
   it.each([
-    ['theme', 'light', 'dark', 'blue'],
-    ['background', 'ocean', 'aurora', 'neon'],
+    ['theme', 'dark', 'light', 'blue'],
+    ['background', 'ocean', 'minimal', 'neon'],
     ['browser', 'chrome', 'default', 'firefox'],
-    ['viewMode', 'list', 'grid', 'cards'],
+    ['viewMode', 'grid', 'list', 'cards'],
     ['lastTab', 'tasks', 'folders', 'settings'],
   ])(
     '%s keeps a valid value and falls back for an invalid one',
@@ -100,6 +108,60 @@ describe('normalizeAppData: prefs', () => {
       }
     }
   )
+
+  describe('theme', () => {
+    it('is light for data without one', () => {
+      expect(defaultPrefs.theme).toBe('light')
+      expect(prefsOf({ lang: 'en' }).theme).toBe('light')
+    })
+
+    it.each(THEME_SETTINGS)('keeps %s', (theme) => {
+      expect(prefsOf({ theme }).theme).toBe(theme)
+    })
+
+    it('knows three settings: the two themes and following the system', () => {
+      expect([...THEME_SETTINGS].sort()).toEqual(['dark', 'light', 'system'])
+      for (const theme of THEMES) expect(THEME_SETTINGS).toContain(theme)
+    })
+
+    it.each([
+      ['another spelling of system', 'System'],
+      ['auto', 'auto'],
+      ['os', 'os'],
+      ['a boolean', true],
+    ])('falls back to light for %s', (_label, theme) => {
+      expect(prefsOf({ theme }).theme).toBe('light')
+    })
+  })
+
+  describe('background', () => {
+    it('is graphite (minimal) for data without one', () => {
+      expect(defaultPrefs.background).toBe('minimal')
+      expect(prefsOf({ lang: 'en' }).background).toBe('minimal')
+    })
+
+    it('knows six accents, monokai the newest', () => {
+      expect(BACKGROUNDS).toEqual([
+        'aurora',
+        'sunset',
+        'forest',
+        'ocean',
+        'minimal',
+        'monokai',
+      ])
+    })
+
+    it.each(BACKGROUNDS)('keeps %s', (background) => {
+      expect(prefsOf({ background }).background).toBe(background)
+    })
+  })
+
+  describe('viewMode', () => {
+    it('is a list for data without one', () => {
+      expect(defaultPrefs.viewMode).toBe('list')
+      expect(prefsOf({ lang: 'en' }).viewMode).toBe('list')
+    })
+  })
 
   it.each(['folders', 'websites', 'apps', 'passwords', 'commands', 'notes'])(
     'accepts %s as the last tab',
@@ -251,13 +313,18 @@ describe('normalizeAppData: prefs', () => {
   })
 
   describe('shortcut', () => {
-    it('is Ctrl+Alt+Space, switched on, for data written before the setting existed', () => {
-      expect(defaultPrefs.shortcut).toBe('CommandOrControl+Alt+Space')
+    it('is the default, Ctrl+Shift+Space, switched on, when the data has none', () => {
+      expect(DEFAULT_SHORTCUT).toBe('CommandOrControl+Shift+Space')
+      expect(defaultPrefs.shortcut).toBe(DEFAULT_SHORTCUT)
       expect(defaultPrefs.shortcutEnabled).toBe(true)
-      expect(prefsOf({ lang: 'en' }).shortcut).toBe(
+      expect(prefsOf({ lang: 'en' }).shortcut).toBe(DEFAULT_SHORTCUT)
+      expect(prefsOf({ lang: 'en' }).shortcutEnabled).toBe(true)
+    })
+
+    it('keeps the default of earlier versions for a user who has it stored', () => {
+      expect(prefsOf({ shortcut: 'CommandOrControl+Alt+Space' }).shortcut).toBe(
         'CommandOrControl+Alt+Space'
       )
-      expect(prefsOf({ lang: 'en' }).shortcutEnabled).toBe(true)
     })
 
     it('keeps an acceptable shortcut, written canonically', () => {
@@ -279,7 +346,7 @@ describe('normalizeAppData: prefs', () => {
       ['null', null],
       ['an object', {}],
     ])('falls back to the default for %s', (_label, shortcut) => {
-      expect(prefsOf({ shortcut }).shortcut).toBe('CommandOrControl+Alt+Space')
+      expect(prefsOf({ shortcut }).shortcut).toBe(DEFAULT_SHORTCUT)
     })
 
     it('only accepts a real boolean for the switch', () => {
@@ -1474,4 +1541,20 @@ describe('normalizeAppData: default icons', () => {
     expect(icons.length).toBeGreaterThan(5)
     for (const icon of icons) expect(icon).toMatch(TILE_VALUE)
   })
+
+  it.each(LANGS)(
+    'leaves the sample data of a new installation as it is (%s)',
+    (lang) => {
+      const starter = createDefaultAppData(lang)
+
+      const data = normalizeAppData(JSON.parse(JSON.stringify(starter)))
+
+      // The sample apps, account and command are entries like any other: nothing is repaired.
+      expect(data.apps).toEqual(starter.apps)
+      expect(data.passwords).toEqual(starter.passwords)
+      expect(data.commands).toEqual(starter.commands)
+      expect(data.prefs).toEqual(starter.prefs)
+      expect(data.topOrder).toEqual(starter.topOrder)
+    }
+  )
 })

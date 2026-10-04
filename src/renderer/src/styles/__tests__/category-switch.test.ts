@@ -1,8 +1,17 @@
-// motion-5: choosing a category shows it at once; only the marker slides. These read the real
-// stylesheets in cascade order.
+// Choosing a category: its page slides in a short way from the side its tab lies on, the way the
+// marker travels, and fades in; the first page of a session is simply there. The bodies of groups
+// and tasks unfold only when the user opens them, not when their page arrives. These read the real
+// stylesheets in cascade order (ContentRouter.test.tsx checks which page gets which direction).
 import { describe, expect, it } from 'vitest'
 
-import { lastValue, loadCascade } from './css-utils'
+import {
+  CASCADE_ORDER,
+  declarations,
+  lastValue,
+  loadCascade,
+  loadRules,
+  splitSelectors,
+} from './css-utils'
 
 const cascade = loadCascade()
 const win = (selector: string, property: string, at: string[] = []) =>
@@ -11,21 +20,110 @@ const keyframes = (name: string) =>
   cascade
     .filter((rule) => rule.selector === `@keyframes ${name}`)
     .map((rule) => rule.body.replace(/\s+/g, ' ').trim())
+const REDUCED = '@media (prefers-reduced-motion: reduce)'
 
-describe('the content of a category', () => {
-  it('is there at once: it only brightens from 0.6, with no slide and no empty first frame', () => {
-    expect(keyframes('sectionIn')).toEqual([
-      'from { opacity: 0.6; } to { opacity: 1; }',
-    ])
-    expect(keyframes('sectionIn')[0]).not.toContain('transform')
-    expect(keyframes('sectionIn')[0]).not.toContain('opacity: 0;')
+describe('the page of a category', () => {
+  it.each([
+    ['forward', 'pageInForward', '16px'],
+    ['backward', 'pageInBackward', '-16px'],
+  ] as const)(
+    'comes in %s from 16px to that side, fading in from nothing',
+    (_direction, name, offset) => {
+      expect(keyframes(name)).toEqual([
+        `from { opacity: 0; transform: translateX(${offset}); }`,
+      ])
+    }
+  )
+
+  it('has no end frame and does not hold its last one, so no transform is left on the page', () => {
+    // A transform on the page, even `translateX(0)`, would make it the containing block of the
+    // fixed drag overlay. Without `to` the animation ends on the page as it is styled, and without
+    // a fill mode nothing of it remains afterwards.
+    for (const name of ['pageInForward', 'pageInBackward']) {
+      expect(keyframes(name)[0], name).not.toMatch(/\bto\b|100%/)
+    }
+    for (const direction of ['forward', 'backward']) {
+      const animation = win(
+        `.section-content[data-enter='${direction}']`,
+        'animation'
+      )!
+
+      expect(animation, direction).not.toMatch(/\b(both|forwards|backwards)\b/)
+      expect(
+        win(
+          `.section-content[data-enter='${direction}']`,
+          'animation-fill-mode'
+        )
+      ).toBeUndefined()
+    }
+    expect(win('.section-content', 'transform')).toBeUndefined()
+    expect(win('.section-content', 'will-change')).toBeUndefined()
   })
 
-  it('brightens in the instant duration, declared once', () => {
-    expect(win('.section-content', 'animation')).toBe(
-      'sectionIn var(--motion-instant) var(--ease-out) both'
+  it('slides in the normal duration with the arriving curve, like the marker', () => {
+    expect(win(".section-content[data-enter='forward']", 'animation')).toBe(
+      'pageInForward var(--motion-normal) var(--ease-out)'
     )
-    expect(win('.section-content', 'animation-duration')).toBeUndefined()
+    expect(win(".section-content[data-enter='backward']", 'animation')).toBe(
+      'pageInBackward var(--motion-normal) var(--ease-out)'
+    )
+    expect(win('.tabbar::before', 'transition')).toBe(
+      'transform var(--motion-normal) var(--ease-out)'
+    )
+  })
+
+  it('is simply there when it was not switched to: a page without data-enter has no animation', () => {
+    expect(win('.section-content', 'animation')).toBeUndefined()
+    expect(win('.section-content', 'animation-name')).toBeUndefined()
+    // Every animation on the page asks for a direction.
+    const animated = cascade
+      .filter((rule) =>
+        declarations(rule.body).some(([name]) => /^animation/.test(name))
+      )
+      .flatMap((rule) => splitSelectors(rule.selector))
+      .filter((selector) => /\.section-content(?![\w-])/.test(selector))
+
+    expect(animated.sort()).toEqual([
+      ".section-content[data-enter='backward']",
+      ".section-content[data-enter='forward']",
+    ])
+  })
+
+  it('has let go of the old brightening', () => {
+    const everything = CASCADE_ORDER.map((file) =>
+      loadRules(file)
+        .map((rule) => `${rule.selector} { ${rule.body} }`)
+        .join('\n')
+    ).join('\n')
+
+    expect(everything).not.toContain('sectionIn')
+  })
+
+  it('does not move at all for someone who asked for reduced motion', () => {
+    const everywhere = cascade.find(
+      (rule) =>
+        rule.at.join('|') === REDUCED &&
+        splitSelectors(rule.selector).includes('*')
+    )
+
+    expect(everywhere).toBeDefined()
+    expect(
+      declarations(everywhere!.body).find(([name]) => name === 'animation')?.[1]
+    ).toBe('none !important')
+  })
+})
+
+describe('the body of a group or a task', () => {
+  it('unfolds only when the user opened it', () => {
+    for (const body of ['.group-card-body', '.task-card-body']) {
+      expect(win(`${body}[data-unfold]`, 'animation'), body).toBe(
+        'expandIn var(--motion-normal) var(--ease-out) both'
+      )
+      // One that is open when its page arrives is part of the page: it has no animation of its
+      // own, or a whole page of bodies would drop down under the page that is sliding in.
+      expect(win(body, 'animation'), body).toBeUndefined()
+    }
+    expect(keyframes('expandIn')).toHaveLength(1)
   })
 })
 

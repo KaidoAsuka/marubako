@@ -5,9 +5,13 @@ import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 
-import { createDefaultAppData } from '../src/shared/default-data'
 import { DEFAULT_PANEL_WIDTH } from '../src/shared/layout-widths'
-import { closeApp, launchApp, type AppContext } from './test-utils'
+import {
+  createDefaultAppData,
+  closeApp,
+  launchApp,
+  type AppContext,
+} from './test-utils'
 
 async function profileWith(
   mutate: (data: ReturnType<typeof createDefaultAppData>) => void

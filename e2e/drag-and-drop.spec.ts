@@ -4,9 +4,8 @@ import path from 'node:path'
 
 import { test, expect, type Locator, type Page } from '@playwright/test'
 
-import { createDefaultAppData } from '../src/shared/default-data'
 import type { AppData } from '../src/shared/types'
-import { closeApp, launchApp } from './test-utils'
+import { createDefaultAppData, closeApp, launchApp } from './test-utils'
 
 async function launchWithData(mutate: (data: AppData) => void) {
   const userDataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'marubako-dnd-'))

@@ -65,7 +65,7 @@ beforeEach(() => {
       activations = activations.filter((entry) => entry !== callback)
     }
   })
-  launchSettings('Ctrl + Alt + Space', true)
+  launchSettings('Ctrl + Shift + Space', true)
   useAppStore.setState({
     data: null,
     windowState: { alwaysOnTop: false, collapsed: false, opacity: 1 },
@@ -104,7 +104,7 @@ describe('the three lines', () => {
   })
 
   it('leave out the shortcut when none could be registered, rather than name a key that does nothing', async () => {
-    launchSettings('Ctrl + Alt + Space', false)
+    launchSettings('Ctrl + Shift + Space', false)
     showData()
     await mountCard()
 
@@ -126,7 +126,7 @@ describe('the three lines', () => {
       expect(screen.getAllByRole('listitem')).toHaveLength(3)
       expect(
         screen.getByTestId('onboarding-step-hotkey').querySelector('kbd')
-      ).toHaveTextContent('Ctrl + Alt + Space')
+      ).toHaveTextContent('Ctrl + Shift + Space')
       view.unmount()
       localStorage.clear()
     }
@@ -286,7 +286,7 @@ describe('finishing', () => {
   })
 
   it('finishes with two lines when there is no shortcut line', async () => {
-    launchSettings('Ctrl + Alt + Space', false)
+    launchSettings('Ctrl + Shift + Space', false)
     showData()
     await mountCard()
     vi.useFakeTimers()

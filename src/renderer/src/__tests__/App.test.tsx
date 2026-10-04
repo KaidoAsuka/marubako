@@ -2,9 +2,15 @@ import { act, cleanup, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createDefaultAppData } from '../../../shared/default-data'
-import type { AppData, DataStatus } from '../../../shared/types'
+import type {
+  AppData,
+  DataStatus,
+  QuickLaunchResult,
+} from '../../../shared/types'
 import App from '../App'
 import { useAppStore } from '../store/use-app-store'
+import { ACCENT_CHOICES } from '../styles/background-theme'
+import { installSystemTheme, type SystemTheme } from '../test/system-theme'
 
 function mockLoadedData(mutate: (data: AppData) => void): void {
   const data = createDefaultAppData()
@@ -29,6 +35,7 @@ describe('App', () => {
       loading: true,
       error: null,
       dataStatus: { writeError: null, notices: [] },
+      previewPrefs: null,
     })
   })
 
@@ -52,10 +59,32 @@ describe('App', () => {
 
     render(<App />)
 
+    // An unknown theme is drawn light, the default; an unknown accent in violet.
     const root = await screen.findByTestId('app-root')
-    expect(root).toHaveClass('theme-dark')
+    expect(root).toHaveClass('theme-light')
+    expect(root).not.toHaveClass('theme-dark')
     expect(root).toHaveAttribute('data-background', 'aurora')
-    expect(document.documentElement.dataset.theme).toBe('dark')
+    expect(document.documentElement.dataset.theme).toBe('light')
+  })
+
+  it('wears the look of a new installation: light, graphite', async () => {
+    mockLoadedData(() => {})
+
+    render(<App />)
+
+    const root = await screen.findByTestId('app-root')
+    expect(root).toHaveClass('theme-light')
+    expect(root).toHaveAttribute('data-background', 'minimal')
+    expect(root.style.getPropertyValue('--accent')).toBe(
+      ACCENT_CHOICES.minimal.light
+    )
+    expect(root.style.getPropertyValue('--accent-solid')).toBe(
+      ACCENT_CHOICES.minimal.solidLight
+    )
+    for (const target of [document.documentElement, document.body]) {
+      expect(target).toHaveClass('theme-light')
+      expect(target.dataset.background).toBe('minimal')
+    }
   })
 
   it('shows the data banner on top of the workspace and follows pushed status changes', async () => {
@@ -153,6 +182,7 @@ describe('App', () => {
 
   it('has no blob layer behind the opaque canvas, and still sets the accent from the stored choice', async () => {
     mockLoadedData((data) => {
+      data.prefs.theme = 'dark'
       data.prefs.background = 'forest'
     })
 
@@ -168,6 +198,43 @@ describe('App', () => {
       '#62d0dc'
     )
     expect(document.body.dataset.background).toBe('forest')
+  })
+
+  it('puts the theme and the accent choice on the same three elements, where a whole palette looks for them', async () => {
+    mockLoadedData((data) => {
+      data.prefs.theme = 'dark'
+      data.prefs.background = 'monokai'
+    })
+
+    render(<App />)
+    const root = await screen.findByTestId('app-root')
+
+    // themes.css and code.css dress monokai with `.theme-<theme>[data-background='monokai']`.
+    for (const target of [document.documentElement, document.body, root]) {
+      expect(
+        target.matches(".theme-dark[data-background='monokai']"),
+        target.tagName
+      ).toBe(true)
+    }
+    expect(root.style.getPropertyValue('--accent')).toBe(
+      ACCENT_CHOICES.monokai.dark
+    )
+    expect(root.style.getPropertyValue('--accent-solid')).toBe(
+      ACCENT_CHOICES.monokai.solidDark
+    )
+
+    act(() => useAppStore.getState().setPreviewPrefs({ theme: 'light' }))
+
+    for (const target of [document.documentElement, document.body, root]) {
+      expect(
+        target.matches(".theme-light[data-background='monokai']"),
+        target.tagName
+      ).toBe(true)
+      expect(target.matches('.theme-dark'), target.tagName).toBe(false)
+    }
+    expect(root.style.getPropertyValue('--accent')).toBe(
+      ACCENT_CHOICES.monokai.light
+    )
   })
 
   it('has no status bar, and the feedback strip is the last thing in the shell', async () => {
@@ -186,5 +253,149 @@ describe('App', () => {
     expect(screen.getByTestId('feedback-strip')).not.toHaveAttribute(
       'data-open'
     )
+  })
+
+  describe('the theme set to follow Windows', () => {
+    let system: SystemTheme
+
+    afterEach(() => {
+      system.restore()
+    })
+
+    it('is dark while Windows is dark and light while it is light, and changes with it at once', async () => {
+      system = installSystemTheme(true)
+      mockLoadedData((data) => {
+        data.prefs.theme = 'system'
+        data.prefs.background = 'ocean'
+      })
+
+      render(<App />)
+      const root = await screen.findByTestId('app-root')
+
+      expect(root).toHaveClass('theme-dark')
+      expect(document.documentElement.dataset.theme).toBe('dark')
+      expect(root.style.getPropertyValue('--accent')).toBe(
+        ACCENT_CHOICES.ocean.dark
+      )
+
+      system.set(false)
+
+      expect(root).toHaveClass('theme-light')
+      expect(root).not.toHaveClass('theme-dark')
+      expect(document.documentElement).toHaveClass('theme-light')
+      expect(document.body).toHaveClass('theme-light')
+      expect(document.documentElement.dataset.theme).toBe('light')
+      // The accent is the one of the theme that is drawn now.
+      expect(root.style.getPropertyValue('--accent')).toBe(
+        ACCENT_CHOICES.ocean.light
+      )
+      // What is saved stays "follow the system": nothing was written.
+      expect(useAppStore.getState().data?.prefs.theme).toBe('system')
+      expect(window.quickLaunch.saveData).not.toHaveBeenCalled()
+
+      system.set(true)
+      expect(root).toHaveClass('theme-dark')
+    })
+
+    it.each(['light', 'dark'] as const)(
+      'leaves a chosen theme (%s) alone whatever Windows does',
+      async (theme) => {
+        system = installSystemTheme(theme === 'light')
+        mockLoadedData((data) => {
+          data.prefs.theme = theme
+        })
+
+        render(<App />)
+        const root = await screen.findByTestId('app-root')
+        expect(root).toHaveClass(`theme-${theme}`)
+
+        system.set(theme !== 'light')
+
+        expect(root).toHaveClass(`theme-${theme}`)
+      }
+    )
+
+    it('is what the settings dialog previews when "system" is picked there', async () => {
+      system = installSystemTheme(true)
+      mockLoadedData((data) => {
+        data.prefs.theme = 'light'
+      })
+
+      render(<App />)
+      const root = await screen.findByTestId('app-root')
+      expect(root).toHaveClass('theme-light')
+
+      act(() => useAppStore.getState().setPreviewPrefs({ theme: 'system' }))
+
+      expect(root).toHaveClass('theme-dark')
+      act(() => useAppStore.getState().setPreviewPrefs(null))
+      expect(root).toHaveClass('theme-light')
+    })
+  })
+
+  describe('the first frame, before the data has arrived', () => {
+    let deliver: (result: QuickLaunchResult<AppData>) => void
+
+    function openAt(search: string): void {
+      window.history.replaceState(null, '', `/${search}`)
+    }
+
+    beforeEach(() => {
+      vi.mocked(window.quickLaunch.loadData).mockReturnValue(
+        new Promise((resolve) => {
+          deliver = resolve
+        })
+      )
+    })
+
+    afterEach(() => {
+      openAt('')
+    })
+
+    it.each(['dark', 'light'] as const)(
+      'wears the %s theme the main process put in the URL',
+      async (theme) => {
+        openAt(`?theme=${theme}`)
+
+        render(<App />)
+
+        expect(screen.getByTestId('loading-screen')).toBeInTheDocument()
+        for (const target of [document.documentElement, document.body]) {
+          expect(target).toHaveClass(`theme-${theme}`)
+          expect(target.dataset.theme).toBe(theme)
+        }
+        await act(async () => {})
+        expect(document.documentElement).toHaveClass(`theme-${theme}`)
+      }
+    )
+
+    it.each(['', '?theme=sepia', '?theme=system'])(
+      'is light, the default, when the URL names no theme it knows (%j)',
+      (search) => {
+        openAt(search)
+
+        render(<App />)
+
+        expect(document.documentElement).toHaveClass('theme-light')
+        expect(document.documentElement).not.toHaveClass('theme-dark')
+      }
+    )
+
+    it('hands over to the saved theme once the data is there', async () => {
+      openAt('?theme=light')
+      render(<App />)
+      expect(document.documentElement).toHaveClass('theme-light')
+
+      const data = createDefaultAppData()
+      data.prefs.theme = 'dark'
+      await act(async () => {
+        deliver({ ok: true, data })
+      })
+
+      const root = await screen.findByTestId('app-root')
+      expect(root).toHaveClass('theme-dark')
+      expect(document.documentElement).toHaveClass('theme-dark')
+      expect(document.documentElement).not.toHaveClass('theme-light')
+    })
   })
 })

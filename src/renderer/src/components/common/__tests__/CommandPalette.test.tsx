@@ -358,6 +358,26 @@ describe('the search palette: what Enter does', () => {
     expect(state().currentTab).toBe('websites')
   })
 
+  it('shows a group in the list layout by going to its page and opening it there: a list has no popup', async () => {
+    open((data) => {
+      data.websites = [
+        { id: 'g', name: 'Zeta group', icon: 'G', open: false, items: [] },
+      ]
+      data.prefs.viewMode = 'list'
+    })
+    fireEvent.change(input(), { target: { value: 'zeta group' } })
+    await waitFor(() => expect(options().length).toBeGreaterThan(0))
+
+    await act(async () => {
+      fireEvent.keyDown(input(), { key: 'Enter' })
+    })
+
+    expect(state().widgetPopup).toBeNull()
+    expect(state().currentTab).toBe('websites')
+    expect(state().data!.websites[0]).toMatchObject({ id: 'g', open: true })
+    expect(state().commandOpen).toBe(false)
+  })
+
   it('does nothing on Enter when there is no result', async () => {
     open()
     fireEvent.change(input(), { target: { value: 'nothing like this' } })

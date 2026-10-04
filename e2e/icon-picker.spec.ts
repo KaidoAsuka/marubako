@@ -4,8 +4,7 @@ import path from 'node:path'
 
 import { expect, test } from '@playwright/test'
 
-import { createDefaultAppData } from '../src/shared/default-data'
-import { closeApp, launchApp } from './test-utils'
+import { createDefaultAppData, closeApp, launchApp } from './test-utils'
 
 async function savedIcons(userDataDir: string): Promise<string[]> {
   const file = JSON.parse(

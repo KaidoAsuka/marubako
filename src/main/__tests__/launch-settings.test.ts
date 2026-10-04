@@ -199,14 +199,20 @@ describe('the launch shortcut setting', () => {
     it('uses the default for a stored shortcut that is not an acceptable one', () => {
       ls.registerLaunchShortcut(config('Ctrl+K'))
 
-      expect(registerCalls()).toEqual(['CommandOrControl+Alt+Space'])
+      expect(registerCalls()).toEqual(['CommandOrControl+Shift+Space'])
     })
 
-    it('defaults to Ctrl+Alt+Space switched on', () => {
+    it('defaults to Ctrl+Shift+Space switched on', () => {
       ls.registerLaunchShortcut()
 
-      expect(registerCalls()).toEqual(['CommandOrControl+Alt+Space'])
-      expect(ls.getLaunchSettings().shortcutEnabled).toBe(true)
+      expect(ls.LAUNCH_SHORTCUT).toBe('CommandOrControl+Shift+Space')
+      expect(registerCalls()).toEqual(['CommandOrControl+Shift+Space'])
+      expect(ls.getLaunchSettings()).toMatchObject({
+        shortcut: 'Ctrl + Shift + Space',
+        shortcutAccelerator: 'CommandOrControl+Shift+Space',
+        shortcutAvailable: true,
+        shortcutEnabled: true,
+      })
     })
 
     it('survives Electron refusing an accelerator by throwing', () => {

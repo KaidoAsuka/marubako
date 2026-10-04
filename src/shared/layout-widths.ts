@@ -36,11 +36,16 @@ export const STACKED_MIN_WIDTH: Record<Lang, number> = {
  * (ja was 686 before a Japanese interface got its own fonts, which draw kana narrower; en was 694
  * before the passwords tab was named "Passwords" instead of "Keys"; the constants of ja were left
  * where they were). The longest "add" label is the one of the command tab.
+ *
+ * The folders, sites and apps pages carry a third button, the switch between grid and list (28px
+ * and its 6px gap). In Chinese their "add" label is as long as the command tab's, so the Chinese
+ * width grew by those 34px; in English "Add item" is that much shorter than "New command", and
+ * the width only gained a little spare room; Japanese already had it.
  */
 export const ROW_MIN_WIDTH: Record<Lang, number> = {
-  zh: 610,
+  zh: 644,
   ja: 700,
-  en: 732,
+  en: 740,
 }
 
 /**
@@ -53,8 +58,18 @@ export const DEFAULT_PANEL_WIDTH: Record<Lang, number> = {
   en: 470,
 }
 
-/** Below this the global search is only its magnifying glass. */
-export const SEARCH_ICON_BELOW_WIDTH = 420
+/**
+ * Below this the global search is only its magnifying glass. With its label it would leave the
+ * window row no free stretch to drag the window by, on the pages that carry three buttons beside it.
+ */
+export const SEARCH_ICON_BELOW_WIDTH = 454
+
+/**
+ * Below this the window row has no room for the switch between grid and list beside "new group" and
+ * "add" (the close button would leave the window): the switch is then only in the settings. A
+ * window is never this narrow at the normal interface size; it takes the zoom setting to get there.
+ */
+export const VIEW_TOGGLE_MIN_WIDTH = 262
 
 // The two widths above were measured with all seven categories. A user can hide categories in the
 // settings; fewer tabs need less room, so the widths shrink with the count (the default window then
@@ -118,6 +133,11 @@ export function resolveTabMode(
   if (width >= stackedMinWidth(lang, tabCount)) return 'stacked'
 
   return 'icons'
+}
+
+/** Whether the window row shows the switch between grid and list at this width. */
+export function showsViewToggle(width: number): boolean {
+  return width >= VIEW_TOGGLE_MIN_WIDTH
 }
 
 export function resolveSearchMode(

@@ -3,6 +3,7 @@ import { DEFAULT_PEEK_COLLAPSE_DELAY, DEFAULT_STARTUP_TAB } from './types'
 import type {
   AppData,
   AppItem,
+  CommandItem,
   FolderItem,
   Group,
   Lang,
@@ -29,14 +30,15 @@ function starterWindowState(): WindowState {
 function starterPrefs(lang: Lang): Prefs {
   return {
     lang,
-    theme: 'dark',
-    background: 'aurora',
+    theme: 'light',
+    // Graphite: the quiet accent. The other accents are a choice in the settings.
+    background: 'minimal',
     browser: 'default',
     zoom: 1,
     opacity: 1,
     motion: 1.35,
     peekCollapseDelay: DEFAULT_PEEK_COLLAPSE_DELAY,
-    viewMode: 'grid',
+    viewMode: 'list',
     lastTab: DEFAULT_STARTUP_TAB,
     hiddenTabs: [],
     shortcut: DEFAULT_SHORTCUT,
@@ -76,9 +78,9 @@ function starterTopOrder(ids: {
 }
 
 /**
- * The words of the sample data, per language. Ids, icons, URLs and the placeholder path prefix
- * are shared. The prefix 'C:\\Users\\用户名\\' stays as it is in every language: the data store
- * resolves the real folders of the computer by that prefix (data-store.ts, resolveStarterPaths).
+ * The words of the sample data. Ids, icons, URLs and the placeholder path prefix are shared. The
+ * prefix 'C:\\Users\\用户名\\' stays as it is in every language: the data store resolves the real
+ * folders of the computer by that prefix (data-store.ts, resolveStarterPaths).
  */
 interface StarterText {
   folderWork: string
@@ -88,12 +90,45 @@ interface StarterText {
   downloads: string
   siteTools: string
   siteFun: string
+  appGroup: string
+  appCmd: string
   passwordGroup: string
+  passwordName: string
+  passwordNote: string
   noteGroup: string
   noteName: string
   noteContent: string
+  commandGroup: string
+  commandName: string
+  commandDescription: string
 }
 
+const ENGLISH_TEXT: StarterText = {
+  folderWork: 'Work files',
+  folderLife: 'Personal',
+  desktop: 'Desktop',
+  documents: 'Documents',
+  downloads: 'Downloads',
+  siteTools: 'Everyday tools',
+  siteFun: 'Fun',
+  appGroup: 'Terminals',
+  appCmd: 'Command Prompt',
+  passwordGroup: 'Accounts',
+  passwordName: 'Example account',
+  passwordNote:
+    'A sample: replace it with an account of your own, or delete it.',
+  noteGroup: 'Notes',
+  noteName: 'How to use',
+  noteContent:
+    'The global shortcut is listed in Settings\nCtrl + K searches every item and task\nArrow keys select, Enter opens\nAlt + number switches category, Ctrl + N adds a new item\nPasswords and commands copy in one click\nEsc closes a dialog or collapses the panel to the bubble',
+  commandGroup: 'Network',
+  commandName: 'Flush the DNS cache',
+  commandDescription:
+    'For when a site will not load after its address changed.',
+}
+
+// Chinese has its own words. A Japanese first start takes the English ones: they read the same on
+// any computer, and the sample folders are then named as Windows itself names them in a path.
 const STARTER_TEXT: Record<Lang, StarterText> = {
   zh: {
     folderWork: '工作文件',
@@ -103,40 +138,21 @@ const STARTER_TEXT: Record<Lang, StarterText> = {
     downloads: '下载',
     siteTools: '常用工具',
     siteFun: '娱乐',
+    appGroup: '终端',
+    appCmd: '命令提示符',
     passwordGroup: '常用账号',
+    passwordName: '示例账号',
+    passwordNote: '这是示例：换成你自己的账号，或者删掉。',
     noteGroup: '备忘',
     noteName: '使用说明',
     noteContent:
       '全局唤起快捷键可在设置中查看\nCtrl + K 搜索所有条目与任务\n方向键选择，回车打开\nAlt + 数字键切换分类，Ctrl + N 新建\n密码和命令可一键复制\nEsc 关闭弹窗或收起到悬浮球',
+    commandGroup: '网络',
+    commandName: '刷新 DNS 缓存',
+    commandDescription: '网站换了地址后打不开时用。',
   },
-  en: {
-    folderWork: 'Work files',
-    folderLife: 'Personal',
-    desktop: 'Desktop',
-    documents: 'Documents',
-    downloads: 'Downloads',
-    siteTools: 'Everyday tools',
-    siteFun: 'Fun',
-    passwordGroup: 'Accounts',
-    noteGroup: 'Notes',
-    noteName: 'How to use',
-    noteContent:
-      'The global shortcut is listed in Settings\nCtrl + K searches every item and task\nArrow keys select, Enter opens\nAlt + number switches category, Ctrl + N adds a new item\nPasswords and commands copy in one click\nEsc closes a dialog or collapses the panel to the bubble',
-  },
-  ja: {
-    folderWork: '仕事のファイル',
-    folderLife: '個人',
-    desktop: 'デスクトップ',
-    documents: 'ドキュメント',
-    downloads: 'ダウンロード',
-    siteTools: 'よく使うツール',
-    siteFun: 'エンタメ',
-    passwordGroup: 'アカウント',
-    noteGroup: 'メモ',
-    noteName: '使い方',
-    noteContent:
-      '呼び出しショートカットは設定で確認できます\nCtrl + K ですべての項目とタスクを検索\n矢印キーで選択、Enter で開く\nAlt + 数字キーでカテゴリを切り替え、Ctrl + N で新規作成\nパスワードとコマンドはワンクリックでコピー\nEsc でダイアログを閉じる、またはフローティングボタンに収納',
-  },
+  en: ENGLISH_TEXT,
+  ja: ENGLISH_TEXT,
 }
 
 interface StarterSite {
@@ -169,7 +185,7 @@ const YOUTUBE: StarterSite = {
 
 // Google and YouTube do not load for much of the Chinese-speaking world, so the Chinese sample
 // sites are a search engine and a video site that do (Bing, Bilibili). GitHub is the same
-// everywhere, and English and Japanese keep Google and YouTube.
+// everywhere, and the other languages keep Google and YouTube.
 const STARTER_TOOL_SITES: Record<Lang, StarterSite[]> = {
   zh: [
     {
@@ -262,10 +278,35 @@ function websiteGroups(lang: Lang, text: StarterText): Group<WebsiteItem>[] {
   ]
 }
 
-function appGroups(): Group<AppItem>[] {
-  return []
+// Two programs every Windows computer has. %SystemRoot% is expanded when the entry is opened.
+function appGroups(text: StarterText): Group<AppItem>[] {
+  return [
+    {
+      id: 'grp-apps-terminals',
+      name: text.appGroup,
+      icon: 'tile:terminal-window:11',
+      open: true,
+      items: [
+        {
+          id: 'app-powershell',
+          kind: 'app',
+          name: 'PowerShell',
+          path: '%SystemRoot%\\System32\\WindowsPowerShell\\v1.0\\powershell.exe',
+          icon: 'tile:terminal-window:1',
+        },
+        {
+          id: 'app-cmd',
+          kind: 'app',
+          name: text.appCmd,
+          path: '%SystemRoot%\\System32\\cmd.exe',
+          icon: 'tile:terminal-window:11',
+        },
+      ],
+    },
+  ]
 }
 
+// The sample account shows what an entry looks like; its password is a made-up word, not a secret.
 function passwordGroups(text: StarterText): Group<PasswordItem>[] {
   return [
     {
@@ -273,7 +314,17 @@ function passwordGroups(text: StarterText): Group<PasswordItem>[] {
       name: text.passwordGroup,
       icon: 'tile:lock-key:5',
       open: true,
-      items: [],
+      items: [
+        {
+          id: 'password-example',
+          kind: 'password',
+          name: text.passwordName,
+          username: 'you@example.com',
+          password: 'example-password',
+          note: text.passwordNote,
+          icon: 'tile:user-circle:1',
+        },
+      ],
     },
   ]
 }
@@ -298,22 +349,46 @@ function noteGroups(text: StarterText): Group<NoteItem>[] {
   ]
 }
 
+function commandGroups(text: StarterText): Group<CommandItem>[] {
+  return [
+    {
+      id: 'grp-commands-default',
+      name: text.commandGroup,
+      icon: 'tile:terminal-window:2',
+      open: true,
+      items: [
+        {
+          id: 'command-flush-dns',
+          kind: 'command',
+          name: text.commandName,
+          content: 'ipconfig /flushdns',
+          language: 'powershell',
+          description: text.commandDescription,
+          icon: 'tile:arrows-clockwise:2',
+        },
+      ],
+    },
+  ]
+}
+
 function starterTasks(): Record<string, TaskItem[]> {
   return {}
 }
 
 /**
- * The data of a new installation, with the sample groups and entries in `lang`. Chinese is the
- * default because the normaliser and many tests depend on it; the main process passes the language
- * of the system for a first start (initial-lang.ts).
+ * The data of a new installation, with the sample groups and entries for `lang` (Chinese words for
+ * Chinese, English ones otherwise). Chinese is the default because the normaliser and many tests
+ * depend on it; the main process passes the language of the system for a first start
+ * (initial-lang.ts).
  */
 export function createDefaultAppData(lang: Lang = 'zh'): AppData {
   const text = STARTER_TEXT[lang]
   const folders = folderGroups(text)
   const websites = websiteGroups(lang, text)
-  const apps = appGroups()
+  const apps = appGroups(text)
   const passwords = passwordGroups(text)
   const notes = noteGroups(text)
+  const commands = commandGroups(text)
   const loose = starterLoose()
 
   return {
@@ -325,7 +400,7 @@ export function createDefaultAppData(lang: Lang = 'zh'): AppData {
     apps,
     passwords,
     notes,
-    commands: [],
+    commands,
     loose,
     topOrder: starterTopOrder({
       folders: folders.map((group) => group.id),
@@ -333,7 +408,7 @@ export function createDefaultAppData(lang: Lang = 'zh'): AppData {
       apps: apps.map((group) => group.id),
       passwords: passwords.map((group) => group.id),
       notes: notes.map((group) => group.id),
-      commands: [],
+      commands: commands.map((group) => group.id),
     }),
     tasks: starterTasks(),
   }

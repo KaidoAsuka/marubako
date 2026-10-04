@@ -14,7 +14,7 @@ import {
   LANGS,
   MAX_PEEK_COLLAPSE_DELAY,
   TASK_STATUSES,
-  THEMES,
+  THEME_SETTINGS,
   VIEW_MODES,
   type CodeLanguage,
 } from '../shared/types'
@@ -104,7 +104,7 @@ function normalizePrefs(
 
   return {
     lang: pickEnum(LANGS, prefs.lang, fallback.lang),
-    theme: pickEnum(THEMES, prefs.theme, fallback.theme),
+    theme: pickEnum(THEME_SETTINGS, prefs.theme, fallback.theme),
     background: pickEnum(BACKGROUNDS, prefs.background, fallback.background),
     browser: pickEnum(BROWSERS, prefs.browser, fallback.browser),
     zoom:

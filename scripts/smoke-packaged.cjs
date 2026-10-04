@@ -77,10 +77,19 @@ async function main() {
     await page
       .getByRole('button', { name: '展开全部代码', exact: true })
       .click()
-    await expect(page.locator('.snippet-code code')).toHaveText(script)
+    // The sample command of a new installation is on the page as well.
+    await expect(
+      page
+        .locator('.command-snippet')
+        .filter({ hasText: '列出工作目录' })
+        .locator('.snippet-code code')
+    ).toHaveText(script)
     const saved = await page.evaluate(() => globalThis.quickLaunch.loadData())
     expect(saved.ok).toBe(true)
-    expect(saved.data.loose.commands[0].content).toBe(script)
+    expect(
+      saved.data.loose.commands.find((item) => item.name === '列出工作目录')
+        .content
+    ).toBe(script)
     await page.screenshot({
       path: 'artifacts/packaged-commands.png',
       animations: 'disabled',
@@ -187,7 +196,8 @@ async function main() {
         .find((window) => !window.isResizable())
         .getSize()
     )
-    expect(compactSize).toEqual([56, 56])
+    // DOCK_SIZE of src/shared/dock-size.ts.
+    expect(compactSize).toEqual([40, 40])
     const bubble = app.windows().find((window) => window !== page)
     await expect(bubble.getByTestId('dock-bubble')).toBeVisible()
     await bubble.screenshot({ path: 'artifacts/packaged-bubble.png' })
@@ -244,7 +254,7 @@ async function main() {
           duplicateLaunch: 'reused existing window',
           recallCollapsedWindow: true,
           compactWindow:
-            '56 × 56 freely movable bubble, preserves panel dimensions',
+            '40 × 40 freely movable bubble, preserves panel dimensions',
           commandRecording: true,
           credentialCopying: true,
           trayIcon: '16px logical size, 6 scale representations',

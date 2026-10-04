@@ -25,15 +25,19 @@ import {
   LANGS,
   MAX_PEEK_COLLAPSE_DELAY,
   MIN_OPACITY,
+  THEME_SETTINGS,
   VIEW_MODES,
   type LaunchSettings,
   type Tab,
+  type ThemeSetting,
   type ViewMode,
 } from '../../../../shared/types'
 import { useI18n } from '../../hooks/use-i18n'
 import { useRadioKeys } from '../../hooks/use-radio-keys'
 import { useShortcutCheck } from '../../hooks/use-shortcut-check'
+import { useSystemDark } from '../../hooks/use-system-dark'
 import { useAppStore } from '../../store/use-app-store'
+import { resolveTheme } from '../../styles/background-theme'
 import { rangeFill } from '../../utils/range-fill'
 import FormField from '../common/FormField'
 import { TAB_ICONS } from '../common/tab-icons'
@@ -79,12 +83,15 @@ export default function SettingsForm(): JSX.Element | null {
     data?.prefs.hideAfterLaunch ?? false
   )
   const [showBubble, setShowBubble] = useState(data?.prefs.showBubble ?? true)
-  const [theme, setTheme] = useState(data?.prefs.theme ?? 'dark')
+  const [theme, setTheme] = useState<ThemeSetting>(data?.prefs.theme ?? 'light')
+  const themeKeys = useRadioKeys(THEME_SETTINGS, setTheme)
+  // The accent dots are drawn in the theme the setting comes to right now.
+  const systemDark = useSystemDark()
   const [background, setBackground] = useState(
-    data?.prefs.background ?? 'aurora'
+    data?.prefs.background ?? 'minimal'
   )
   const [viewMode, setViewMode] = useState<ViewMode>(
-    data?.prefs.viewMode ?? 'grid'
+    data?.prefs.viewMode ?? 'list'
   )
   const viewModeKeys = useRadioKeys(VIEW_MODES, setViewMode)
   const [language, setLanguage] = useState(data?.prefs.lang ?? 'zh')
@@ -492,29 +499,33 @@ export default function SettingsForm(): JSX.Element | null {
             {t('settings_preview_note')}
           </p>
           <FormField label={t('theme')} group>
-            <div className="toggle-row">
-              <button
-                className={`chip-button ${theme === 'dark' ? 'active' : ''}`}
-                type="button"
-                data-testid="theme-dark"
-                onClick={() => setTheme('dark')}
-              >
-                {t('theme_dark')}
-              </button>
-              <button
-                className={`chip-button ${theme === 'light' ? 'active' : ''}`}
-                type="button"
-                data-testid="theme-light"
-                onClick={() => setTheme('light')}
-              >
-                {t('theme_light')}
-              </button>
+            <div
+              className="toggle-row"
+              role="radiogroup"
+              aria-label={t('theme')}
+            >
+              {THEME_SETTINGS.map((entry, index) => (
+                <button
+                  key={entry}
+                  ref={themeKeys.setRef(index)}
+                  className={`chip-button ${theme === entry ? 'active' : ''}`}
+                  type="button"
+                  role="radio"
+                  aria-checked={theme === entry}
+                  tabIndex={theme === entry ? 0 : -1}
+                  data-testid={`theme-${entry}`}
+                  onClick={() => setTheme(entry)}
+                  onKeyDown={(event) => themeKeys.onKeyDown(event, index)}
+                >
+                  {t(`theme_${entry}`)}
+                </button>
+              ))}
             </div>
           </FormField>
           <FormField label={t('accent_color')} group>
             <AccentDots
               value={background}
-              theme={theme}
+              theme={resolveTheme(theme, systemDark)}
               label={t('accent_color')}
               onChange={setBackground}
             />

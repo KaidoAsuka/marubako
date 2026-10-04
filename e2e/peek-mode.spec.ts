@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { launchApp, closeApp, type AppContext } from './test-utils'
 import { dragNativeMouse } from './native-mouse'
+import { DOCK_SIZE } from '../src/shared/dock-size'
 
 // Exercise the leave timer with deterministic cursor coordinates while the
 // user's desktop remains interactive. Real OS dragging is verified separately.
@@ -60,7 +61,10 @@ async function collapse(context: AppContext) {
 async function openPeek(context: AppContext) {
   const bubble = await collapse(context)
   const bounds = (await state(context)).bubble
-  await movePointer(context, { x: bounds.x + 28, y: bounds.y + 28 })
+  await movePointer(context, {
+    x: bounds.x + DOCK_SIZE / 2,
+    y: bounds.y + DOCK_SIZE / 2,
+  })
   await bubble.getByTestId('dock-bubble').click()
   await expect.poll(async () => (await state(context)).ready).toBe(true)
   return bubble
@@ -81,16 +85,31 @@ test('temporary right-side expansion flips inward and repeatedly returns to the 
       y: before.area.y + before.area.height - 130,
     }
     await bubble.evaluate(
-      async ({ from, to }) => {
+      async ({ from, to, half }) => {
         const api = window.quickLaunch.window
-        await api.dragDock({ phase: 'start', x: from.x + 28, y: from.y + 28 })
-        await api.dragDock({ phase: 'move', x: to.x + 28, y: to.y + 28 })
-        await api.dragDock({ phase: 'end', x: to.x + 28, y: to.y + 28 })
+        await api.dragDock({
+          phase: 'start',
+          x: from.x + half,
+          y: from.y + half,
+        })
+        await api.dragDock({
+          phase: 'move',
+          x: to.x + half,
+          y: to.y + half,
+        })
+        await api.dragDock({
+          phase: 'end',
+          x: to.x + half,
+          y: to.y + half,
+        })
       },
-      { from: before.bubble, to: anchor }
+      { from: before.bubble, to: anchor, half: DOCK_SIZE / 2 }
     )
     for (let count = 0; count < 3; count++) {
-      await movePointer(context, { x: anchor.x + 28, y: anchor.y + 28 })
+      await movePointer(context, {
+        x: anchor.x + DOCK_SIZE / 2,
+        y: anchor.y + DOCK_SIZE / 2,
+      })
       await bubble.getByTestId('dock-bubble').click()
       await expect.poll(async () => (await state(context)).ready).toBe(true)
       const expanded = await state(context)
@@ -106,7 +125,10 @@ test('temporary right-side expansion flips inward and repeatedly returns to the 
       )
       // This desktop strip is within the combined bounding rectangle, but is
       // outside both the panel and the actual ball. It must dismiss the peek.
-      await movePointer(context, { x: anchor.x + 28, y: expanded.panel.y + 60 })
+      await movePointer(context, {
+        x: anchor.x + DOCK_SIZE / 2,
+        y: expanded.panel.y + 60,
+      })
       await expect.poll(async () => (await state(context)).visible).toBe(false)
       expect((await state(context)).bubble).toMatchObject(anchor)
       const data = await context.page.evaluate(() =>
@@ -178,7 +200,10 @@ test('pin suspends temporary dismissal, unpin resumes it, and double-click opens
     await context.page.getByTestId('toggle-pin').click()
     await expect.poll(async () => (await state(context)).visible).toBe(false)
     const anchor = (await state(context)).bubble
-    await movePointer(context, { x: anchor.x + 28, y: anchor.y + 28 })
+    await movePointer(context, {
+      x: anchor.x + DOCK_SIZE / 2,
+      y: anchor.y + DOCK_SIZE / 2,
+    })
     await bubble.getByTestId('dock-bubble').dblclick({ delay: 90 })
     await expect
       .poll(async () => {
@@ -244,7 +269,10 @@ test('dragging the visible anchor moves its open panel and does not turn drag re
   try {
     const bubble = await collapse(context)
     const initial = (await state(context)).bubble
-    await movePointer(context, { x: initial.x + 28, y: initial.y + 28 })
+    await movePointer(context, {
+      x: initial.x + DOCK_SIZE / 2,
+      y: initial.y + DOCK_SIZE / 2,
+    })
     await bubble.getByTestId('dock-bubble').dblclick()
     await expect.poll(async () => (await state(context)).ready).toBe(true)
     const before = await state(context)
@@ -258,8 +286,14 @@ test('dragging the visible anchor moves its open panel and does not turn drag re
     })
     await dragNativeMouse(
       context,
-      { x: before.bubble.x + 28, y: before.bubble.y + 28 },
-      { x: before.bubble.x + 108, y: before.bubble.y + 68 }
+      {
+        x: before.bubble.x + DOCK_SIZE / 2,
+        y: before.bubble.y + DOCK_SIZE / 2,
+      },
+      {
+        x: before.bubble.x + DOCK_SIZE / 2 + 80,
+        y: before.bubble.y + DOCK_SIZE / 2 + 40,
+      }
     )
     await expect
       .poll(async () => (await state(context)).bubble.x)
@@ -377,7 +411,10 @@ test('two clicks 480 ms apart still count as a double click and keep the panel o
   try {
     const bubble = await collapse(context)
     const anchor = (await state(context)).bubble
-    await movePointer(context, { x: anchor.x + 28, y: anchor.y + 28 })
+    await movePointer(context, {
+      x: anchor.x + DOCK_SIZE / 2,
+      y: anchor.y + DOCK_SIZE / 2,
+    })
     // Timed inside the ball's page: Playwright's own click latency would eat the margin.
     await bubble.evaluate(async () => {
       const button = document.querySelector('[data-testid="dock-bubble"]')!

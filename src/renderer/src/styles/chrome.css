@@ -213,6 +213,7 @@
   min-height: 28px;
   padding: 0 10px;
 }
+.section-actions .section-view-toggle,
 .section-actions .section-group-add,
 .titlebar .section-actions .section-add {
   width: 28px;

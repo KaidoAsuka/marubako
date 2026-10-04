@@ -1,19 +1,36 @@
 import { describe, expect, it } from 'vitest'
 
+import { DOCK_SIZE } from '../../../../shared/dock-size'
 import { currentScale, panelGeometry } from '../window-motion'
+
+// The ball window sits 8px left of the panel (DOCK_PANEL_GAP in the main process), so its top-left
+// corner is that far, plus its own width, left of the panel's.
+const GAP = 8
+const BALL_LEFT = { x: -(DOCK_SIZE + GAP), y: 0 }
+// The ball is drawn in the middle of its window.
+const CENTER = DOCK_SIZE / 2
 
 describe('panelGeometry', () => {
   it('scales from the centre of the ball, which may lie outside the panel window', () => {
-    // The ball window sits 8px left of the panel: its top-left corner is at x = -64.
-    const geometry = panelGeometry({ x: -64, y: 0 }, 760, 720)
-    expect(geometry.origin).toBe('-36px 28px')
+    const geometry = panelGeometry(BALL_LEFT, 760, 720)
+    expect(geometry.origin).toBe(`${-GAP - CENTER}px ${CENTER}px`)
+    expect(-GAP - CENTER).toBeLessThan(0)
+  })
+
+  it('takes the centre to be the middle of the ball window, whatever its size', () => {
+    expect(panelGeometry({ x: 0, y: 0 }, 760, 720).origin).toBe(
+      `${CENTER}px ${CENTER}px`
+    )
+    expect(panelGeometry({ x: 428, y: 332 }, 420, 700).origin).toBe(
+      `${428 + CENTER}px ${332 + CENTER}px`
+    )
   })
 
   it('keeps the far edge travelling about 48px however large the panel is', () => {
     for (const [width, height, origin] of [
-      [760, 720, { x: -64, y: 0 }],
+      [760, 720, BALL_LEFT],
       [420, 700, { x: 428, y: 332 }],
-      [1100, 900, { x: -64, y: 100 }],
+      [1100, 900, { ...BALL_LEFT, y: 100 }],
     ] as const) {
       const { expand, origin: css } = panelGeometry(origin, width, height)
       const [ox = 0, oy = 0] = css.split(' ').map(parseFloat)
@@ -37,7 +54,7 @@ describe('panelGeometry', () => {
   })
 
   it('shrinks the collapsing panel by 32px at the far edge', () => {
-    const { collapse, origin } = panelGeometry({ x: -64, y: 0 }, 760, 720)
+    const { collapse, origin } = panelGeometry(BALL_LEFT, 760, 720)
     const [ox = 0] = origin.split(' ').map(parseFloat)
     const reach = 760 - ox
     expect((1 - collapse) * reach).toBeCloseTo(32, 6)

@@ -28,7 +28,8 @@ function openAppearance(viewMode: ViewMode = 'grid', lang: Lang = 'en'): void {
   fireEvent.click(screen.getByTestId('settings-tab-appearance'))
 }
 
-// The grid/list switch used to be a button on every page; the layout of the entries is a setting.
+// The layout of the entries is a setting. The three pages that have the two layouts carry a switch
+// for the same setting as well (SectionActions.test.tsx).
 describe('SettingsForm item layout', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -81,12 +82,26 @@ describe('SettingsForm item layout', () => {
     expect(list).toHaveAttribute('aria-checked', 'true')
   })
 
-  it('starts on grid for a fresh profile', () => {
-    openAppearance('grid')
+  it('starts on the list for a fresh profile', () => {
+    // The sample data as it is, with no layout chosen by the test.
+    const data = createDefaultAppData()
+    data.prefs.lang = 'en'
+    useAppStore.setState({
+      data,
+      loading: false,
+      saving: false,
+      error: null,
+      modal: { kind: 'settings' },
+    })
+    render(<SettingsForm />)
 
-    expect(screen.getByTestId('view-mode-grid')).toHaveAttribute(
+    expect(screen.getByTestId('view-mode-list')).toHaveAttribute(
       'aria-checked',
       'true'
+    )
+    expect(screen.getByTestId('view-mode-grid')).toHaveAttribute(
+      'aria-checked',
+      'false'
     )
   })
 

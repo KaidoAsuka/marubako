@@ -167,6 +167,47 @@ export function lastValue(
   return value
 }
 
+/** The selector of the block a whole-palette accent choice adds for a theme (themes.css, code.css). */
+export function paletteSelector(
+  theme: 'dark' | 'light',
+  background: string
+): string {
+  return `.theme-${theme}[data-background='${background}']`
+}
+
+/**
+ * The value a custom property has on the app root for a theme and an accent choice: the choice's
+ * own block if it has one that sets the property (only a whole palette such as monokai does), else
+ * the theme's block, else `:root`. The cascade for these three is by specificity and then by which
+ * elements carry them, which this order mirrors.
+ */
+export function paletteValue(
+  rules: CssRule[],
+  theme: 'dark' | 'light',
+  background: string,
+  name: string
+): string | undefined {
+  return (
+    lastValue(rules, paletteSelector(theme, background), name) ??
+    (theme === 'light' ? lastValue(rules, '.theme-light', name) : undefined) ??
+    lastValue(rules, ':root', name)
+  )
+}
+
+/**
+ * Whether an accent choice is a whole palette: one with a block of its own in themes.css, which
+ * changes surfaces and text as well as the accent. The generic accent tests (white text on the
+ * solid fill, the accent on the default surfaces) do not hold for such a choice; it has tests of
+ * its own (monokai-palette.test.ts).
+ */
+export function isPaletteChoice(rules: CssRule[], background: string): boolean {
+  return (['dark', 'light'] as const).some((theme) =>
+    rules.some((rule) =>
+      splitSelectors(rule.selector).includes(paletteSelector(theme, background))
+    )
+  )
+}
+
 /** Every rule whose selector list mentions `fragment` (substring match on any selector). */
 export function rulesMatching(rules: CssRule[], fragment: string): CssRule[] {
   return rules.filter((rule) =>

@@ -555,53 +555,74 @@ test('hovering moves nothing and re-truncates nothing, and the buttons on a card
   }
 })
 
-test('choosing a category shows it at once: no empty first frame, no slide, and a calmer day change', async () => {
+test('choosing a category slides its page in from the side its tab is on, and the day change is calmer', async () => {
   const context = await launchApp()
   const { page } = context
   try {
-    for (const [tab, section] of [
-      ['websites', 'section-websites'],
-      ['tasks', 'section-tasks'],
-      ['folders', 'section-folders'],
+    // Folders is the first tab: websites and tasks lie to its right, and folders is back to the left.
+    for (const [tab, section, name, from] of [
+      ['websites', 'section-websites', 'pageInForward', 'translate(16px)'],
+      ['tasks', 'section-tasks', 'pageInForward', 'translate(16px)'],
+      ['folders', 'section-folders', 'pageInBackward', 'translate(-16px)'],
     ] as const) {
-      // Click from inside the page and sample every frame of the new section from then on.
-      const frames = await page.evaluate(
-        ([tabId, sectionId]) =>
-          new Promise<{ opacity: number; transform: string }[]>((resolve) => {
-            const samples: { opacity: number; transform: string }[] = []
-            const begin = performance.now()
-            document
-              .querySelector<HTMLElement>(`[data-testid="${tabId}"]`)!
-              .click()
-            const tick = () => {
-              const node = document.querySelector(
-                `[data-testid="${sectionId}"]`
-              )
-              if (node) {
-                const computed = getComputedStyle(node)
-                samples.push({
-                  opacity: Number(computed.opacity),
-                  transform: computed.transform,
-                })
-              }
-              if (performance.now() - begin < 300) requestAnimationFrame(tick)
-              else resolve(samples)
-            }
-            requestAnimationFrame(tick)
-          }),
+      // Click from inside the page and read the animation the new page starts with. (Counting the
+      // frames of 180 ms is not reliable: a window that is not in front draws only a few.)
+      const seen = await page.evaluate(
+        async ([tabId, sectionId]) => {
+          document
+            .querySelector<HTMLElement>(`[data-testid="${tabId}"]`)!
+            .click()
+          // The new page is drawn a moment after the click, not within it.
+          let node: HTMLElement | null = null
+          for (let attempt = 0; attempt < 50 && !node; attempt++) {
+            await Promise.resolve()
+            node = document.querySelector<HTMLElement>(
+              `[data-testid="${sectionId}"]`
+            )
+            if (!node) await new Promise((done) => setTimeout(done, 5))
+          }
+          if (!node) throw new Error(`${sectionId} did not appear`)
+          const animations = node.getAnimations()
+          const animation = animations[0] as CSSAnimation | undefined
+          const effect = animation?.effect as KeyframeEffect | undefined
+          const frames = effect?.getKeyframes() ?? []
+          const report = {
+            count: animations.length,
+            name: animation?.animationName ?? '',
+            duration: Number(effect?.getTiming().duration ?? 0),
+            first: {
+              opacity: String(frames[0]?.opacity ?? ''),
+              transform: String(frames[0]?.transform ?? ''),
+            },
+            frames: frames.length,
+          }
+          await animation?.finished
+          const settled = getComputedStyle(node)
+
+          return {
+            ...report,
+            end: { opacity: settled.opacity, transform: settled.transform },
+            left: node.getAnimations().length,
+          }
+        },
         [`tab-${tab}`, section] as const
       )
 
-      // The change lasts 90 ms: three frames of a 60 Hz display are enough to see it did not jump.
-      expect(frames.length, `${tab}: frames seen`).toBeGreaterThan(2)
-      // Never empty (it starts at 0.6, not 0), never moved, and settled at 1.
-      expect(Math.min(...frames.map((frame) => frame.opacity))).toBeGreaterThan(
-        0.59
-      )
-      expect(new Set(frames.map((frame) => frame.transform))).toEqual(
-        new Set(['none'])
-      )
-      expect(frames[frames.length - 1]!.opacity).toBe(1)
+      // One animation: from the side the tab is on, 16px away and clear, in the normal duration.
+      expect(seen.count, tab).toBe(1)
+      expect(seen.name, tab).toBe(name)
+      expect(seen.duration, tab).toBe(180)
+      // (Chromium writes translateX(16px) back as translate(16px).)
+      expect(
+        {
+          ...seen.first,
+          transform: seen.first.transform.replace('translateX', 'translate'),
+        },
+        tab
+      ).toEqual({ opacity: '0', transform: from })
+      // Arrived: fully shown, and no transform left on the page (it would catch a dragged card).
+      expect(seen.end, tab).toEqual({ opacity: '1', transform: 'none' })
+      expect(seen.left, tab).toBe(0)
     }
 
     // The marker slides in the normal duration, at every width: there is no two-row layout to special-case.

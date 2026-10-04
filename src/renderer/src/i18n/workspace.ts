@@ -14,6 +14,7 @@ export const workspaceStrings: Record<Lang, Record<string, string>> = {
     immediately: '立即',
     dock_bubble_hint: '单击临时展开 · 双击保持打开 · 拖动移动',
     dock_bubble_hint_open: '单击收起 · 双击保持打开 · 拖动移动',
+    dock_bubble_hint_kept: '单击收起 · 拖动移动',
     dock_close: '收起 Marubako',
     dock_tip: '移开鼠标可收起；双击悬浮球保持打开，置顶也可暂停自动收起。',
     dock_kept_open: '已保持打开，移开鼠标不会收起',
@@ -124,6 +125,8 @@ export const workspaceStrings: Record<Lang, Record<string, string>> = {
     view_mode_hint: '文件夹、网站、软件三页的条目排列方式。',
     view_mode_grid: '网格',
     view_mode_list: '列表',
+    view_switch_grid: '切换为网格',
+    view_switch_list: '切换为列表',
     tab_summary: '{name} · {groups} 个分组 {items} 个条目 · Alt+{n}',
     tab_summary_tasks: '{name} · {open} 个待办 · Alt+{n}',
     copy: '复制',
@@ -280,6 +283,7 @@ export const workspaceStrings: Record<Lang, Record<string, string>> = {
       'Click to peek · Double-click to keep open · Drag to move',
     dock_bubble_hint_open:
       'Click to collapse · Double-click to keep open · Drag to move',
+    dock_bubble_hint_kept: 'Click to collapse · Drag to move',
     dock_close: 'Collapse Marubako',
     dock_tip:
       'Move away to collapse; double-click the bubble to keep open. Pin also prevents auto-collapse.',
@@ -396,6 +400,8 @@ export const workspaceStrings: Record<Lang, Record<string, string>> = {
       'How the Folders, Sites and Apps pages lay out their items.',
     view_mode_grid: 'Grid',
     view_mode_list: 'List',
+    view_switch_grid: 'Show as grid',
+    view_switch_list: 'Show as list',
     tab_summary: '{name} · {groups} groups, {items} items · Alt+{n}',
     tab_summary_tasks: '{name} · {open} open · Alt+{n}',
     copy: 'Copy',
@@ -567,6 +573,7 @@ export const workspaceStrings: Record<Lang, Record<string, string>> = {
       'クリックで一時表示 · ダブルクリックで開いたまま · ドラッグで移動',
     dock_bubble_hint_open:
       'クリックで収納 · ダブルクリックで開いたまま · ドラッグで移動',
+    dock_bubble_hint_kept: 'クリックで収納 · ドラッグで移動',
     dock_close: 'Marubako を収納',
     dock_tip:
       'マウスを離すと収納。フローティングボタンのダブルクリックまたはピン留めで開いたままにできます。',
@@ -680,6 +687,8 @@ export const workspaceStrings: Record<Lang, Record<string, string>> = {
     view_mode_hint: 'フォルダ・サイト・アプリのページで項目を並べる形式です。',
     view_mode_grid: 'グリッド',
     view_mode_list: 'リスト',
+    view_switch_grid: 'グリッド表示に切り替え',
+    view_switch_list: 'リスト表示に切り替え',
     tab_summary: '{name} · {groups} グループ {items} 件 · Alt+{n}',
     tab_summary_tasks: '{name} · 未完了 {open} 件 · Alt+{n}',
     copy: 'コピー',

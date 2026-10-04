@@ -97,11 +97,45 @@ describe('DockBubble look and press feedback', () => {
         expect(button).toHaveAttribute('title', strings.dock_bubble_hint)
         expect(button).toHaveAttribute('aria-expanded', 'false')
 
-        act(() => pushState(state(false)))
+        // A temporary panel: a double click can still keep it open.
+        act(() => pushState({ ...state(false), mode: 'peek' }))
         expect(button).toHaveAttribute('aria-label', strings.dock_close)
         expect(button).toHaveAttribute('title', strings.dock_bubble_hint_open)
         expect(button).toHaveAttribute('aria-expanded', 'true')
         expect(strings.dock_close).not.toBe(strings.dock_open)
+      }
+    )
+
+    it.each(['zh', 'en', 'ja'] as const)(
+      'do not offer the double click while the open panel is kept open already, in %s',
+      async (lang) => {
+        const { button } = mount()
+        await act(async () => {})
+        act(() => pushAppearance({ lang, theme: 'dark' }))
+        const strings = workspaceStrings[lang]
+        expect(strings.dock_bubble_hint_kept).toBeTruthy()
+        expect(strings.dock_bubble_hint_kept).not.toBe(
+          strings.dock_bubble_hint_open
+        )
+
+        // Opened as a window.
+        act(() => pushState(state(false)))
+        expect(button).toHaveAttribute('aria-label', strings.dock_close)
+        expect(button).toHaveAttribute('title', strings.dock_bubble_hint_kept)
+
+        // A temporary panel that is pinned.
+        act(() =>
+          pushState({ ...state(false), mode: 'peek', alwaysOnTop: true })
+        )
+        expect(button).toHaveAttribute('title', strings.dock_bubble_hint_kept)
+
+        // Unpinned again: the offer is back.
+        act(() => pushState({ ...state(false), mode: 'peek' }))
+        expect(button).toHaveAttribute('title', strings.dock_bubble_hint_open)
+
+        // Collapsed, whatever it was before: the ball offers both again.
+        act(() => pushState(state(true)))
+        expect(button).toHaveAttribute('title', strings.dock_bubble_hint)
       }
     )
 
@@ -128,6 +162,16 @@ describe('DockBubble look and press feedback', () => {
       expect(workspaceStrings.ja.dock_close).toBe('Marubako を収納')
       expect(workspaceStrings.ja.dock_bubble_hint_open).toBe(
         'クリックで収納 · ダブルクリックで開いたまま · ドラッグで移動'
+      )
+      // The same hint without the double click, for a panel that is kept open already.
+      expect(workspaceStrings.zh.dock_bubble_hint_kept).toBe(
+        '单击收起 · 拖动移动'
+      )
+      expect(workspaceStrings.en.dock_bubble_hint_kept).toBe(
+        'Click to collapse · Drag to move'
+      )
+      expect(workspaceStrings.ja.dock_bubble_hint_kept).toBe(
+        'クリックで収納 · ドラッグで移動'
       )
     })
   })

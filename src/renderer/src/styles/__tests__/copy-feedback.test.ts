@@ -9,6 +9,7 @@ import {
   loadCascade,
   loadRules,
   over,
+  paletteValue,
   parseColor,
   specificity,
   splitSelectors,
@@ -147,6 +148,22 @@ describe('the copied state', () => {
       expect(
         contrast(read('--success'), tinted),
         `${name} success on its 10% tint`
+      ).toBeGreaterThanOrEqual(4.5)
+    }
+  })
+
+  it('keeps it above 4.5:1 in the monokai palette too, on that palette’s card and in its green', () => {
+    for (const theme of ['dark', 'light'] as const) {
+      const read = (name: string) =>
+        paletteValue(themes, theme, 'monokai', name)!
+      const tinted = over(
+        { ...parseColor(read('--success')), a: 0.1 },
+        parseColor(read('--card-bg'))
+      )
+
+      expect(
+        contrast(read('--success'), tinted),
+        `monokai ${theme} success on its 10% tint`
       ).toBeGreaterThanOrEqual(4.5)
     }
   })

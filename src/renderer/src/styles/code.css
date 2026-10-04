@@ -264,3 +264,21 @@
     height: clamp(140px, 22vh, 180px);
   }
 }
+
+/* Monokai colours its code the way the editors do. */
+.theme-dark[data-background='monokai'] {
+  --code-bg: #221f22;
+  --code-comment: #939293;
+  --code-string: #ffd866;
+  --code-number: #ab9df2;
+  --code-keyword: #ff6188;
+  --code-variable: #78dce8;
+}
+.theme-light[data-background='monokai'] {
+  --code-bg: #f3edeb;
+  --code-comment: #6b6568;
+  --code-string: #8a5000;
+  --code-number: #6851b5;
+  --code-keyword: #c22e5a;
+  --code-variable: #14758c;
+}

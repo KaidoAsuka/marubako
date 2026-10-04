@@ -68,6 +68,46 @@ describe('TaskSection', () => {
     expect(heading).toHaveClass('sr-only')
   })
 
+  it.each(['forward', 'backward'] as const)(
+    'carries the side it comes in from (%s) for the stylesheet, and nothing when it is simply there',
+    (enter) => {
+      const slid = render(<TaskSection enter={enter} />)
+      expect(screen.getByTestId('section-tasks')).toHaveAttribute(
+        'data-enter',
+        enter
+      )
+      expect(screen.getByTestId('section-tasks')).toHaveClass('section-content')
+      slid.unmount()
+
+      const there = render(<TaskSection enter={null} />)
+      expect(screen.getByTestId('section-tasks')).not.toHaveAttribute(
+        'data-enter'
+      )
+      there.unmount()
+
+      render(<TaskSection />)
+      expect(screen.getByTestId('section-tasks')).not.toHaveAttribute(
+        'data-enter'
+      )
+    }
+  )
+
+  it('does not unfold a task that is open when the page appears, and unfolds one the user opens', async () => {
+    render(<TaskSection />)
+    const body = () =>
+      screen.getByTestId('task-card-task-test').querySelector('.task-card-body')
+
+    expect(body()).not.toBeNull()
+    expect(body()).not.toHaveAttribute('data-unfold')
+
+    fireEvent.click(screen.getByTestId('task-toggle-task-test'))
+    await waitFor(() => expect(body()).toBeNull())
+    fireEvent.click(screen.getByTestId('task-toggle-task-test'))
+
+    await waitFor(() => expect(body()).not.toBeNull())
+    expect(body()).toHaveAttribute('data-unfold')
+  })
+
   it('renders the empty state when there are no tasks on the selected date', () => {
     useAppStore.setState((state) => ({
       data: state.data

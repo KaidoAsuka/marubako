@@ -8,9 +8,8 @@ import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 
-import { createDefaultAppData } from '../src/shared/default-data'
 import type { FolderItem } from '../src/shared/types'
-import { closeApp, launchApp } from './test-utils'
+import { createDefaultAppData, closeApp, launchApp } from './test-utils'
 
 // layout-7: one strip at the bottom of the window, there only when there is something to say.
 

@@ -128,13 +128,15 @@ describe('first start', () => {
     expect(file.data.window).toBeUndefined()
   })
 
+  // The interface follows the system language; the sample words are Chinese for Chinese and
+  // English for everything else, a Japanese start included.
   it.each([
     ['en-US', 'en', 'Work files'],
     ['de-DE', 'en', 'Work files'],
-    ['ja-JP', 'ja', '仕事のファイル'],
+    ['ja-JP', 'ja', 'Work files'],
     ['zh-TW', 'zh', '工作文件'],
   ])(
-    'follows the system language: %s starts in %s with sample groups in it',
+    'follows the system language: %s starts in %s with sample groups named for it',
     async (locale, lang, firstGroup) => {
       env.locale = locale
       const { loadAppData } = await startSession()
@@ -149,6 +151,121 @@ describe('first start', () => {
       expect((await readJson(dataFile())).data.prefs.lang).toBe(lang)
     }
   )
+
+  it('has a sample of every category, the sample account stored as ciphertext', async () => {
+    const { loadAppData } = await startSession()
+
+    const data = await loadAppData()
+
+    expect(data.apps[0]?.items.map((item) => item.id)).toEqual([
+      'app-powershell',
+      'app-cmd',
+    ])
+    // The paths of the sample apps are left for Windows to expand when one is opened.
+    expect(data.apps[0]?.items[1]?.path).toBe('%SystemRoot%\\System32\\cmd.exe')
+    expect(data.commands[0]?.items[0]).toMatchObject({
+      id: 'command-flush-dns',
+      content: 'ipconfig /flushdns',
+      language: 'powershell',
+    })
+    expect(data.passwords[0]?.items[0]).toMatchObject({
+      id: 'password-example',
+      username: 'you@example.com',
+      password: 'example-password',
+    })
+    const text = await fs.readFile(dataFile(), 'utf8')
+    expect(text).not.toContain('example-password')
+    expect(
+      JSON.parse(text).data.passwords[0].items[0].passwordCiphertext
+    ).toBeTruthy()
+  })
+
+  describe('the look it starts with', () => {
+    const saved = {
+      e2e: process.env.QUICKLAUNCH_E2E,
+      firstRun: process.env.QUICKLAUNCH_FIRST_RUN,
+    }
+
+    beforeEach(() => {
+      delete process.env.QUICKLAUNCH_E2E
+      delete process.env.QUICKLAUNCH_FIRST_RUN
+    })
+
+    afterEach(() => {
+      if (saved.e2e === undefined) delete process.env.QUICKLAUNCH_E2E
+      else process.env.QUICKLAUNCH_E2E = saved.e2e
+      if (saved.firstRun === undefined) delete process.env.QUICKLAUNCH_FIRST_RUN
+      else process.env.QUICKLAUNCH_FIRST_RUN = saved.firstRun
+    })
+
+    it('is light, in graphite, a list, with Ctrl+Shift+Space switched on', async () => {
+      const { loadAppData } = await startSession()
+
+      const { prefs } = await loadAppData()
+
+      expect(prefs).toMatchObject({
+        theme: 'light',
+        background: 'minimal',
+        viewMode: 'list',
+        shortcut: 'CommandOrControl+Shift+Space',
+        shortcutEnabled: true,
+      })
+      expect((await readJson(dataFile())).data.prefs).toMatchObject({
+        theme: 'light',
+        background: 'minimal',
+        viewMode: 'list',
+      })
+    })
+
+    it('is the one the specs were written against in an end-to-end run: dark, violet, a grid', async () => {
+      process.env.QUICKLAUNCH_E2E = '1'
+      const { loadAppData } = await startSession()
+
+      const { prefs } = await loadAppData()
+
+      expect(prefs).toMatchObject({
+        theme: 'dark',
+        background: 'aurora',
+        viewMode: 'grid',
+      })
+      // Only the look is replaced: everything else is the starter data.
+      expect(prefs.shortcut).toBe('CommandOrControl+Shift+Space')
+      expect((await readJson(dataFile())).data.prefs).toMatchObject({
+        theme: 'dark',
+        background: 'aurora',
+        viewMode: 'grid',
+      })
+    })
+
+    it('is the real one again for a spec that asks for the first run', async () => {
+      process.env.QUICKLAUNCH_E2E = '1'
+      process.env.QUICKLAUNCH_FIRST_RUN = '1'
+      const { loadAppData } = await startSession()
+
+      const { prefs } = await loadAppData()
+
+      expect(prefs).toMatchObject({
+        theme: 'light',
+        background: 'minimal',
+        viewMode: 'list',
+      })
+    })
+
+    it('is never put on data that already exists', async () => {
+      const first = await startSession()
+      await first.loadAppData()
+      await first.flushPendingWrite()
+
+      process.env.QUICKLAUNCH_E2E = '1'
+      const second = await startSession()
+
+      expect((await second.loadAppData()).prefs).toMatchObject({
+        theme: 'light',
+        background: 'minimal',
+        viewMode: 'list',
+      })
+    })
+  })
 
   it('is a fresh installation only when there was no data and no backup', async () => {
     const first = await startSession()
@@ -501,13 +618,13 @@ describe('passwords that cannot be decrypted here', () => {
 
     const saved = await second.saveAppData({
       ...data,
-      prefs: { ...data.prefs, theme: 'light' },
+      prefs: { ...data.prefs, theme: 'dark' },
     })
     await second.flushPendingWrite()
 
     expect(saved.loose.passwords[0]?.passwordLost).toBe(true)
     const file = await readJson(dataFile())
-    expect(file.data.prefs.theme).toBe('light')
+    expect(file.data.prefs.theme).toBe('dark')
     expect(file.data.loose.passwords[0].passwordCiphertext).toBe(ciphertext)
   })
 
@@ -550,7 +667,7 @@ describe('passwords that cannot be decrypted here', () => {
     const data = await second.loadAppData()
     await second.saveAppData({
       ...data,
-      prefs: { ...data.prefs, theme: 'light' },
+      prefs: { ...data.prefs, theme: 'dark' },
     })
     await second.flushPendingWrite()
 
@@ -589,7 +706,7 @@ describe('writing to disk', () => {
       )
 
     const draft = sampleData()
-    draft.prefs.theme = 'light'
+    draft.prefs.theme = 'dark'
     await session.saveAppData(draft)
     await expect(session.flushPendingWrite()).rejects.toThrow('disk is full')
 
@@ -604,7 +721,7 @@ describe('writing to disk', () => {
     const status = await session.retryDataSave()
 
     expect(status.writeError).toBeNull()
-    expect((await readJson(dataFile())).data.prefs.theme).toBe('light')
+    expect((await readJson(dataFile())).data.prefs.theme).toBe('dark')
     expect(updates.at(-1)?.writeError).toBeNull()
   })
 
@@ -792,7 +909,7 @@ describe('the end of a Windows session', () => {
       ...args: Parameters<typeof fs.open>
     ) => sleep(150).then(() => original(...args))) as typeof fs.open)
     const edit = sampleData()
-    edit.prefs.theme = 'light'
+    edit.prefs.theme = 'dark'
     await session.saveAppData(edit)
     const flushing = session.flushPendingWrite()
     await sleep(40)
@@ -800,7 +917,7 @@ describe('the end of a Windows session', () => {
     session.flushPendingWriteSync()
 
     expect(JSON.parse(readFileSync(dataFile(), 'utf8')).data.prefs.theme).toBe(
-      'light'
+      'dark'
     )
     await flushing
   })
@@ -893,7 +1010,7 @@ describe('importing between computers', () => {
       count: 1,
     })
     const draft = structuredClone(imported)
-    draft.prefs.theme = 'light'
+    draft.prefs.theme = 'dark'
     await second.saveAppData(draft)
     await second.flushPendingWrite()
     expect(
@@ -907,7 +1024,7 @@ describe('importing between computers', () => {
     await session.saveAppData(sampleData())
     await session.flushPendingWrite()
     const edit = sampleData()
-    edit.prefs.theme = 'light'
+    edit.prefs.theme = 'dark'
     await session.saveAppData(edit)
     const file = path.join(env.dir, 'export.json')
     await fs.writeFile(
@@ -923,7 +1040,7 @@ describe('importing between computers', () => {
     expect(backups).toHaveLength(1)
     expect(
       (await readJson(path.join(backupDir(), backups[0]!))).data.prefs.theme
-    ).toBe('light')
+    ).toBe('dark')
   })
 })
 
@@ -1041,7 +1158,7 @@ describe('the passwords notice', () => {
     second.dismissNotice('passwordsLost')
 
     const draft = structuredClone(data)
-    draft.prefs.theme = 'light'
+    draft.prefs.theme = 'dark'
     await second.saveAppData(draft)
 
     expect(second.getDataStatus().notices).toEqual([])
@@ -1075,13 +1192,13 @@ describe('daily backups while the app keeps running', () => {
 
     vi.setSystemTime(new Date(2026, 9, 4, 0, 5, 0))
     const edit = sampleData()
-    edit.prefs.theme = 'light'
+    edit.prefs.theme = 'dark'
     await second.saveAppData(edit)
     await second.flushPendingWrite()
 
     const snapshot = path.join(backupDir(), 'quicklaunch-data-20261004.json')
     expect(await fs.readFile(snapshot, 'utf8')).toBe(dayOne)
-    expect((await readJson(dataFile())).data.prefs.theme).toBe('light')
+    expect((await readJson(dataFile())).data.prefs.theme).toBe('dark')
     expect(await fs.readdir(backupDir())).toContain(
       'quicklaunch-data-20261003.json'
     )
@@ -1100,7 +1217,7 @@ describe('daily backups while the app keeps running', () => {
     const taken = await fs.readFile(snapshot, 'utf8')
 
     const edit = sampleData()
-    edit.prefs.theme = 'light'
+    edit.prefs.theme = 'dark'
     await second.saveAppData(edit)
     await second.flushPendingWrite()
 
@@ -1183,7 +1300,7 @@ describe('backups and recovery', () => {
       chooseRecovery: async () => ({ action: 'fresh' }),
     })
     const edit = sampleData()
-    edit.prefs.theme = 'light'
+    edit.prefs.theme = 'dark'
     await session.saveAppData(edit)
     await session.flushPendingWrite()
 

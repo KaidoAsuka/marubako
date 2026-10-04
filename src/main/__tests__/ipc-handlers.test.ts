@@ -39,6 +39,11 @@ const mocks = vi.hoisted(() => ({
   checkForUpdatesNow: vi.fn(),
   installDownloadedUpdate: vi.fn(() => true),
   flushPendingWrite: vi.fn(async () => undefined),
+  applyBubblePreference: vi.fn(async () => undefined),
+  applyLaunchShortcut: vi.fn(),
+  keepTabNamesVisible: vi.fn(async () => undefined),
+  /** What Windows says about its own light or dark mode. */
+  nativeTheme: { shouldUseDarkColors: false },
   browser: {
     getFileIcon: vi.fn(),
     openApp: vi.fn(),
@@ -75,6 +80,7 @@ vi.mock('electron', () => ({
     ) => mocks.handlers.set(channel, handler),
     on: vi.fn(),
   },
+  nativeTheme: mocks.nativeTheme,
 }))
 vi.mock('electron-log/main', () => ({
   default: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
@@ -84,7 +90,7 @@ vi.mock('../auto-updater', () => ({
   installDownloadedUpdate: mocks.installDownloadedUpdate,
 }))
 vi.mock('../launch-settings', () => ({
-  applyLaunchShortcut: vi.fn(),
+  applyLaunchShortcut: mocks.applyLaunchShortcut,
   checkLaunchShortcut: vi.fn(),
   getLaunchSettings: vi.fn(),
   retryLaunchShortcut: vi.fn(),
@@ -95,7 +101,7 @@ vi.mock('../tray', () => ({ refreshTrayMenu: mocks.refreshTrayMenu }))
 vi.mock('../window-manager', () => ({
   closeWindow: vi.fn(),
   acknowledgeWindowFrame: vi.fn(),
-  applyBubblePreference: vi.fn(async () => undefined),
+  applyBubblePreference: mocks.applyBubblePreference,
   collapseWindow: vi.fn(),
   activateDock: vi.fn(),
   dismissAfterLaunch: vi.fn(),
@@ -114,6 +120,7 @@ vi.mock('../window-manager', () => ({
   ),
   getWindowSnapshot: vi.fn(),
   hideWindow: vi.fn(),
+  keepTabNamesVisible: mocks.keepTabNamesVisible,
   setWindowOpacity: vi.fn(async () => undefined),
   togglePin: vi.fn(),
 }))
@@ -162,8 +169,16 @@ function invoke(channel: string, ...args: unknown[]): Promise<any> {
   return invokeFrom(mainEvent, channel, ...args)
 }
 
-function dataWithPassword(): AppData {
+/** Sample data from which the sample account has been deleted: nothing in it is a password. */
+function dataWithoutPasswords(): AppData {
   const data = createDefaultAppData()
+  for (const group of data.passwords) group.items = []
+  return data
+}
+
+/** Data whose one password is the loose entry 'pw-1'. */
+function dataWithPassword(): AppData {
+  const data = dataWithoutPasswords()
   data.loose.passwords = [
     {
       id: 'pw-1',
@@ -186,6 +201,10 @@ beforeEach(() => {
   mocks.statusListener = null
   mocks.loadAppData.mockImplementation(async () => createDefaultAppData())
   mocks.saveAppData.mockImplementation(async (data: AppData) => data)
+  mocks.applyBubblePreference.mockImplementation(async () => undefined)
+  mocks.applyLaunchShortcut.mockImplementation(() => undefined)
+  mocks.keepTabNamesVisible.mockImplementation(async () => undefined)
+  mocks.nativeTheme.shouldUseDarkColors = false
   mocks.lang = 'en'
   mocks.messageBoxAnswers = []
   mocks.messageBoxes = []
@@ -259,7 +278,7 @@ describe('exporting data', () => {
   })
 
   it('does not ask when there is no password to protect', async () => {
-    const result = await invoke('data-export', createDefaultAppData())
+    const result = await invoke('data-export', dataWithoutPasswords())
 
     expect(mocks.messageBoxes).toHaveLength(0)
     expect(mocks.exportAppDataFile).toHaveBeenCalledWith(
@@ -277,6 +296,23 @@ describe('exporting data', () => {
     await invoke('data-export', data)
 
     expect(mocks.messageBoxes).toHaveLength(0)
+  })
+
+  it('asks about the sample account of a new installation as about any password', async () => {
+    mocks.messageBoxAnswers = [0]
+
+    const result = await invoke('data-export', createDefaultAppData())
+
+    expect(mocks.messageBoxes).toHaveLength(1)
+    expect(mocks.exportAppDataFile).toHaveBeenCalledWith(
+      expect.anything(),
+      'C:\\out\\export.json',
+      { includePasswords: false }
+    )
+    expect(result).toMatchObject({
+      ok: true,
+      data: { canceled: false, passwordsIncluded: false },
+    })
   })
 
   it('asks in the saved language', async () => {
@@ -427,6 +463,10 @@ describe('who may reach the data (data-security-8)', () => {
       expect(mocks.dismissNotice).not.toHaveBeenCalled()
       expect(mocks.getDataStatus).not.toHaveBeenCalled()
       expect(mocks.messageBoxes).toHaveLength(0)
+      // Nothing that a save does to the windows happens either.
+      expect(mocks.applyBubblePreference).not.toHaveBeenCalled()
+      expect(mocks.applyLaunchShortcut).not.toHaveBeenCalled()
+      expect(mocks.keepTabNamesVisible).not.toHaveBeenCalled()
     }
   )
 
@@ -465,14 +505,34 @@ describe('who may reach the data (data-security-8)', () => {
   it('tells the ball how to look, and nothing else', async () => {
     const data = dataWithPassword()
     data.prefs.lang = 'ja'
-    data.prefs.theme = 'light'
+    data.prefs.theme = 'dark'
     mocks.loadAppData.mockImplementation(async () => data)
 
     const result = await invokeFrom(dockEvent, 'dock-get-appearance')
 
-    expect(result).toEqual({ ok: true, data: { lang: 'ja', theme: 'light' } })
+    expect(result).toEqual({ ok: true, data: { lang: 'ja', theme: 'dark' } })
     expect(JSON.stringify(result)).not.toContain('s3cret')
   })
+
+  it.each([
+    ['system', true, 'dark'],
+    ['system', false, 'light'],
+    // A theme the user chose is not for Windows to change.
+    ['light', true, 'light'],
+    ['dark', false, 'dark'],
+  ] as const)(
+    'tells the ball the theme that is drawn: %s with Windows dark %s is %s',
+    async (setting, systemDark, theme) => {
+      const data = dataWithPassword()
+      data.prefs.theme = setting
+      mocks.loadAppData.mockImplementation(async () => data)
+      mocks.nativeTheme.shouldUseDarkColors = systemDark
+
+      const result = await invokeFrom(dockEvent, 'dock-get-appearance')
+
+      expect(result).toEqual({ ok: true, data: { lang: 'zh', theme } })
+    }
+  )
 
   it('keeps the ball channel for the ball: the panel and strangers are refused', async () => {
     expect((await invoke('dock-get-appearance')).ok).toBe(false)
@@ -582,7 +642,7 @@ describe('a change of language reaches the tray menu (i18n-copy-6)', () => {
   it('leaves the tray menu alone when only something else was saved', async () => {
     mocks.loadAppData.mockImplementation(async () => withLang('zh'))
     const data = withLang('zh')
-    data.prefs.theme = 'light'
+    data.prefs.theme = 'dark'
 
     await invoke('data-save', data)
 
@@ -618,6 +678,98 @@ describe('a change of language reaches the tray menu (i18n-copy-6)', () => {
     await invoke('data-import')
 
     expect(mocks.refreshTrayMenu).not.toHaveBeenCalled()
+  })
+})
+
+describe('a save keeps the names on the tabs', () => {
+  function withPrefs(prefs: Partial<AppData['prefs']>): AppData {
+    const data = createDefaultAppData()
+    data.prefs = { ...data.prefs, ...prefs }
+    return data
+  }
+
+  it('hands the preferences before and after the save to the window manager', async () => {
+    const before = withPrefs({ lang: 'zh', zoom: 1 })
+    const after = withPrefs({ lang: 'en', zoom: 1.2, hiddenTabs: ['notes'] })
+    mocks.loadAppData.mockImplementation(async () => before)
+
+    const result = await invoke('data-save', after)
+
+    expect(result.ok).toBe(true)
+    expect(mocks.keepTabNamesVisible).toHaveBeenCalledTimes(1)
+    expect(mocks.keepTabNamesVisible).toHaveBeenCalledWith(
+      before.prefs,
+      after.prefs
+    )
+  })
+
+  it('uses what was really saved, not what the page sent', async () => {
+    const before = withPrefs({ lang: 'zh' })
+    const stored = withPrefs({ lang: 'ja' })
+    mocks.loadAppData.mockImplementation(async () => before)
+    mocks.saveAppData.mockImplementation(async () => stored)
+
+    await invoke('data-save', withPrefs({ lang: 'en' }))
+
+    expect(mocks.keepTabNamesVisible).toHaveBeenCalledWith(
+      before.prefs,
+      stored.prefs
+    )
+  })
+
+  it('widens the panel after the ball and the shortcut have been dealt with', async () => {
+    const order: string[] = []
+    mocks.saveAppData.mockImplementation(async (data: AppData) => {
+      order.push('save')
+      return data
+    })
+    mocks.applyBubblePreference.mockImplementation(async () => {
+      order.push('bubble')
+    })
+    mocks.applyLaunchShortcut.mockImplementation(() => {
+      order.push('shortcut')
+    })
+    mocks.keepTabNamesVisible.mockImplementation(async () => {
+      order.push('tab names')
+    })
+
+    await invoke('data-save', withPrefs({ lang: 'en' }))
+
+    expect(order).toEqual(['save', 'bubble', 'shortcut', 'tab names'])
+  })
+
+  it('does not widen anything for a save that failed', async () => {
+    mocks.saveAppData.mockRejectedValueOnce(new Error('disk full'))
+
+    const result = await invoke('data-save', withPrefs({ lang: 'en' }))
+
+    expect(result.ok).toBe(false)
+    expect(mocks.keepTabNamesVisible).not.toHaveBeenCalled()
+  })
+
+  it('still reports the save as done when the panel could not be widened', async () => {
+    mocks.keepTabNamesVisible.mockRejectedValueOnce(new Error('no window'))
+
+    const result = await invoke('data-save', withPrefs({ lang: 'en' }))
+
+    expect(result.ok).toBe(true)
+  })
+
+  it('does the same after an import, with the preferences of the imported file', async () => {
+    const before = withPrefs({ lang: 'zh' })
+    const imported = withPrefs({ lang: 'en', zoom: 1.2 })
+    mocks.loadAppData.mockImplementation(async () => before)
+    mocks.importAppData.mockImplementation(async () => imported)
+    mocks.messageBoxAnswers = [0]
+
+    const result = await invoke('data-import')
+
+    expect(result).toMatchObject({ ok: true, data: { canceled: false } })
+    expect(mocks.keepTabNamesVisible).toHaveBeenCalledTimes(1)
+    expect(mocks.keepTabNamesVisible).toHaveBeenCalledWith(
+      before.prefs,
+      imported.prefs
+    )
   })
 })
 

@@ -28,7 +28,8 @@ test('records, copies, searches and restores scripts with exact formatting', asy
   })
   await editor.press('Control+s')
   await expect(page.getByTestId('modal-item')).toHaveCount(0)
-  const row = page.locator('.command-item').first()
+  // The sample command of a new installation is on the page too.
+  const row = page.locator('.command-item').filter({ hasText: '查看工作目录' })
   const id = (await row.getAttribute('data-top-entry-id'))!
   await expect(row.locator('.code-token-variable')).not.toHaveCount(0)
   await row.getByRole('button', { name: '展开全部代码' }).click()

@@ -9,6 +9,7 @@ const KEYS = [
   'show_bubble',
   'show_bubble_hint',
   'dock_bubble_hint_open',
+  'dock_bubble_hint_kept',
   'peek_collapse_delay_hint',
   'hide_after_launch_hint',
   'launch_at_login_hint',
@@ -32,6 +33,33 @@ describe('floating ball strings', () => {
     expect(workspaceStrings.ja.dock_bubble_hint_open).toBe(
       'クリックで収納 · ダブルクリックで開いたまま · ドラッグで移動'
     )
+  })
+
+  it('has a hint without the double click for a panel that is kept open already', () => {
+    // A click collapses such a panel at once, and the second click of a double click is spent:
+    // the hint must not promise that a double click keeps it open.
+    expect(workspaceStrings.zh.dock_bubble_hint_kept).toBe(
+      '单击收起 · 拖动移动'
+    )
+    expect(workspaceStrings.en.dock_bubble_hint_kept).toBe(
+      'Click to collapse · Drag to move'
+    )
+    expect(workspaceStrings.ja.dock_bubble_hint_kept).toBe(
+      'クリックで収納 · ドラッグで移動'
+    )
+    expect(workspaceStrings.zh.dock_bubble_hint_kept).not.toContain('双击')
+    expect(workspaceStrings.en.dock_bubble_hint_kept).not.toMatch(/double/i)
+    expect(workspaceStrings.ja.dock_bubble_hint_kept).not.toContain(
+      'ダブルクリック'
+    )
+    for (const lang of LANGS) {
+      // The rest is the hint of a temporary panel, word for word.
+      const [collapse, , drag] =
+        workspaceStrings[lang].dock_bubble_hint_open!.split(' · ')
+      expect(workspaceStrings[lang].dock_bubble_hint_kept).toBe(
+        `${collapse} · ${drag}`
+      )
+    }
   })
 
   it('keeps the double-click wording the e2e tests look for', () => {

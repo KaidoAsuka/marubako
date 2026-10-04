@@ -5,6 +5,7 @@ import { visibleTabs } from '../../../shared/tabs'
 import {
   resolveSearchMode,
   resolveTabMode,
+  showsViewToggle,
   type SearchMode,
   type TabMode,
 } from '../../../shared/layout-widths'
@@ -14,6 +15,8 @@ import { useAppStore } from '../store/use-app-store'
 export type LayoutMode = {
   tabMode: TabMode
   searchMode: SearchMode
+  /** Whether there is room for the switch between grid and list among the page's actions. */
+  viewToggle: boolean
 }
 
 /** The width the interface has to work with: the window, less what the zoom setting takes. */
@@ -27,6 +30,7 @@ function modeAt(lang: Lang, zoom: number, tabCount: number): LayoutMode {
   return {
     tabMode: resolveTabMode(lang, width, tabCount),
     searchMode: resolveSearchMode(lang, width, tabCount),
+    viewToggle: showsViewToggle(width),
   }
 }
 
@@ -52,7 +56,8 @@ export function useLayoutMode(): LayoutMode {
       const next = modeAt(lang, zoom, tabCount)
       setMode((current) =>
         current.tabMode === next.tabMode &&
-        current.searchMode === next.searchMode
+        current.searchMode === next.searchMode &&
+        current.viewToggle === next.viewToggle
           ? current
           : next
       )
