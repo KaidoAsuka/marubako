@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Marubako demo stage</title>
+    <link rel="stylesheet" href="stage.css" />
+  </head>
+  <body>
+    <!-- What the camera sees. The world is a dark room with one screen in it: the staged desktop. -->
+    <div id="viewport">
+      <div id="world">
+        <div id="screen">
+          <div id="desktop">
+            <div id="taskbar">
+              <div class="taskbar-apps">
+                <i class="start"><b></b><b></b><b></b><b></b></i>
+                <span class="taskbar-search">Search</span>
+                <i style="--c: #4f8ef7"></i>
+                <i style="--c: #f2a33a"></i>
+                <i style="--c: #35b37e"></i>
+                <i style="--c: #8b6cf0"></i>
+              </div>
+              <div class="taskbar-clock">
+                <span>10:24</span><span>2026/10/04</span>
+              </div>
+            </div>
+          </div>
+          <div id="mocks"></div>
+          <img id="panel" class="app-window" alt="" />
+          <img id="ball" class="app-window" alt="" />
+          <div id="rings"></div>
+          <svg id="cursor" width="24" height="30" viewBox="0 0 16 24">
+            <path
+              d="M1 1 L1 18 L5.5 14 L8.5 21 L11.5 19.5 L8.5 13 L14 13 Z"
+              fill="#fff"
+              stroke="#141822"
+              stroke-width="1.4"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </div>
+      </div>
+      <div id="keys"></div>
+      <div id="caption"></div>
+    </div>
+    <script src="windows.js"></script>
+    <script src="scenes.js"></script>
+    <script src="stage.js"></script>
+  </body>
+</html>

@@ -30,6 +30,16 @@ export default [
     },
   },
   {
+    // The stage of the README demos is a plain page: its scripts run in a browser window.
+    files: ['tools/demo/stage/*.js'],
+    languageOptions: {
+      sourceType: 'script',
+      globals: {
+        ...globals.browser,
+      },
+    },
+  },
+  {
     files: ['**/*.{ts,tsx}'],
     languageOptions: {
       parser: tsParser,

@@ -2,7 +2,7 @@
 
 这份文档记录 Marubako 当前的行为：每一条写的是用户能看到的结果，以及背后的取舍。它原本是项目的 README，在第一次公开发布时挪到这里；README 现在只讲「是什么、怎么装、怎么用」。
 
-读者是作者、维护者和 AI 助手：改动行为之前先看这里有没有对应的条目，改完以后同步更新。普通用户请读 [README](../README.zh-CN.md)（English: [README](../README.md)）。
+读者是作者、维护者和 AI 助手：改动行为之前先看这里有没有对应的条目，改完以后同步更新。普通用户请读 [README](../README.zh-CN.md)（English: [README](../README.md)，日本語: [README](../README.ja.md)）。
 
 文中的 `quicklaunch-data.json`、`window.quickLaunch`、`QUICKLAUNCH_*` 是项目更名前留下的内部标识，保留原名是有意的，用户看不到它们。
 

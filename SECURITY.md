@@ -13,6 +13,10 @@ Please report it privately. Do **not** open a public issue, a pull request or a 
 
 This is a small project with one maintainer, so there is no service-level promise, but a report is normally answered within about a week. Once a fix is released, the report is published as a security advisory and you are credited, unless you prefer not to be.
 
+## What the app sends
+
+Marubako has no sign-up, no cloud sync and no telemetry. The only internet connection it makes by itself is to GitHub, to check for a new version and download it (shortly after it starts, then once a day). Those requests carry a random installation ID made by the updater and nothing you stored: no password, user name, site address, path, command or note is ever part of them. GitHub sees your IP address, as any server does. If an app you added is on a network share, Marubako reads its icon from that share when the Apps page is shown, as Explorer does.
+
 ## What counts
 
 Things that are in scope:
