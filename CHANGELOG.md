@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.1.1](https://github.com/KaidoAsuka/marubako/compare/v3.1.0...v3.1.1) (2026-10-04)
+
+
+### Features
+
+* **settings:** bubble size, font, a Markdown list of the data, and a version notice for the portable copy ([#19](https://github.com/KaidoAsuka/marubako/issues/19)) ([fc7ddfa](https://github.com/KaidoAsuka/marubako/commit/fc7ddfa897abad00998463a2d86c28a291f0ec18))
+
 ## [3.1.0](https://github.com/KaidoAsuka/marubako/compare/v3.0.1...v3.1.0) (2026-10-04)
 
 
