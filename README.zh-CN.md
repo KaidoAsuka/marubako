@@ -1,6 +1,6 @@
 # Marubako
 
-[English](README.md) | [简体中文](README.zh-CN.md)
+[English](README.md) | [简体中文](README.zh-CN.md) | [日本語](README.ja.md)
 
 [![CI](https://github.com/KaidoAsuka/marubako/actions/workflows/ci.yml/badge.svg)](https://github.com/KaidoAsuka/marubako/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -45,7 +45,9 @@ Windows 上的一个小面板：把工作里要反复打开的东西收在一处
   <img src="docs/images/demo-ball.gif" width="880" alt="面板收成悬浮球，桌面空了；双击球，面板回来；拖动面板，球跟着走">
 </p>
 
-另外还有备忘和每天的任务。数据全部在本机，没有账号，没有云端。有浅色、深色和 Monokai 配色，界面有中文、English、日本語。演示里的数据都是虚构的。
+**密码只保存在你的电脑上，Marubako 绝不会把它们发送到任何地方。** 密码用你的 Windows 账号加密。不用注册账号，没有云同步，也不上报任何使用数据；应用自己唯一会联网做的事，是从 GitHub 检查并下载自身的更新，其中不带你存的任何内容。
+
+另外还有备忘和每天的任务。有浅色、深色和 Monokai 配色，界面有中文、English、日本語。演示里的数据都是虚构的。
 
 ## 安装
 
@@ -55,7 +57,7 @@ Windows 上的一个小面板：把工作里要反复打开的东西收在一处
 
 ## 你的数据
 
-全部在 `%APPDATA%\marubako\`：一个普通的 JSON 文件，外加最近七天每天一份备份。换电脑请用 **设置 > 语言与数据 > 导出数据**，到新电脑上再 **导入数据**（直接复制文件夹带不走密码，密码是按一台电脑上的一个 Windows 账号加密的）。带密码导出的文件里，密码是明文。
+全部在 `%APPDATA%\marubako\`：一个普通的 JSON 文件，外加最近七天每天一份备份。换电脑请用 **设置 > 语言与数据 > 导出数据**，到新电脑上再 **导入数据**（直接复制文件夹带不走密码，密码是按一台电脑上的一个 Windows 账号加密的）。带密码导出的文件里，密码是明文；复制出来的密码和其他复制的内容一样，会留在 Windows 剪贴板里。
 
 「密码」页是为了随手取用，适合放测试环境这类账号。它不是密码管理器：能登录你 Windows 账号的人都能看到。重要的密码请放进专门的密码管理器。
 

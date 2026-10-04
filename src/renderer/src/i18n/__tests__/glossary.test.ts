@@ -228,16 +228,43 @@ describe('the glossary is written down', () => {
 })
 
 describe('the README', () => {
-  const readme = readFileSync(resolve(process.cwd(), 'README.md'), 'utf8')
+  const read = (file: string) =>
+    readFileSync(resolve(process.cwd(), file), 'utf8')
 
-  it('uses the Chinese words of the glossary', () => {
+  it('uses the Chinese words of the glossary in its Chinese version', () => {
+    const chinese = read('README.zh-CN.md')
     const found = BANNED.zh
-      .filter(({ pattern }) => pattern.test(readme))
-      // The README also speaks of folders of the disk ("目录") and of source and data directories.
-      .filter(({ pattern }) => !pattern.test('目录'))
+      // The README speaks of projects ("按项目或环境分组"): 项目 is only banned as a name for an item.
+      .filter(({ pattern }) => !pattern.test('项目'))
+      .filter(({ pattern }) => pattern.test(chinese))
       .map(({ pattern, use }) => `${pattern}: say ${use}`)
 
     expect(found).toEqual([])
+    // The ball has one name.
+    expect(chinese).toContain('悬浮球')
+  })
+
+  it('uses the Japanese words of the glossary in its Japanese version', () => {
+    const japanese = read('README.ja.md')
+    const found = BANNED.ja
+      .filter(({ pattern }) => pattern.test(japanese))
+      .map(({ pattern, use }) => `${pattern}: say ${use}`)
+
+    expect(found).toEqual([])
+    // The ball has one name, and the panel goes into it with one word.
+    expect(japanese).toContain('フローティングボタンに収納')
+  })
+
+  it('offers the same three languages, in one line, in every version', () => {
+    const line =
+      '[English](README.md) | [简体中文](README.zh-CN.md) | [日本語](README.ja.md)'
+
+    for (const file of ['README.md', 'README.zh-CN.md', 'README.ja.md']) {
+      const first = read(file)
+        .split(/\r?\n/)
+        .find((text) => text.includes('](README'))
+      expect(first, file).toBe(line)
+    }
   })
 })
 

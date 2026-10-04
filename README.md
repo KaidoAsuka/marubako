@@ -1,6 +1,6 @@
 # Marubako
 
-[English](README.md) | [简体中文](README.zh-CN.md)
+[English](README.md) | [简体中文](README.zh-CN.md) | [日本語](README.ja.md)
 
 [![CI](https://github.com/KaidoAsuka/marubako/actions/workflows/ci.yml/badge.svg)](https://github.com/KaidoAsuka/marubako/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -24,7 +24,7 @@ Now they are all in one panel, and my desktop is empty.
 **Copies accounts and commands with one click.** The user name, the password and the commands you keep typing, for every environment.
 
 <p align="center">
-  <img src="docs/images/demo-copy.gif" width="880" alt="A click copies the user name of a test account and it is pasted into the sign-in page, then the password; a copied command is pasted into a terminal">
+  <img src="docs/images/demo-copy.gif" width="880" alt="A click copies the user name of a test account and it is pasted into the sign-in page, then the password; a copied command is pasted into a terminal and run">
 </p>
 
 **Finds anything.** `Ctrl + K` searches every category.
@@ -45,7 +45,9 @@ Now they are all in one panel, and my desktop is empty.
   <img src="docs/images/demo-ball.gif" width="880" alt="The panel collapses into the bubble and leaves the desktop empty; a double click brings it back; dragging the panel takes the bubble along">
 </p>
 
-Also: notes and daily tasks. Everything stays on your PC (no account, no cloud). Light, dark and Monokai looks. English, Chinese and Japanese. The demos use made-up data.
+**Your passwords are saved only on your PC, and Marubako never sends them anywhere.** They are encrypted for your Windows account. There is no sign-up, no cloud sync and no telemetry: the only thing the app itself goes online for is its own updates from GitHub, and nothing you stored is part of that.
+
+Also: notes and daily tasks. Light, dark and Monokai looks. English, Chinese and Japanese. The demos use made-up data.
 
 ## Install
 
@@ -55,7 +57,7 @@ The installer is not code-signed yet, so Windows will probably say **Windows pro
 
 ## Your data
 
-Everything is in `%APPDATA%\marubako\`: one plain JSON file, with a backup for each of the last seven days. To move to another PC, use **Settings > Language & data > Export data** and **Import data** there (copying the folder does not carry the passwords, which are encrypted for one Windows account on one PC). An export with passwords holds them in plain text.
+Everything is in `%APPDATA%\marubako\`: one plain JSON file, with a backup for each of the last seven days. To move to another PC, use **Settings > Language & data > Export data** and **Import data** there (copying the folder does not carry the passwords, which are encrypted for one Windows account on one PC). An export with passwords holds them in plain text, and a password you copy stays on the Windows clipboard like any other copied text.
 
 The passwords page is a convenience for accounts you want at hand, such as those of test environments. It is not a password manager: anyone who can sign in to your Windows account can read them. Keep the passwords that matter in a real one.
 
