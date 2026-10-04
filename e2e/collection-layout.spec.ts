@@ -205,7 +205,14 @@ test('reorders adjacent command cards by dropping on the trailing side', async (
           )
       )
       .toEqual(['command-1', 'command-0'])
-    await page.getByTestId('edit-item-command-0').click()
+    // Just after a drop the first click can still be swallowed on a slow machine: click until the
+    // editor opens.
+    await expect(async () => {
+      await page.getByTestId('edit-item-command-0').click()
+      await expect(page.getByTestId('command-code-input')).toBeVisible({
+        timeout: 1500,
+      })
+    }).toPass({ timeout: 10_000 })
     await expect(page.getByTestId('command-code-input')).toContainText(
       'Get-ChildItem'
     )

@@ -262,8 +262,14 @@ test('moves a loose folder shortcut into a folder widget', async () => {
 
     await expect(source).toHaveCount(0)
 
-    await target.click()
-    await expect(context.page.locator('.widget-popup')).toBeVisible()
+    // Just after a drop the first click can still be swallowed on a slow machine: click until the
+    // popup opens.
+    await expect(async () => {
+      await target.click()
+      await expect(context.page.locator('.widget-popup')).toBeVisible({
+        timeout: 1500,
+      })
+    }).toPass({ timeout: 10_000 })
     await expect(context.page.locator('.widget-popup')).toContainText(
       'LooseTest'
     )

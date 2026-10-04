@@ -116,7 +116,8 @@ test('provides top navigation and usable code editing at narrow widths', async (
         .locator('.workspace-content')
         .boundingBox()
       expect(nav!.y + nav!.height).toBeLessThanOrEqual(content!.y + 1)
-      expect(content!.x).toBeLessThan(2)
+      // The shell border and the root padding are 2 px at a 100% display scale (a little less at 125%).
+      expect(content!.x).toBeLessThanOrEqual(2)
       // The tabs stay one row, never wrapping: 44px high with the icon above the name (the default
       // window), 32px beside it (wide) or with only the icon (narrow).
       const mode = layouts[width]
