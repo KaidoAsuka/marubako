@@ -1,7 +1,7 @@
 // Step 2 of the README demos: films the stage.
 //
 // For every scene record.cjs recorded, the stage (tools/demo/stage) is given the recording and is
-// drawn at a steady 20 pictures a second, each one saved as a PNG. The stage draws a moment purely
+// drawn at a steady 30 pictures a second, each one saved as a PNG. The stage draws a moment purely
 // from its time, so the film is as smooth as the script, whatever this computer is busy with.
 //
 //   node tools/demo/render.cjs artifacts/demo [scene]
@@ -11,7 +11,9 @@ const { pathToFileURL } = require('node:url')
 
 const { _electron: electron } = require('@playwright/test')
 
-const FPS = 20
+const FPS = 30
+// The view of the stage (stage.css), in its own pixels.
+const VIEW = { x: 0, y: 0, width: 880, height: 550 }
 
 async function main() {
   const root = path.resolve(process.argv[2] ?? 'artifacts/demo')
@@ -47,6 +49,8 @@ async function main() {
         )
         await page.screenshot({
           path: path.join(out, `${String(index).padStart(4, '0')}.png`),
+          // The view itself: Windows may have made the window a pixel or two larger.
+          clip: VIEW,
         })
       }
       console.log(`${name}: ${count + 1} pictures`)

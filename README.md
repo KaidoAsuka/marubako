@@ -8,7 +8,7 @@
 A small panel for Windows that keeps everything you open again and again at work in one place, one shortcut away.
 
 <p align="center">
-  <img src="docs/images/demo-open.gif" width="880" alt="The shortcut brings the panel out of the floating bubble; one click opens a folder of design documents in the file manager, another opens the sign-in page of the test environment in the browser">
+  <img src="docs/images/demo-open.webp" width="880" alt="The shortcut brings the panel out of the floating bubble; one click opens a folder of design documents in the file manager, another opens the sign-in page of the test environment in the browser">
 </p>
 
 ## Why
@@ -24,25 +24,25 @@ Now they are all in one panel, and my desktop is empty.
 **Copies accounts and commands with one click.** The user name, the password and the commands you keep typing, for every environment.
 
 <p align="center">
-  <img src="docs/images/demo-copy.gif" width="880" alt="A click copies the user name of a test account and it is pasted into the sign-in page, then the password; a copied command is pasted into a terminal and run">
+  <img src="docs/images/demo-copy.webp" width="880" alt="A click copies the user name of a test account and it is pasted into the sign-in page, then the password; a copied command is pasted into a terminal and run">
 </p>
 
 **Finds anything.** `Ctrl + K` searches every category.
 
 <p align="center">
-  <img src="docs/images/demo-search.gif" width="880" alt="Ctrl + K, the word test, Enter: the folder that was found opens">
+  <img src="docs/images/demo-search.webp" width="880" alt="Ctrl + K, the word test, Enter: the folder that was found opens">
 </p>
 
 **Switches between list and grid.** One button on the Folders, Sites and Apps pages; in the grid, each group is a tile that opens to show its items.
 
 <p align="center">
-  <img src="docs/images/demo-view.gif" width="880" alt="One click turns the list of sites into a grid of tiles; a click on a tile shows the items of its group; another click brings the list back">
+  <img src="docs/images/demo-view.webp" width="880" alt="One click turns the list of sites into a grid of tiles; a click on a tile shows the items of its group; another click brings the list back">
 </p>
 
 **Stays out of the way.** The panel collapses into a small bubble at the edge of the screen, and the two move together.
 
 <p align="center">
-  <img src="docs/images/demo-ball.gif" width="880" alt="The panel collapses into the bubble and leaves the desktop empty; a double click brings it back; dragging the panel takes the bubble along">
+  <img src="docs/images/demo-ball.webp" width="880" alt="The panel collapses into the bubble and leaves the desktop empty; a double click brings it back; dragging the panel takes the bubble along">
 </p>
 
 **Your passwords are saved only on your PC, and Marubako never sends them anywhere.** They are encrypted for your Windows account. There is no sign-up, no cloud sync and no telemetry: the only thing the app itself goes online for is its own updates from GitHub, and nothing you stored is part of that.

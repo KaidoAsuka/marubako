@@ -56,7 +56,7 @@
     let from = recorded(takeover.start)
     for (const stop of takeover.stops) {
       const target = stop.back ? recorded(takeover.end) : stop
-      const begin = stop.at - (stop.travel ?? 520)
+      const begin = stop.at - (stop.travel ?? 380)
       if (t < begin) return from
       if (t < stop.at) {
         const k = easeInOut((t - begin) / (stop.at - begin))
@@ -82,6 +82,29 @@
       from = shot
     }
     return from
+  }
+
+  /**
+   * A window between two recorded frames. A window that is dragged is recorded some fifteen times
+   * a second and the film has thirty pictures: its place is taken between the frames around the
+   * moment, as the pointer's is, so that the two stay together. The picture is that of the earlier
+   * frame. A jump (the panel coming up somewhere else) stays a jump.
+   */
+  function between(window, later, share) {
+    if (!window || !later || !window.visible || !later.visible) return window
+    const from = window.bounds
+    const to = later.bounds
+    const step = Math.hypot(to.x - from.x, to.y - from.y)
+    const resized = to.width !== from.width || to.height !== from.height
+    if (step === 0 || step > 90 || resized) return window
+    return {
+      ...window,
+      bounds: {
+        ...from,
+        x: lerp(from.x, to.x, share),
+        y: lerp(from.y, to.y, share),
+      },
+    }
   }
 
   function applyCamera({ cx, cy, s }) {
@@ -167,12 +190,19 @@
 
       // The real app: the last pictures taken at or before this moment.
       let frame = recording.frames[0]
+      let later = null
       for (const candidate of recording.frames) {
-        if (candidate.t > t) break
+        if (candidate.t > t) {
+          later = candidate
+          break
+        }
         frame = candidate
       }
+      const share = later ? clamp01((t - frame.t) / (later.t - frame.t)) : 0
+      const find = (source, role) =>
+        source?.windows.find((window) => window.role === role)
       const byRole = (role) =>
-        frame.windows.find((window) => window.role === role)
+        between(find(frame, role), find(later, role), share)
       await Promise.all([
         showPicture(nodes.panel, byRole('panel'), base, offset),
         showPicture(nodes.ball, byRole('ball'), base, offset),
