@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.0.1](https://github.com/KaidoAsuka/marubako/compare/v3.0.0...v3.0.1) (2026-10-04)
+
+
+### Features
+
+* smaller ball that moves with the panel, new defaults, system theme and Monokai ([#10](https://github.com/KaidoAsuka/marubako/issues/10)) ([185159c](https://github.com/KaidoAsuka/marubako/commit/185159c3804392073bf6debdb6ce9df573fea411))
+
+
+### Miscellaneous
+
+* release the next version as 3.0.1 ([#12](https://github.com/KaidoAsuka/marubako/issues/12)) ([1d40851](https://github.com/KaidoAsuka/marubako/commit/1d40851798c3402951d55fc8a9138fa867d9dbc6))
+
 ## [3.0.0](https://github.com/KaidoAsuka/marubako/compare/v2.5.8...v3.0.0) (2026-10-04)
 
 
