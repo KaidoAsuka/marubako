@@ -239,9 +239,15 @@ describe('the README', () => {
 
     expect(found).toEqual([])
   })
+})
+
+// The README is a short introduction of the product; the rules for whoever changes the text are in
+// the contributing guide.
+describe('the contributing guide', () => {
+  const guide = readFileSync(resolve(process.cwd(), 'CONTRIBUTING.md'), 'utf8')
 
   it('names the glossary, so that the next change finds it', () => {
-    expect(readme).toContain('translations.ts')
-    expect(readme).toContain('glossary.test.ts')
+    expect(guide).toContain('translations.ts')
+    expect(guide).toContain('glossary.test.ts')
   })
 })
