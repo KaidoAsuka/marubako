@@ -1,0 +1,61 @@
+/*
+ * Coloured tile icons (components/common/EntryIcon.tsx): a filled glyph on a coloured rounded square.
+ * The tile and glyph colours are set per tile (--tile-bg, --tile-fg) and do not change with the theme.
+ * The size comes from the slot the tile sits in: each slot below sets --entry-tile-size to roughly the
+ * space its emoji or program icon used to take, so a stored icon looks the same wherever it is shown.
+ */
+.entry-tile {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: var(--entry-tile-size, 1.2em);
+  height: var(--entry-tile-size, 1.2em);
+  border-radius: 28%;
+  background: var(--tile-bg);
+  color: var(--tile-fg);
+  line-height: 1;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+}
+
+.entry-tile svg {
+  display: block;
+  width: 64%;
+  height: 64%;
+}
+
+.group-card-icon,
+.task-card-icon {
+  --entry-tile-size: 26px;
+}
+
+/* A tile is its own chip: drop the slot's frame so the tile is not boxed twice. */
+.group-card-icon:has(> .entry-tile),
+.task-card-icon:has(> .entry-tile),
+.command-result-icon:has(> .entry-tile) {
+  border-color: transparent;
+  background: transparent;
+}
+
+.item-icon {
+  --entry-tile-size: 26px;
+}
+
+/* One tile slot for the grid, the group popup and the loose entries: 24px, as the one-line tile is 44px. */
+.grid-ico,
+.loose-icon-source,
+.widget-folder-symbol {
+  --entry-tile-size: 24px;
+}
+
+.widget-popup-icon {
+  --entry-tile-size: 28px;
+}
+
+.snippet-icon {
+  --entry-tile-size: 22px;
+}
+
+.command-result-icon {
+  --entry-tile-size: 34px;
+}

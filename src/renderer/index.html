@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' ws: http://localhost:*; object-src 'none'; base-uri 'none'; form-action 'none';"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Marubako</title>
+    <link rel="stylesheet" href="/src/styles/startup.css" />
+  </head>
+  <body>
+    <div id="root">
+      <div class="startup-shell" data-testid="startup-shell" role="status">
+        <div class="startup-stack">
+          <div class="startup-visual" aria-hidden="true">
+            <img class="startup-logo" src="/src/assets/marubako.svg" alt="" />
+            <span class="startup-shortcut"><i></i><i></i><i></i></span>
+            <span class="startup-shortcut"><i></i><i></i><i></i></span>
+            <span class="startup-shortcut"><i></i><i></i><i></i></span>
+          </div>
+          <div class="startup-title">Marubako</div>
+          <div class="startup-track" aria-hidden="true"></div>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

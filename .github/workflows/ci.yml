@@ -1,0 +1,109 @@
+name: CI
+
+# Runs on every pull request and on every push to main. A pull request needs `checks` and `e2e` to
+# be green before it is merged; `package` is informational for now.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# A new push to a pull request cancels the older run of that pull request. Runs on main are never
+# cancelled, so that every commit on main gets a verdict.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # `npm ci` runs the `prepare` script, which installs the husky git hooks. Not wanted on a runner.
+  HUSKY: '0'
+
+jobs:
+  checks:
+    name: Lint, types and unit tests
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: ESLint
+        run: npx eslint src e2e scripts tools
+      - name: Prettier
+        run: npx prettier --check .
+      - name: Types (main, preload and renderer)
+        run: npm run typecheck
+      - name: Unit tests
+        run: npm run test:coverage
+      - name: Repository scripts
+        run: node --test "tools/**/*.test.cjs"
+      - name: Third-party notices
+        run: node tools/third-party-notices.cjs
+      - name: Upload the coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+          if-no-files-found: ignore
+
+  e2e:
+    name: UI tests (Playwright)
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build
+        run: npm run build
+      # The whole suite. Two specs (window-controls "a bubble stays at a free position through
+      # clicks, edits and restart" and peek-mode "temporary right-side expansion flips inward and
+      # repeatedly returns to the untouched bubble") are known to fail on one developer machine
+      # because of display scaling; a standard runner is at 100%, so they are expected to pass here.
+      # They are not skipped: if they do fail on the runner, that is information.
+      - name: Playwright
+        run: npx playwright test --reporter=list,html
+        env:
+          PLAYWRIGHT_HTML_OPEN: never
+      - name: Upload the Playwright report and traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
+
+  # Builds the unpacked app the way a release does, and starts it once. This catches a broken
+  # packaging setup on the pull request instead of on release day. It does not fail the run yet:
+  # it has not been seen running on a hosted runner. When it has been green for a while, remove
+  # `continue-on-error` and add it to the required checks.
+  package:
+    name: Packaging smoke test (informational)
+    runs-on: windows-latest
+    timeout-minutes: 30
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Package without an installer
+        run: npx electron-builder --config electron-builder.config.cjs --win --dir --publish never
+      - name: Start the packaged app
+        run: node scripts/smoke-packaged.cjs

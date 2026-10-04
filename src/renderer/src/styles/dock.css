@@ -1,0 +1,119 @@
+.app-root {
+  /* Keep the anti-aliased alpha edge inside the native transparent surface. */
+  padding: 1px;
+  --window-corner: 18px;
+}
+.app-shell {
+  border-radius: var(--window-corner);
+  clip-path: inset(0 round var(--window-corner));
+}
+.dock-root {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+}
+.dock-bubble {
+  outline: none;
+  display: grid;
+  place-items: center;
+  width: 50px;
+  height: 50px;
+  padding: 0;
+  border: 0;
+  /* The hit area follows the drawn shape of the ball. */
+  border-radius: 28% 28% 28% 50%;
+  color: var(--text);
+  background: transparent;
+  cursor: pointer;
+  touch-action: none;
+  -webkit-app-region: no-drag;
+}
+/* The ball is drawn in the shape of the app icon: three rounded corners, one round one, one white dot.
+   Nothing is drawn outside the 50px box: a spring may swell it, and the native window is only 56px. */
+.dock-bubble-surface {
+  position: relative;
+  display: block;
+  width: 50px;
+  height: 50px;
+  border-radius: 28% 28% 28% 50%;
+  background: linear-gradient(135deg, var(--brand-start), var(--brand-end));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.22),
+    0 0 0 1px rgba(10, 12, 20, 0.18);
+  opacity: 0.92;
+  transform: scale(1);
+  transform-origin: center;
+  pointer-events: none;
+  transition:
+    transform 90ms cubic-bezier(0.2, 0, 0, 1),
+    opacity 120ms ease-out,
+    filter 120ms ease-out;
+}
+.dock-bubble-dot {
+  position: absolute;
+  left: calc(40.6% - 7px);
+  top: calc(59.4% - 7px);
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  opacity: 1;
+  pointer-events: none;
+}
+.dock-bubble:hover .dock-bubble-surface,
+.dock-bubble:focus-visible .dock-bubble-surface,
+.dock-bubble.dragging .dock-bubble-surface {
+  opacity: 1;
+  filter: brightness(1.08);
+}
+/* The panel is open: the ball shrinks to a plain violet dot. */
+.dock-bubble-surface[data-morph='dot'] {
+  border-radius: 50%;
+  transform: scale(0.52);
+}
+.dock-bubble-surface[data-morph='dot'] .dock-bubble-dot {
+  opacity: 0;
+}
+/* Pressed: the ball gives way before anything has been asked of the main process. */
+.dock-bubble[data-pressed] .dock-bubble-surface {
+  transform: scale(0.92);
+}
+.dock-bubble[data-pressed] .dock-bubble-surface[data-morph='dot'] {
+  transform: scale(0.48);
+}
+/* The global `button:focus-visible` accent outline would sit outside the 50px ball and be cut off
+   by the 56px window; the ring below is the focus indicator here. */
+.dock-bubble:focus-visible {
+  outline: none;
+}
+/* White ring on the outside of a dark one, so the focus shows on any desktop. */
+.dock-bubble:focus-visible .dock-bubble-surface {
+  box-shadow:
+    inset 0 0 0 2px #fff,
+    inset 0 0 0 4px rgba(10, 12, 20, 0.85);
+}
+.dock-bubble.dragging {
+  cursor: grabbing;
+}
+.peek-delay-range input {
+  flex: 1;
+  min-width: 0;
+}
+.peek-delay-range span {
+  flex: 0 0 86px;
+  text-align: right;
+  white-space: nowrap;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dock-bubble-surface {
+    transition: none;
+  }
+  .dock-bubble[data-pressed] .dock-bubble-surface {
+    transform: scale(1);
+  }
+  .dock-bubble[data-pressed] .dock-bubble-surface[data-morph='dot'] {
+    transform: scale(0.52);
+  }
+}

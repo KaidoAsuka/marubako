@@ -1,0 +1,55 @@
+name: Feature request
+description: Suggest an idea or an improvement
+title: '[Feature]: '
+labels: ['enhancement']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for the idea. A good request describes the problem first and the solution second. It will be read by a person, and may be handed on to an AI coding assistant as a task, so be concrete.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem do you want to solve?
+      description: What are you trying to do, and what gets in the way today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like Marubako to do?
+      description: Describe the behavior you want. A sketch or a screenshot is welcome.
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: How will we know it is done?
+      description: A short list of things that must be true, for example "pressing X while Y opens Z".
+      placeholder: |
+        - ...
+        - ...
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What else did you consider?
+      description: Other ways to solve it, or how you work around it now.
+    validations:
+      required: false
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part is it about?
+      options:
+        - Panel and categories
+        - Floating bubble and window behavior
+        - Search and keyboard
+        - Tasks
+        - Data, backup and import
+        - Settings and appearance
+        - Installer and updates
+        - Something else
+    validations:
+      required: false

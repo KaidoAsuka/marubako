@@ -1,0 +1,92 @@
+name: Bug report
+description: Something does not work the way it should
+title: '[Bug]: '
+labels: ['bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting this. The more exactly you describe what happened, the sooner it can be fixed.
+
+        Please do not post passwords, and do not upload your data file (`quicklaunch-data.json`): it holds your data.
+  - type: input
+    id: version
+    attributes:
+      label: Marubako version
+      description: For example 3.0.0. If you cannot find it in the app, use the number in the file name of the installer you downloaded, or say "built from source".
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      description: Press Win + R, type `winver` and press Enter. For example "Windows 11 24H2".
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How did you install it?
+      options:
+        - Installer (Marubako-Setup-x.y.z.exe)
+        - Built from source
+        - Something else (explain below)
+    validations:
+      required: true
+  - type: dropdown
+    id: scale
+    attributes:
+      label: Display scaling
+      description: Windows Settings > System > Display > Scale. It matters for problems with window size and position.
+      options:
+        - 100%
+        - 125%
+        - 150%
+        - 175%
+        - 200% or more
+        - I do not know
+    validations:
+      required: false
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: What did you do, step by step?
+      placeholder: |
+        1. Open the panel with Ctrl + Alt + Space
+        2. ...
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened instead?
+      description: A screenshot or a short screen recording helps. You can paste it here.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log lines (optional)
+      description: |
+        The lines around the problem from `%APPDATA%\marubako\logs\main.log`.
+        Before you paste: replace your Windows user name in any path, and remove anything private. Never upload `quicklaunch-data.json` or files named `.recovery-*`.
+      render: text
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you send
+      options:
+        - label: I searched the existing issues and this is not a duplicate.
+          required: true
+        - label: I did not include passwords or my data file.
+          required: true

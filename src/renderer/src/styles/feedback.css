@@ -1,0 +1,128 @@
+/* The feedback strip: the one place the app talks back (see FeedbackStrip.tsx).
+   - It sits at the bottom of the app shell in normal flow, so when it opens the content above gives
+     up exactly its height. Nothing is ever covered, and nothing floats over a card.
+   - With nothing to say it is 0px high. The height animates with the grid-rows trick, because a
+     height cannot transition to `auto`.
+   - It is one line (28px) or up to two for a long message.
+   - The words are always --text. The tone (--danger, --success, or neutral) colours only the icon
+     and the line on the left: red words on a red tint reach about 3.5:1 in the light theme. */
+.feedback-strip {
+  position: relative;
+  flex-shrink: 0;
+  display: grid;
+  grid-template-rows: 0fr;
+  /* The dialogs end where this begins (see the overlay rules below). */
+  anchor-name: --feedback-strip;
+  /* Leaving is quick and takes the strip back to nothing; arriving eases out. */
+  transition: grid-template-rows var(--motion-fast) var(--ease-in);
+}
+
+.feedback-strip[data-open] {
+  grid-template-rows: 1fr;
+  transition: grid-template-rows var(--motion-normal) var(--ease-out);
+}
+
+.feedback-clip {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.feedback-body {
+  --tone: var(--text-dim);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  padding: 5px 12px;
+  border-top: 1px solid var(--line);
+  background: color-mix(in srgb, var(--tone) 12%, var(--sidebar-bg));
+  box-shadow: inset 3px 0 0 var(--tone);
+  color: var(--text);
+  font: 12px/1.4 var(--sans);
+}
+
+.feedback-strip[data-kind='error'] .feedback-body,
+.feedback-strip[data-kind='danger'] .feedback-body {
+  --tone: var(--danger);
+}
+
+.feedback-strip[data-kind='success'] .feedback-body {
+  --tone: var(--success);
+}
+
+.feedback-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--tone);
+}
+
+.feedback-text {
+  flex: 1;
+  min-width: 0;
+  /* Two lines at most; the full text is in the title. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.feedback-action {
+  flex-shrink: 0;
+  min-height: 24px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.feedback-action:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+
+/* On the light strip the accent itself falls under 4.5:1 for most colours, more so on the hover
+   tint; lean toward the text colour, as the active tab does. */
+.theme-light .feedback-action {
+  color: color-mix(in srgb, var(--accent) 60%, var(--text));
+}
+
+.feedback-action:disabled {
+  color: var(--text-dim);
+  cursor: default;
+}
+
+/* Where the strip was, for a moment after its button was used: the click that is still on its way
+   (the second of a double-click) lands here instead of on what moves into the room it leaves. */
+.feedback-shield {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 48px;
+  z-index: 5;
+}
+
+/* A dialog, the search palette and a folder popup are painted over the whole window, strip
+   included. The strip lives inside the app shell, which cannot be raised above them, so they stop
+   where it starts: a message that arrives while one is open (an import that failed, a write that
+   went wrong) stays in plain sight at the bottom, outside the dimmed area. Without a strip they
+   keep their old size. */
+.modal-overlay,
+.widget-popup-overlay {
+  bottom: max(4px, anchor(--feedback-strip top, 4px));
+}
+
+.command-overlay {
+  bottom: max(0px, anchor(--feedback-strip top, 0px));
+}
+
+/* The popup overlay is rounded like the window; with the strip below it the corners would float. */
+body:has(.feedback-strip[data-open]) .widget-popup-overlay {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}

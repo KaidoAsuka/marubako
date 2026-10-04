@@ -1,0 +1,967 @@
+/* Workspace shell. Shared controls also apply to portals mounted in body. */
+:root {
+  --sans: 'Segoe UI', 'Microsoft YaHei UI', system-ui, sans-serif;
+}
+/* A kanji drawn in the Chinese letterforms of Microsoft YaHei UI reads as wrong to a Japanese
+   reader, so in a Japanese interface the Japanese UI fonts come before it. */
+:root:lang(ja) {
+  --sans: 'Segoe UI', 'Yu Gothic UI', 'Meiryo UI', system-ui, sans-serif;
+}
+.app-root {
+  padding: 0;
+}
+.app-shell {
+  border-radius: 18px;
+  background: var(--workspace-bg);
+  border-color: var(--line);
+  box-shadow: none;
+}
+.icon-button {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border-color: var(--line);
+}
+/* The accent outline is for keyboard focus only, and there is exactly one of it. */
+button:focus-visible,
+[tabindex]:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-dim);
+  opacity: 1;
+}
+kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 22px;
+  padding: 2px 6px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  font: 11px/1.2 var(--sans);
+  color: var(--text-dim);
+  background: var(--card-bg);
+  white-space: nowrap;
+}
+.quick-search-row {
+  flex-shrink: 0;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+}
+.workspace {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.workspace-content {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+}
+.section-content {
+  width: 100%;
+  min-height: 0;
+}
+.primary-button,
+.secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+/* Four roles: soft for a toolbar action, solid for the one action a dialog or an empty screen is
+   about, tinted for a destructive one that turns solid only on hover, neutral for the rest. */
+.primary-button {
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px solid transparent;
+  box-shadow: none;
+}
+.primary-button:hover:not(:disabled) {
+  background: var(--accent-solid);
+  color: var(--on-accent);
+  border-color: var(--accent-solid);
+}
+.modal-actions .primary-button,
+.empty-state-action {
+  background: var(--accent-solid);
+  color: var(--on-accent);
+  border-color: transparent;
+}
+.modal-actions .primary-button:hover:not(:disabled),
+.empty-state-action:hover:not(:disabled) {
+  background: var(--accent-solid-hover);
+  color: var(--on-accent);
+  border-color: transparent;
+}
+.empty-state-action {
+  min-height: 34px;
+  border-radius: 8px;
+}
+/* Destructive: stays the tinted red it is at rest, in a dialog footer too, and is never repainted
+   in the accent by the rules above. */
+.primary-button.danger,
+.modal-actions .primary-button.danger {
+  color: var(--danger-text);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  border-color: color-mix(in srgb, var(--danger) 35%, transparent);
+}
+.primary-button.danger:hover:not(:disabled),
+.modal-actions .primary-button.danger:hover:not(:disabled) {
+  color: var(--on-accent);
+  background: var(--danger-solid);
+  border-color: var(--danger-solid);
+}
+.secondary-button {
+  background: var(--card-bg);
+  border: 1px solid var(--line);
+  color: var(--text-mid);
+}
+.secondary-button:hover {
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+.widget-grid {
+  padding: 0 0 16px;
+}
+.folder-widget,
+.widget-loose {
+  border: 1px solid var(--line);
+  background: var(--card-bg);
+}
+.folder-widget:hover,
+.widget-loose:hover {
+  border-color: var(--line-strong);
+  background: var(--hover-bg);
+}
+.widget-mini-ico {
+  background: var(--neutral-soft);
+}
+.widget-action-button {
+  background: transparent;
+  border-radius: 6px;
+}
+.widget-action-button svg {
+  width: 12px;
+  height: 12px;
+}
+.folder-widget:focus-within .widget-actions,
+.widget-loose:focus-within .widget-actions {
+  opacity: 1;
+}
+.widget-popup {
+  border-radius: 16px;
+  aspect-ratio: auto;
+  min-height: 240px;
+  padding: 20px;
+  border-color: var(--line-strong);
+}
+.widget-popup-overlay {
+  border-radius: 18px;
+}
+.widget-popup-title {
+  font-size: 17px;
+}
+.grid-item:hover,
+.group-card:hover,
+.task-card:hover {
+  border-color: var(--line-strong);
+}
+.grid-item:focus-within .grid-actions {
+  opacity: 1;
+}
+.group-card,
+.task-card {
+  border-radius: 12px;
+  background: var(--card-bg);
+  border-color: var(--line);
+  margin-bottom: 12px;
+}
+.group-card-header,
+.task-card-header {
+  padding: 12px;
+}
+.item-row {
+  padding: 12px;
+  border-radius: 9px;
+  border-color: var(--line);
+  cursor: pointer;
+}
+.item-name,
+.task-name {
+  font-size: 13px;
+  font-weight: 500;
+}
+.item-subtext {
+  font-size: 11px;
+  margin-top: 3px;
+  color: var(--text-dim);
+}
+.item-icon {
+  flex-shrink: 0;
+  border-radius: 9px;
+}
+.note-preview {
+  font: 12px/1.7 var(--sans);
+  user-select: text;
+}
+.item-row:focus-within .item-actions {
+  opacity: 1;
+}
+.task-section-heading {
+  margin-bottom: 20px;
+}
+.task-toolbar .section-label {
+  font: 11px var(--sans);
+  letter-spacing: 0;
+}
+.empty-state {
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  padding: 40px 18px;
+}
+.modal-card {
+  position: relative;
+  width: min(480px, 92vw);
+  max-height: 90vh;
+  border: 1px solid var(--line-strong);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: var(--shadow-modal);
+}
+.modal-title {
+  font-size: 19px;
+  font-weight: 600;
+  margin-bottom: 22px;
+  padding-right: 30px;
+}
+.modal-close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  background: transparent;
+  border-color: transparent;
+}
+.form-field {
+  margin-bottom: 16px;
+}
+.form-field-label {
+  font: 12px/1.5 var(--sans);
+  letter-spacing: 0;
+  font-weight: 500;
+  color: var(--text-mid);
+}
+.form-field input,
+.form-field textarea,
+.form-field select {
+  min-height: 38px;
+  font-size: 12px;
+  padding: 9px 11px;
+  border-radius: 8px;
+}
+.form-field input[type='range'] {
+  min-height: 0;
+  padding: 0;
+}
+/* Range sliders are drawn here. Chromium paints them in the system blue, and giving them an
+   `accent-color` turns the unfilled track near-white in the dark theme. --range-fill (0 to 1) is
+   set per input by rangeFill(); without it the track simply stays unfilled. */
+.range-row input[type='range'] {
+  appearance: none;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  cursor: pointer;
+}
+.range-row input[type='range']::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--accent-solid) calc(8px + (100% - 16px) * var(--range-fill, 0)),
+    color-mix(in srgb, var(--text-dim) 30%, transparent)
+      calc(8px + (100% - 16px) * var(--range-fill, 0))
+  );
+}
+.range-row input[type='range']::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: -6px;
+  border: 2px solid var(--card-bg);
+  border-radius: 50%;
+  background: var(--accent-solid);
+}
+.range-row input[type='range']:hover::-webkit-slider-thumb {
+  background: var(--accent-solid-hover);
+}
+.range-row input[type='range']:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.path-field {
+  display: flex;
+  gap: 8px;
+}
+.path-field input {
+  min-width: 0;
+  flex: 1;
+}
+.path-field .secondary-button {
+  flex-shrink: 0;
+}
+.modal-actions {
+  position: sticky;
+  bottom: -24px;
+  margin: 20px -24px -24px;
+  padding: 16px 24px;
+  background: var(--sidebar-bg);
+  border-top: 1px solid var(--line);
+  justify-content: flex-end;
+  z-index: 2;
+}
+.modal-actions .primary-button,
+.modal-actions .secondary-button {
+  min-width: 75px;
+}
+.settings-card {
+  width: min(540px, 94vw);
+}
+.settings-nav {
+  display: flex;
+  border-bottom: 1px solid var(--line);
+  margin: -8px 0 22px;
+  gap: 6px;
+}
+.settings-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 11px 10px;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 12px;
+  cursor: pointer;
+}
+.settings-tab.active {
+  color: var(--accent);
+}
+.settings-tab.active::after {
+  content: '';
+  position: absolute;
+  height: 2px;
+  background: var(--accent);
+  bottom: -1px;
+  left: 8px;
+  right: 8px;
+}
+.settings-panel {
+  min-height: 320px;
+}
+.settings-data-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 14px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.settings-data-note svg {
+  color: var(--success);
+}
+/* The about block: version, the update check and the way to report a problem. */
+.settings-about {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.settings-about-version {
+  font-size: 12px;
+  color: var(--text-mid);
+}
+.settings-about-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.settings-about-actions .secondary-button {
+  flex: 0 1 auto;
+}
+.settings-about-actions .text-button {
+  font-size: 12px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.settings-about .form-field-note:empty {
+  display: none;
+}
+.chip-button {
+  font-size: 12px;
+  border-radius: 8px;
+}
+/* The accent colour setting: five solid dots. The button is the 28px hit area, the fill inside it
+   is 24px and is the colour you get. The chosen one is the only one with a ring and a check, so the
+   choice is never colour alone. */
+.accent-dots {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 4px;
+}
+.accent-dot {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--on-accent);
+  cursor: pointer;
+}
+.accent-dot-fill {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--dot);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+}
+.accent-dot:hover:not(.active) .accent-dot-fill {
+  box-shadow:
+    0 0 0 2px var(--card-bg),
+    0 0 0 4px var(--line-strong);
+}
+.accent-dot.active .accent-dot-fill {
+  box-shadow:
+    0 0 0 2px var(--card-bg),
+    0 0 0 4px var(--text);
+}
+.accent-dot:focus-visible {
+  outline-offset: 3px;
+}
+.shortcut-card {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+  background: var(--workspace-bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin-bottom: 15px;
+}
+.shortcut-card > svg {
+  flex-shrink: 0;
+  color: var(--accent);
+}
+.shortcut-card strong {
+  font-size: 12px;
+  font-weight: 600;
+}
+.shortcut-card p {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin: 5px 0 0;
+  line-height: 1.6;
+}
+.shortcut-card kbd {
+  margin-left: auto;
+  font-size: 10px;
+}
+/* The launch shortcut (iteration 5): a switch, the combination, "change" and "reset", and a line that
+   says whether it works. */
+.shortcut-card {
+  align-items: flex-start;
+}
+.shortcut-card-body {
+  flex: 1;
+  min-width: 0;
+}
+.shortcut-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+}
+.shortcut-card-head small {
+  display: block;
+  margin-top: 5px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+.shortcut-card-head strong {
+  display: block;
+}
+.shortcut-card-keys {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+.shortcut-recorder {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--card-bg);
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+}
+/* More specific than the narrow-window rule for the old read-only card (.shortcut-card kbd). */
+.shortcut-card .shortcut-recorder kbd {
+  margin: 0;
+}
+.shortcut-recorder > span {
+  color: var(--accent);
+}
+.shortcut-recorder[data-recording] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.shortcut-card-keys .secondary-button {
+  min-height: 30px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+.shortcut-status {
+  margin: 8px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+.shortcut-status[data-tone='good'] {
+  color: var(--success);
+}
+.shortcut-status[data-tone='bad'] {
+  color: var(--danger);
+}
+.setting-switch-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  justify-content: space-between;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+}
+.setting-switch-row strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+}
+.setting-switch-row small {
+  display: block;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--text-dim);
+  margin-top: 5px;
+}
+.setting-switch-row input {
+  appearance: none;
+  width: 34px;
+  height: 20px;
+  flex-shrink: 0;
+  border-radius: 20px;
+  background: var(--neutral-soft);
+  border: 1px solid var(--line);
+  position: relative;
+  cursor: pointer;
+}
+.setting-switch-row input::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  height: 12px;
+  width: 12px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  transition: transform var(--motion-fast) var(--ease-out);
+}
+.setting-switch-row input:checked {
+  background: var(--accent-solid);
+  border-color: var(--accent-solid);
+}
+.setting-switch-row input:checked::after {
+  background: var(--on-accent);
+  transform: translateX(14px);
+}
+.setting-switch-row input:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.setting-switch-row + .form-field {
+  margin-top: 18px;
+}
+/* "Categories shown": seven switches in a grid, each with the category's icon. They look like the
+   switch rows of the behaviour page, only smaller, so seven of them do not push the rest of the page
+   out of the dialog. */
+.category-switches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(138px, 1fr));
+  gap: 6px;
+}
+.category-switch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 36px;
+  padding: 4px 8px 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text-dim);
+  font-size: 12px;
+  cursor: pointer;
+}
+.category-switch[data-on] {
+  color: var(--text);
+}
+.category-switch > svg {
+  flex-shrink: 0;
+}
+.category-switch[data-on] > svg {
+  color: var(--accent);
+}
+.category-switch > span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Inside a form field, so the field's own input style (full width, padded) has to be undone. */
+.category-switch input,
+.shortcut-switch {
+  appearance: none;
+  position: relative;
+  box-sizing: border-box;
+  width: 30px;
+  height: 18px;
+  min-height: 0;
+  padding: 0;
+  flex-shrink: 0;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--neutral-soft);
+  cursor: pointer;
+}
+.category-switch input::after,
+.shortcut-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  transition: transform var(--motion-fast) var(--ease-out);
+}
+.category-switch input:checked,
+.shortcut-switch:checked {
+  border-color: var(--accent-solid);
+  background: var(--accent-solid);
+}
+.category-switch input:checked::after,
+.shortcut-switch:checked::after {
+  background: var(--on-accent);
+  transform: translateX(12px);
+}
+.category-switch input:disabled,
+.shortcut-switch:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.keyboard-guide {
+  margin: 20px 0;
+  color: var(--text-mid);
+  font-size: 11px;
+}
+.keyboard-guide > strong {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.keyboard-guide > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+}
+.command-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 250;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: min(12vh, 80px) 16px 20px;
+  background: var(--scrim);
+  backdrop-filter: blur(6px);
+}
+.command-dialog {
+  width: min(600px, 100%);
+  /* Never taller than the overlay's content box: with a short window, or a feedback strip taking
+     room at the bottom, 82vh alone would run past the overlay's lower edge. */
+  max-height: min(82vh, 100%);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: 15px;
+  background: var(--card-bg);
+  box-shadow: var(--shadow-modal);
+}
+.command-input-row {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 13px;
+  padding: 20px;
+  border-bottom: 1px solid var(--line);
+  color: var(--accent);
+}
+.command-input-row input {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 15px;
+}
+.command-input-row input:focus-visible {
+  outline: none;
+}
+.command-input-row input::placeholder {
+  color: var(--text-dim);
+}
+.command-caption {
+  padding: 14px 20px 7px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+.command-results {
+  overflow: auto;
+  min-height: 0;
+  padding: 0 8px 10px;
+  scrollbar-width: thin;
+}
+.command-result {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px;
+  text-align: left;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+.command-result.selected {
+  background: var(--accent-soft);
+}
+/* A result is a row: the result itself, and beside it the pencil that opens the editor (Shift+Enter).
+   The row paints the selection so the pencil sits on it. */
+.command-row {
+  display: flex;
+  align-items: center;
+  border-radius: 9px;
+}
+.command-row.selected {
+  background: var(--accent-soft);
+}
+.command-row .command-result {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+}
+.command-result-edit {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  margin-right: 8px;
+  opacity: 0;
+}
+.command-row:hover .command-result-edit,
+.command-row.selected .command-result-edit,
+.command-result-edit:focus-visible {
+  opacity: 1;
+}
+.command-result-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  font-size: 21px;
+  background: var(--card-bg);
+}
+.command-result-copy {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 5px;
+}
+.command-result-copy strong {
+  font-size: 13px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.command-result-copy > span {
+  color: var(--text-dim);
+  font-size: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* On the selected row the dim text sits on the accent tint, where it falls under 4.5:1 in dark. */
+.command-result.selected .command-result-copy > span {
+  color: var(--text-mid);
+}
+.command-result-action {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  color: var(--text-dim);
+}
+.command-result.selected .command-result-action {
+  color: var(--accent);
+}
+.command-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+  flex-shrink: 0;
+  padding: 12px 20px;
+  border-top: 1px solid var(--line);
+  font-size: 10px;
+  color: var(--text-dim);
+}
+.command-footer > span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.command-footer > span:last-child {
+  margin-left: auto;
+}
+.command-footer kbd {
+  font-size: 10px;
+  min-height: 18px;
+  padding: 1px 4px;
+}
+.command-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 40px 12px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.command-empty strong {
+  font-size: 14px;
+  color: var(--text);
+  font-weight: 500;
+}
+.load-error {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 24px;
+  gap: 12px;
+  background: var(--workspace-bg);
+  color: var(--text);
+}
+.load-error p {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+/* Root error boundary: opaque, because the window itself is transparent. */
+.root-error-fallback {
+  height: 100%;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--workspace-bg);
+  color: var(--text);
+  overflow: auto;
+}
+.root-error-compact {
+  padding: 4px;
+  border-radius: 28px;
+}
+.root-error-compact > :not(button) {
+  display: none;
+}
+.root-error-compact > button {
+  min-height: 0;
+  padding: 4px 6px;
+  font-size: 10px;
+}
+@media (max-width: 480px) {
+  .quick-search-row {
+    padding: 10px 12px;
+  }
+  .shortcut-card {
+    flex-wrap: wrap;
+  }
+  .shortcut-card kbd {
+    margin-left: 32px;
+  }
+  .settings-tab {
+    font-size: 11px;
+    padding: 10px 7px;
+    gap: 4px;
+  }
+  .modal-card {
+    padding: 20px;
+  }
+  .modal-actions {
+    bottom: -20px;
+    margin-left: -20px;
+    margin-right: -20px;
+    margin-bottom: -20px;
+    padding: 14px 20px;
+  }
+}

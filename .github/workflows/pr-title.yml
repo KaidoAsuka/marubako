@@ -1,0 +1,30 @@
+name: PR title
+
+# The title of a pull request becomes the commit message on main (squash merge), and release-please
+# reads those messages to write the changelog and choose the next version. A title that does not
+# follow `type(scope): summary` would be silently left out, so it is checked here. It is a separate
+# workflow because editing a title must not start the heavy CI again.
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions: {}
+
+jobs:
+  title:
+    name: Title is type(scope) summary
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Check the title
+        # The title goes through an environment variable and never into the script text, so that a
+        # crafted title cannot run commands.
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          pattern='^(feat|fix|perf|refactor|docs|test|build|ci|chore|revert)(\([a-z0-9._/-]+\))?!?: [^ ].*$'
+          if ! printf '%s\n' "$TITLE" | grep -Eq "$pattern"; then
+            echo "::error::The pull request title must look like 'type(scope): summary', for example 'fix(tasks): keep the date when a task is edited'. Types: feat, fix, perf, refactor, docs, test, build, ci, chore, revert. See CONTRIBUTING.md."
+            exit 1
+          fi

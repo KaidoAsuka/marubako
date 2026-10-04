@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="fill" gradientUnits="userSpaceOnUse" x1="40" y1="24" x2="216" y2="232">
+      <stop offset="0" stop-color="#9A85FF"/>
+      <stop offset="1" stop-color="#5544DA"/>
+    </linearGradient>
+  </defs>
+  <!-- Three corners are a 48px radius; the bottom-left corner is a full quarter circle (r=104): the ball inside the panel. -->
+  <path d="M72 24H184A48 48 0 0 1 232 72V184A48 48 0 0 1 184 232H128A104 104 0 0 1 24 128V72A48 48 0 0 1 72 24Z" fill="url(#fill)"/>
+  <circle cx="104" cy="152" r="36" fill="#FFFFFF"/>
+</svg>

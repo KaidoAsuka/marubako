@@ -1,0 +1,460 @@
+.item-row.password-item {
+  display: block;
+  padding: 0;
+  cursor: default;
+  overflow: hidden;
+}
+.credential-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px 6px;
+}
+.credential-header .item-name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+}
+.credential-fields {
+  padding: 0 6px 6px;
+}
+.credential-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 5px;
+  border-top: 1px solid var(--line);
+}
+.credential-label {
+  color: var(--text-dim);
+  font-size: 10px;
+  flex-shrink: 0;
+  min-width: 32px;
+}
+.credential-copy {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--text-mid);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+.credential-value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 11px/1.5 var(--sans);
+}
+.credential-copy svg {
+  flex-shrink: 0;
+  color: var(--text-dim);
+}
+.credential-copy:hover:not(:disabled) {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+.credential-copy:hover:not(:disabled) svg {
+  color: var(--accent);
+}
+.credential-copy:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.credential-secret {
+  font-family: var(--mono);
+  letter-spacing: 2px;
+}
+.credential-secret.revealed {
+  letter-spacing: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.credential-copy.lost:disabled {
+  opacity: 1;
+}
+.credential-secret.lost {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  letter-spacing: 0;
+  color: var(--warning);
+}
+.credential-copy .credential-secret.lost svg {
+  color: var(--warning);
+}
+.credential-reveal {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border-color: transparent;
+  background: transparent;
+}
+.item-modal-card {
+  width: min(600px, calc(100vw - 24px));
+  max-height: calc(100vh - 28px);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--card-bg);
+  border-color: var(--line-strong);
+  border-radius: 15px;
+}
+.item-modal-card.code-modal {
+  width: min(700px, calc(100vw - 24px));
+}
+.item-modal-card .modal-close {
+  top: 17px;
+  right: 17px;
+  z-index: 3;
+}
+.item-modal-header {
+  display: flex;
+  align-items: flex-start;
+  flex-shrink: 0;
+  gap: 13px;
+  padding: 22px 54px 18px 24px;
+}
+.item-modal-symbol {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  border-radius: 11px;
+}
+.item-modal-heading {
+  min-width: 0;
+}
+.item-modal-category {
+  margin-bottom: 4px;
+  color: var(--accent);
+  font-size: 10px;
+}
+.item-modal-card .modal-title {
+  margin: 0;
+  padding: 0;
+  font-size: 20px;
+  letter-spacing: -0.3px;
+}
+.item-modal-heading p {
+  margin: 7px 0 0;
+  color: var(--text-dim);
+  font-size: 11px;
+  line-height: 1.6;
+}
+.item-modal-location {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 9px 24px;
+  background: var(--sidebar-bg);
+  border-block: 1px solid var(--line);
+  font-size: 10px;
+  color: var(--text-dim);
+}
+.item-modal-location strong {
+  color: var(--text-mid);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.item-form {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.item-form-body {
+  overflow-y: auto;
+  min-height: 0;
+  padding: 20px 24px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+.item-primary-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 72px;
+  gap: 12px;
+  align-items: start;
+  margin-bottom: 18px;
+}
+.item-form .form-field {
+  margin: 0;
+  gap: 7px;
+  min-width: 0;
+}
+.item-form .form-field-label {
+  font-size: 11px;
+  color: var(--text-mid);
+}
+.item-form .form-field input,
+.item-form .form-field textarea,
+.item-form .form-field select,
+.item-form .emoji-picker-trigger {
+  min-height: 40px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--workspace-bg);
+  color: var(--text);
+  font-size: 12px;
+}
+.item-form .form-field input:focus,
+.item-form .form-field textarea:focus,
+.item-form .form-field select:focus,
+.item-form .emoji-picker-trigger:focus {
+  border-color: var(--accent);
+}
+.item-form .emoji-picker-trigger {
+  height: 40px;
+  padding: 0 10px;
+}
+.item-field-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+}
+.item-field-panel-title {
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+}
+.form-field-hint,
+.item-panel-hint {
+  font-size: 10px;
+  color: var(--text-dim);
+  line-height: 1.7;
+}
+.item-panel-hint {
+  margin: 0;
+}
+.item-credential-inputs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.item-form .command-metadata {
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 12px;
+}
+.item-form textarea {
+  min-height: 72px;
+  resize: vertical;
+  line-height: 1.7;
+}
+.item-form textarea.item-note-editor {
+  min-height: 180px;
+}
+.item-form .code-editor-body textarea {
+  min-height: 0;
+  height: 100%;
+  padding: 12px;
+  border: 0;
+  border-radius: 0;
+  resize: none;
+  background: transparent;
+  font: 13px/22px var(--code-font);
+}
+.item-modal-card .modal-actions {
+  position: static;
+  flex-shrink: 0;
+  margin: 0;
+  padding: 14px 24px;
+  background: var(--sidebar-bg);
+  gap: 8px;
+}
+.item-save-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: auto;
+  color: var(--text-dim);
+  font-size: 10px;
+}
+.item-modal-card .modal-actions button {
+  min-height: 34px;
+  border-radius: 8px;
+}
+.item-form .form-note {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.item-form .form-note-warning {
+  color: var(--text);
+  background: color-mix(in srgb, var(--warning) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--warning) 35%, transparent);
+}
+.item-form .input-with-action {
+  min-width: 0;
+}
+.item-form .input-with-action input {
+  padding-right: 42px;
+}
+:is(
+  .item-row,
+  .folder-widget,
+  .widget-loose,
+  .grid-item,
+  .group-card,
+  .task-card
+):hover {
+  background: var(--hover-bg);
+  border-color: var(--line-strong);
+}
+::selection {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+@media (max-width: 540px) {
+  .item-credential-inputs,
+  .item-form .command-metadata {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .item-modal-header {
+    padding: 18px 46px 16px 16px;
+    gap: 10px;
+  }
+  .item-modal-symbol {
+    width: 34px;
+    height: 34px;
+  }
+  .item-modal-card .modal-title {
+    font-size: 18px;
+  }
+  .item-modal-location {
+    padding-inline: 16px;
+  }
+  .item-form-body {
+    padding: 16px;
+  }
+  .item-field-panel {
+    padding: 12px;
+  }
+  .item-modal-card .modal-actions {
+    padding: 12px 16px;
+  }
+  .item-save-hint {
+    display: none;
+  }
+}
+
+/* Forms and dialogs (iteration 5, package "forms"). */
+
+/* The "Discard unsaved changes?" question. It sits inside the dialog card, directly above the button
+   row, and is not a second dialog: the confirm dialog shares the one modal slot with the form and
+   would unmount it together with the draft. Plain dialogs pad the card by 24px (20px when narrow) and
+   the button row bleeds into that padding, so the bar does too. */
+.discard-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  gap: 8px 12px;
+  margin: 16px -24px 0;
+  padding: 10px 24px;
+  border-top: 1px solid color-mix(in srgb, var(--warning) 45%, transparent);
+  /* Not tinted: the destructive button on it has to keep the 4.5:1 it has on a plain card, and a
+     warm wash under red text takes that away. The warning line and icon carry the tone. */
+  background: var(--card-bg);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.discard-bar-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-weight: 600;
+}
+.discard-bar-icon {
+  flex-shrink: 0;
+  color: var(--warning);
+}
+.discard-bar-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+}
+.discard-bar-actions button {
+  min-height: 30px;
+}
+/* The button row right below stays flush with the bar. */
+.discard-bar + .modal-actions {
+  margin-top: 0;
+}
+/* The item editor is a column of its own with no card padding. */
+.item-form .discard-bar {
+  margin: 0;
+}
+@media (max-width: 540px) {
+  .discard-bar {
+    margin-inline: -20px;
+    padding-inline: 20px;
+  }
+  .item-form .discard-bar {
+    margin-inline: 0;
+    padding-inline: 16px;
+  }
+}
+
+/* A field that failed its check: the message right under it, where the cursor lands, and a red
+   border that stays red while the field has the focus. */
+.form-field-error {
+  color: var(--danger-text);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.form-field input[aria-invalid='true'],
+.form-field textarea[aria-invalid='true'],
+.form-field select[aria-invalid='true'],
+.item-form .form-field input[aria-invalid='true'],
+.item-form .form-field textarea[aria-invalid='true'],
+.item-form .form-field select[aria-invalid='true'],
+.code-editor:has(textarea[aria-invalid='true']) {
+  border-color: var(--danger);
+}
+
+/* Where the entry is saved is a choice, no longer a plain label. */
+.item-modal-location label {
+  flex-shrink: 0;
+}
+.item-modal-location select {
+  flex: 1;
+  min-width: 0;
+  min-height: 28px;
+  padding: 3px 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  background: var(--workspace-bg);
+  color: var(--text);
+  font-size: 11px;
+}
+.item-modal-location select:focus {
+  border-color: var(--accent);
+}
+/* A folder, a program and a website put the target first, then the name and the icon. */
+.item-field-panel + .item-primary-fields {
+  margin: 18px 0 0;
+}

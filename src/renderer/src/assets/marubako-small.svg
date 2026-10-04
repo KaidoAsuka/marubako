@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="fill" gradientUnits="userSpaceOnUse" x1="32" y1="16" x2="224" y2="240">
+      <stop offset="0" stop-color="#9A85FF"/>
+      <stop offset="1" stop-color="#5544DA"/>
+    </linearGradient>
+  </defs>
+  <!-- For 16-24px: fills more of the canvas and uses a larger dot so it survives downscaling. -->
+  <path d="M72 16H192A48 48 0 0 1 240 64V192A48 48 0 0 1 192 240H128A112 112 0 0 1 16 128V64A48 48 0 0 1 72 16Z" fill="url(#fill)"/>
+  <circle cx="104" cy="152" r="44" fill="#FFFFFF"/>
+</svg>

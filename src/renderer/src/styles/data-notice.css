@@ -1,0 +1,66 @@
+/* Persistent data-safety banner: disk write failures and startup recovery notices. */
+.data-notice-stack {
+  flex-shrink: 0;
+  max-height: 45%;
+  overflow-y: auto;
+  border-bottom: 1px solid var(--line);
+}
+.data-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 18px 10px 15px;
+  border-left: 3px solid var(--tone);
+  background: color-mix(in srgb, var(--tone) 12%, var(--sidebar-bg));
+  color: var(--text);
+  font: 12px/1.5 var(--sans);
+}
+.data-notice + .data-notice {
+  border-top: 1px solid var(--line);
+}
+.data-notice-danger {
+  --tone: var(--danger);
+}
+.data-notice-warning {
+  --tone: var(--warning);
+}
+.data-notice-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--tone);
+}
+.data-notice-body {
+  flex: 1;
+  min-width: 0;
+}
+.data-notice-line {
+  margin: 0;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+.data-notice-path {
+  color: var(--text-mid);
+  font: 11px/1.5 var(--mono, Consolas, monospace);
+}
+.data-notice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.data-notice-button {
+  min-height: 28px;
+  padding: 4px 10px;
+  white-space: nowrap;
+}
+@media (max-width: 480px) {
+  .data-notice {
+    flex-wrap: wrap;
+    padding: 10px 12px;
+  }
+  .data-notice-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
