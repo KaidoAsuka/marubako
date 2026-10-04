@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.1.0](https://github.com/KaidoAsuka/marubako/compare/v3.0.1...v3.1.0) (2026-10-04)
+
+
+### Features
+
+* **passwords:** the safety note can be closed for good ([#16](https://github.com/KaidoAsuka/marubako/issues/16)) ([9fa4dfa](https://github.com/KaidoAsuka/marubako/commit/9fa4dfa9c3f94fb1cf4e861c9f691f16f57d5be8))
+* **portable:** a portable copy that runs without installing ([#17](https://github.com/KaidoAsuka/marubako/issues/17)) ([312d567](https://github.com/KaidoAsuka/marubako/commit/312d56708a23835fdb417ecaab99cf072ec14f70))
+
 ## [3.0.1](https://github.com/KaidoAsuka/marubako/compare/v3.0.0...v3.0.1) (2026-10-04)
 
 
