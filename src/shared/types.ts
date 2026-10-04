@@ -17,12 +17,18 @@ export const ALL_TABS = [...GROUP_TABS, 'tasks'] as const
 export const TASK_STATUSES = ['todo', 'doing', 'skip', 'done'] as const
 export const LANGS = ['zh', 'en', 'ja'] as const
 export const THEMES = ['dark', 'light'] as const
+/**
+ * What the theme setting can be: one of the two themes, or `system`, which follows the light or
+ * dark mode of Windows and changes with it.
+ */
+export const THEME_SETTINGS = ['light', 'dark', 'system'] as const
 export const BACKGROUNDS = [
   'aurora',
   'sunset',
   'forest',
   'ocean',
   'minimal',
+  'monokai',
 ] as const
 export const BROWSERS = ['default', 'edge', 'chrome'] as const
 export const VIEW_MODES = ['grid', 'list'] as const
@@ -47,6 +53,7 @@ export const DEFAULT_STARTUP_TAB: Tab = ALL_TABS[0]
 export type TaskStatus = (typeof TASK_STATUSES)[number]
 export type Lang = (typeof LANGS)[number]
 export type Theme = (typeof THEMES)[number]
+export type ThemeSetting = (typeof THEME_SETTINGS)[number]
 export type BackgroundKey = (typeof BACKGROUNDS)[number]
 export type BrowserPreference = (typeof BROWSERS)[number]
 export type ViewMode = (typeof VIEW_MODES)[number]
@@ -96,7 +103,8 @@ export const MAX_PEEK_COLLAPSE_DELAY = 2000
 
 export interface Prefs {
   lang: Lang
-  theme: Theme
+  /** The theme the user chose; `system` is resolved to light or dark where it is drawn. */
+  theme: ThemeSetting
   background: BackgroundKey
   browser: BrowserPreference
   zoom: number
@@ -112,7 +120,7 @@ export interface Prefs {
   hiddenTabs: Tab[]
   /**
    * The global shortcut that brings the panel up from any program: an accelerator such as
-   * `CommandOrControl+Alt+Space` (shared/accelerator.ts). Always a valid one; the default when unset.
+   * `CommandOrControl+Shift+Space` (shared/accelerator.ts). Always a valid one; the default when unset.
    */
   shortcut: string
   /** Whether that shortcut is registered. Off leaves the ball, the tray and the second launch. */
@@ -134,7 +142,7 @@ export interface DockAppearance {
 export interface LaunchSettings {
   openAtLogin: boolean
   canAutoStart: boolean
-  /** The configured shortcut as it reads to the user, e.g. `Ctrl + Alt + Space`. */
+  /** The configured shortcut as it reads to the user, e.g. `Ctrl + Shift + Space`. */
   shortcut: string
   /** True while that shortcut is registered and works. False when it is off or taken. */
   shortcutAvailable: boolean

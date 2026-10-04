@@ -2,7 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createDefaultAppData } from '../../shared/default-data'
 import { IPC_CHANNELS } from '../../shared/ipc-channels'
+import {
+  DEFAULT_PANEL_WIDTH,
+  resolveTabMode,
+  stackedMinWidth,
+} from '../../shared/layout-widths'
 import type { AppData, Prefs, WindowState } from '../../shared/types'
+import { DOCK_SIZE } from '../dock-geometry'
 import type * as WindowManagerModule from '../window-manager'
 
 type Listener = (...args: any[]) => void
@@ -37,6 +43,13 @@ const fake = vi.hoisted(() => {
       const entries = this.listeners.get(event) ?? []
       for (const entry of [...entries]) entry(...args)
       return entries.length > 0
+    }
+    listenerCount(event: string): number {
+      return (this.listeners.get(event) ?? []).length
+    }
+    removeAllListeners(): this {
+      this.listeners.clear()
+      return this
     }
   }
 
@@ -88,14 +101,20 @@ const fake = vi.hoisted(() => {
       return this.options.resizable === true
     }
     loadedQuery: Record<string, string> = {}
-    loadURL(): Promise<void> {
+    // The fragment the page was loaded with ('' when there is none).
+    loadedHash = ''
+    // The address, when the page came from the development server instead of a file.
+    loadedUrl: string | undefined
+    loadURL(url: string): Promise<void> {
+      this.loadedUrl = url
       return this.loadFile()
     }
     loadFile(
       _file?: string,
-      options?: { query?: Record<string, string> }
+      options?: { query?: Record<string, string>; hash?: string }
     ): Promise<void> {
       this.loadedQuery = options?.query ?? {}
+      this.loadedHash = options?.hash ?? ''
       queueMicrotask(() => this.emit('ready-to-show'))
       return Promise.resolve()
     }
@@ -212,14 +231,19 @@ const fake = vi.hoisted(() => {
     on: () => {},
     removeListener: () => {},
   }
+  // What Windows says about its own light or dark mode; it emits 'updated' when that changes.
+  const nativeTheme = Object.assign(new Emitter(), {
+    shouldUseDarkColors: false,
+  })
 
-  return { FakeWindow, Emitter, screen, state }
+  return { FakeWindow, Emitter, screen, nativeTheme, state }
 })
 
 vi.mock('electron', () => ({
   app: { getAppPath: () => 'C:\\app' },
   BrowserWindow: fake.FakeWindow,
   screen: fake.screen,
+  nativeTheme: fake.nativeTheme,
 }))
 vi.mock('electron-log/main', () => ({
   default: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -252,6 +276,13 @@ const panel = (): FakeWindowInstance =>
 const ball = (): FakeWindowInstance =>
   fake.state.windows.find((window) => !window.isPanel)!
 const data = (): AppData => fake.state.data as AppData
+
+// The work area of the fake display, and the places in it that follow from the size of the ball.
+const AREA = { width: 1920, height: 1040 }
+/** Where a ball docked to the right edge stands: 4 px off it. */
+const RIGHT_EDGE_X = AREA.width - DOCK_SIZE - 4
+/** Where a ball on the vertical middle of the work area stands. */
+const MIDDLE_Y = Math.round((AREA.height - DOCK_SIZE) / 2)
 
 /** Starts the app with the given preferences and last window state, as index.ts does. */
 async function boot(
@@ -298,6 +329,9 @@ beforeEach(async () => {
   fake.state.fresh = false
   fake.state.sent.length = 0
   fake.state.cursor = { x: 5, y: 5 }
+  // The balls of earlier tests no longer listen to Windows, which starts every test in light mode.
+  fake.nativeTheme.removeAllListeners()
+  fake.nativeTheme.shouldUseDarkColors = false
   vi.resetModules()
   wm = await import('../window-manager')
   // Every window answers the frame handshake at once, as a ready renderer does.
@@ -776,21 +810,24 @@ describe('restoring the ball after a restart', () => {
   })
 
   it('restores the ball on the saved screen edge', async () => {
+    const saved = { x: RIGHT_EDGE_X, y: 500 }
     await boot({
-      window: {
-        collapsed: true,
-        dockPosition: { x: 1920 - 56 - 4, y: 500 },
-        dockEdge: 'right',
-      },
+      window: { collapsed: true, dockPosition: saved, dockEdge: 'right' },
     })
 
     await vi.waitFor(() => expect(ball().isVisible()).toBe(true))
-    expect(ball().getBounds()).toMatchObject({ x: 1860, y: 500 })
+    expect(ball().getBounds()).toEqual({
+      ...saved,
+      width: DOCK_SIZE,
+      height: DOCK_SIZE,
+    })
+    // Nothing had to be put right, so nothing was rewritten.
+    expect(data().window.dockPosition).toBe(saved)
   })
 
   it('tells the ball which theme and language to use before showing it', async () => {
     await boot({
-      prefs: { theme: 'light', lang: 'en' },
+      prefs: { theme: 'dark', lang: 'en' },
       window: { collapsed: true, dockPosition: savedBall },
     })
 
@@ -800,22 +837,22 @@ describe('restoring the ball after a restart', () => {
         message.windowId === ball().id &&
         message.channel === IPC_CHANNELS.dockAppearance
     )
-    expect(appearance?.args[0]).toEqual({ theme: 'light', lang: 'en' })
+    expect(appearance?.args[0]).toEqual({ theme: 'dark', lang: 'en' })
   })
 
   it('loads the ball with the saved theme and language, so its first frame is right', async () => {
     await boot({
-      prefs: { theme: 'light', lang: 'ja' },
+      prefs: { theme: 'dark', lang: 'ja' },
       window: { collapsed: true, dockPosition: savedBall },
     })
 
     expect(ball().loadedQuery).toEqual({
       view: 'dock',
-      theme: 'light',
+      theme: 'dark',
       lang: 'ja',
     })
     // The panel's loading screen speaks the saved language too.
-    expect(panel().loadedQuery).toEqual({ theme: 'light', lang: 'ja' })
+    expect(panel().loadedQuery).toEqual({ theme: 'dark', lang: 'ja' })
   })
 
   it('tells the panel it is a new installation, so that it can show the first-run card', async () => {
@@ -1150,7 +1187,11 @@ describe('leaving a temporary panel (flow-10)', () => {
     await boot({ peekCollapseDelay })
     await wm.collapseWindow()
     const bounds = ball().getBounds()
-    fake.state.cursor = { x: bounds.x + 28, y: bounds.y + 28 }
+    // The pointer rests on the middle of the ball it has just pressed.
+    fake.state.cursor = {
+      x: bounds.x + DOCK_SIZE / 2,
+      y: bounds.y + DOCK_SIZE / 2,
+    }
     await wm.activateDock('peek')
     expect(wm.getWindowSnapshot()).toMatchObject({
       collapsed: false,
@@ -1408,13 +1449,13 @@ describe('a new installation shows the ball from the first second (flow-4)', () 
     // 1920 x 1040 work area: the ball at the right edge, the panel in the place the ball would
     // open it (8 px gap), both on the vertical middle.
     expect(ball().getBounds()).toEqual({
-      x: 1860,
-      y: 492,
-      width: 56,
-      height: 56,
+      x: RIGHT_EDGE_X,
+      y: MIDDLE_Y,
+      width: DOCK_SIZE,
+      height: DOCK_SIZE,
     })
     expect(panel().getBounds()).toEqual({
-      x: 1860 - 8 - 400,
+      x: RIGHT_EDGE_X - 8 - 400,
       y: Math.round((1040 - 720) / 2),
       width: 400,
       height: 720,
@@ -1446,9 +1487,17 @@ describe('a new installation shows the ball from the first second (flow-4)', () 
     await bootFresh()
     await vi.waitFor(() => expect(ball().isVisible()).toBe(true))
 
-    expect(data().window.dockPosition).toEqual({ x: 1860, y: 492 })
+    expect(data().window.dockPosition).toEqual({
+      x: RIGHT_EDGE_X,
+      y: MIDDLE_Y,
+    })
     expect(data().window.dockEdge).toBe('right')
-    expect(data().window.bounds).toEqual({ x: 1452, y: 160, w: 400, h: 720 })
+    expect(data().window.bounds).toEqual({
+      x: RIGHT_EDGE_X - 8 - 400,
+      y: 160,
+      w: 400,
+      h: 720,
+    })
     expect(data().window.collapsed).toBe(false)
   })
 
@@ -1474,12 +1523,15 @@ describe('a new installation shows the ball from the first second (flow-4)', () 
     await vi.waitFor(() => expect(ball().isVisible()).toBe(true))
 
     expect(panel().getBounds()).toEqual({
-      x: 1366 - 4 - 56 - 8 - 470,
+      x: 1366 - 4 - DOCK_SIZE - 8 - 470,
       y: 12,
       width: 470,
       height: 728 - 24,
     })
-    expect(ball().getBounds()).toMatchObject({ x: 1306, y: 336 })
+    expect(ball().getBounds()).toMatchObject({
+      x: 1366 - 4 - DOCK_SIZE,
+      y: Math.round((728 - DOCK_SIZE) / 2),
+    })
   })
 
   it('leaves everything as it was for data that already existed', async () => {
@@ -1546,7 +1598,7 @@ describe('who brought the panel up (flow-4: the card ticks the shortcut line)', 
 
   it('says "hotkey" for the global shortcut', async () => {
     await boot({
-      window: { collapsed: true, dockPosition: { x: 1860, y: 500 } },
+      window: { collapsed: true, dockPosition: { x: RIGHT_EDGE_X, y: 500 } },
     })
     await vi.waitFor(() => expect(ball().isVisible()).toBe(true))
 
@@ -1558,7 +1610,7 @@ describe('who brought the panel up (flow-4: the card ticks the shortcut line)', 
 
   it('says "other" for the ball, the tray and a second launch', async () => {
     await boot({
-      window: { collapsed: true, dockPosition: { x: 1860, y: 500 } },
+      window: { collapsed: true, dockPosition: { x: RIGHT_EDGE_X, y: 500 } },
     })
     await vi.waitFor(() => expect(ball().isVisible()).toBe(true))
 
@@ -1567,5 +1619,1458 @@ describe('who brought the panel up (flow-4: the card ticks the shortcut line)', 
     await wm.showMainWindow()
 
     expect(activations()).toEqual(['other', 'other'])
+  })
+})
+
+// A panel with its ball beside it, both away from the screen edges: the ball stands 8 px to the
+// right of the panel, top on top. A ball opens a panel it has no place for on its own right, so
+// this pair is one that only stays as it is when its place is remembered.
+const PAIR_PANEL = { x: 600, y: 100, width: 400, height: 600 }
+const PAIR_BALL = { x: PAIR_PANEL.x + PAIR_PANEL.width + 8, y: PAIR_PANEL.y }
+const BALL_SIZE = { width: DOCK_SIZE, height: DOCK_SIZE }
+
+/** Starts with the panel at PAIR_PANEL and the ball at `ballAt`, both on screen. */
+async function bootPair(
+  ballAt: { x: number; y: number } = PAIR_BALL,
+  prefs: Partial<Prefs> = {}
+): Promise<void> {
+  await boot({
+    prefs,
+    window: {
+      bounds: {
+        x: PAIR_PANEL.x,
+        y: PAIR_PANEL.y,
+        w: PAIR_PANEL.width,
+        h: PAIR_PANEL.height,
+      },
+      dockPosition: ballAt,
+      dockEdge: null,
+    },
+  })
+  // With data that already existed the ball shows once the panel has been folded into it.
+  await wm.collapseWindow()
+  await wm.showMainWindow()
+  expect(ball().isVisible()).toBe(true)
+  expect(ball().getBounds()).toEqual({ ...ballAt, ...BALL_SIZE })
+  expect(panel().isVisible()).toBe(true)
+  expect(panel().getBounds()).toEqual(PAIR_PANEL)
+}
+
+/** One step of a drag of the panel by its title bar, as Windows reports it. */
+function dragPanelTo(x: number, y: number): void {
+  panel().emit('will-move')
+  panel().setPosition(x, y)
+  panel().emit('move')
+}
+
+/** The user lets go of the title bar. */
+function releasePanel(): void {
+  panel().emit('moved')
+}
+
+// A drag of the ball, as its page reports it: where the pointer went down, and how far it has
+// gone since.
+const BALL_PRESS = { x: 20, y: 20 }
+const pressBall = () => wm.dragDock({ phase: 'start', ...BALL_PRESS })
+const moveBallBy = (dx: number, dy: number) =>
+  wm.dragDock({ phase: 'move', x: BALL_PRESS.x + dx, y: BALL_PRESS.y + dy })
+const releaseBallAt = (dx: number, dy: number) =>
+  wm.dragDock({ phase: 'end', x: BALL_PRESS.x + dx, y: BALL_PRESS.y + dy })
+
+describe('dragging the panel by its title bar takes the ball along', () => {
+  it('moves the ball with every step, by as much as the panel has gone', async () => {
+    await bootPair()
+
+    dragPanelTo(PAIR_PANEL.x - 100, PAIR_PANEL.y + 20)
+    expect(ball().getBounds()).toEqual({
+      x: PAIR_BALL.x - 100,
+      y: PAIR_BALL.y + 20,
+      ...BALL_SIZE,
+    })
+
+    dragPanelTo(PAIR_PANEL.x - 250, PAIR_PANEL.y + 60)
+    expect(ball().getBounds()).toEqual({
+      x: PAIR_BALL.x - 250,
+      y: PAIR_BALL.y + 60,
+      ...BALL_SIZE,
+    })
+  })
+
+  it('leaves the pair where the drag ended and remembers the place of both', async () => {
+    await bootPair()
+
+    dragPanelTo(PAIR_PANEL.x - 100, PAIR_PANEL.y + 20)
+    dragPanelTo(PAIR_PANEL.x - 250, PAIR_PANEL.y + 60)
+    releasePanel()
+
+    await vi.waitFor(() =>
+      expect(data().window.bounds).toEqual({
+        x: PAIR_PANEL.x - 250,
+        y: PAIR_PANEL.y + 60,
+        w: PAIR_PANEL.width,
+        h: PAIR_PANEL.height,
+      })
+    )
+    expect(ball().getBounds()).toEqual({
+      x: PAIR_BALL.x - 250,
+      y: PAIR_BALL.y + 60,
+      ...BALL_SIZE,
+    })
+    expect(data().window.dockPosition).toEqual({
+      x: PAIR_BALL.x - 250,
+      y: PAIR_BALL.y + 60,
+    })
+    expect(data().window.dockEdge).toBeNull()
+    // It was a move, not a collapse.
+    expect(panel().isVisible()).toBe(true)
+    expect(wm.getWindowSnapshot().collapsed).toBe(false)
+  })
+
+  it('takes a ball off the edge it was docked to', async () => {
+    fake.state.fresh = true
+    await boot()
+    await vi.waitFor(() => expect(ball().isVisible()).toBe(true))
+    expect(data().window.dockEdge).toBe('right')
+    const start = panel().getBounds()
+
+    dragPanelTo(start.x - 300, start.y + 30)
+    releasePanel()
+
+    await vi.waitFor(() => expect(data().window.dockEdge).toBeNull())
+    expect(ball().getBounds()).toMatchObject({
+      x: RIGHT_EDGE_X - 300,
+      y: MIDDLE_Y + 30,
+    })
+    expect(data().window.dockPosition).toEqual({
+      x: RIGHT_EDGE_X - 300,
+      y: MIDDLE_Y + 30,
+    })
+  })
+
+  it('keeps the ball on the screen when the panel is dragged partly off it, and loses nothing by it', async () => {
+    await bootPair()
+
+    // The ball stands at the top of the panel: 1000 px further down it would be below the screen.
+    dragPanelTo(PAIR_PANEL.x, PAIR_PANEL.y + 1000)
+    expect(ball().getBounds()).toEqual({
+      x: PAIR_BALL.x,
+      y: AREA.height - DOCK_SIZE,
+      ...BALL_SIZE,
+    })
+
+    // On the way back the ball is beside the panel again: every step is measured from where the
+    // drag began, not from the step before.
+    dragPanelTo(PAIR_PANEL.x, PAIR_PANEL.y + 20)
+    expect(ball().getBounds()).toMatchObject({
+      x: PAIR_BALL.x,
+      y: PAIR_BALL.y + 20,
+    })
+  })
+
+  it('remembers the ball where the screen kept it', async () => {
+    await bootPair()
+
+    dragPanelTo(PAIR_PANEL.x, PAIR_PANEL.y + 1000)
+    releasePanel()
+
+    const kept = { x: PAIR_BALL.x, y: AREA.height - DOCK_SIZE }
+    await vi.waitFor(() => expect(data().window.dockPosition).toEqual(kept))
+    expect(ball().getBounds()).toMatchObject(kept)
+  })
+
+  it('takes a panel that is a pixel beside where the last step left it for the same drag', async () => {
+    await bootPair()
+
+    dragPanelTo(PAIR_PANEL.x - 100, PAIR_PANEL.y)
+    // At a fractional display scale Windows can report the panel a pixel off.
+    panel().setPosition(PAIR_PANEL.x - 101, PAIR_PANEL.y + 1)
+    dragPanelTo(PAIR_PANEL.x - 200, PAIR_PANEL.y)
+
+    expect(ball().getBounds()).toMatchObject({
+      x: PAIR_BALL.x - 200,
+      y: PAIR_BALL.y,
+    })
+  })
+
+  it('begins a new drag when the panel is not where the last step left it', async () => {
+    await bootPair()
+    // A drag whose end was never reported...
+    dragPanelTo(PAIR_PANEL.x - 100, PAIR_PANEL.y)
+    // ...after which the panel was put somewhere else.
+    panel().setPosition(200, 300)
+
+    dragPanelTo(210, 300)
+
+    // The ball has gone the 10 px of the new drag from where it stood, and no further.
+    expect(ball().getBounds()).toMatchObject({
+      x: PAIR_BALL.x - 100 + 10,
+      y: PAIR_BALL.y,
+    })
+  })
+
+  it('begins every drag anew: the second is measured from where the first one ended', async () => {
+    await bootPair()
+    dragPanelTo(PAIR_PANEL.x - 100, PAIR_PANEL.y + 20)
+    releasePanel()
+
+    dragPanelTo(PAIR_PANEL.x - 100 + 30, PAIR_PANEL.y + 20 + 5)
+    releasePanel()
+
+    await vi.waitFor(() =>
+      expect(data().window.dockPosition).toEqual({
+        x: PAIR_BALL.x - 70,
+        y: PAIR_BALL.y + 25,
+      })
+    )
+    expect(ball().getBounds()).toMatchObject({
+      x: PAIR_BALL.x - 70,
+      y: PAIR_BALL.y + 25,
+    })
+  })
+
+  it('does not take a move of the panel the app made itself for a drag', async () => {
+    await bootPair()
+
+    panel().setPosition(PAIR_PANEL.x - 100, PAIR_PANEL.y)
+    panel().emit('move')
+
+    expect(ball().getBounds()).toMatchObject(PAIR_BALL)
+  })
+
+  it('leaves a ball that is not on screen alone', async () => {
+    await boot({
+      window: {
+        bounds: { x: 600, y: 100, w: 400, h: 600 },
+        dockPosition: PAIR_BALL,
+        dockEdge: null,
+      },
+    })
+    expect(ball().isVisible()).toBe(false)
+
+    dragPanelTo(500, 150)
+    releasePanel()
+
+    await vi.waitFor(() =>
+      expect(data().window.bounds).toMatchObject({ x: 500, y: 150 })
+    )
+    expect(ball().isVisible()).toBe(false)
+    expect(ball().getBounds()).toMatchObject(PAIR_BALL)
+    expect(data().window.dockPosition).toEqual(PAIR_BALL)
+  })
+
+  it('measures a drag whose beginning the ball missed from where the pair was last laid out', async () => {
+    await boot({
+      window: {
+        bounds: { x: 600, y: 100, w: 400, h: 600 },
+        dockPosition: PAIR_BALL,
+        dockEdge: null,
+      },
+    })
+    panel().emit('will-move')
+    // The ball comes on screen while the panel is already under way.
+    ball().showInactive()
+    panel().setPosition(PAIR_PANEL.x + 100, PAIR_PANEL.y + 50)
+
+    releasePanel()
+
+    const beside = { x: PAIR_BALL.x + 100, y: PAIR_BALL.y + 50 }
+    expect(ball().getBounds()).toMatchObject(beside)
+    await vi.waitFor(() => expect(data().window.dockPosition).toEqual(beside))
+  })
+
+  it('still folds a panel that is let go at a screen edge into the ball there', async () => {
+    await bootPair()
+
+    dragPanelTo(0, 200)
+    // On the way the ball has come along...
+    expect(ball().getBounds()).toMatchObject({
+      x: PAIR_BALL.x - PAIR_PANEL.x,
+      y: PAIR_BALL.y + 100,
+    })
+    releasePanel()
+
+    await vi.waitFor(() => expect(panel().isVisible()).toBe(false))
+    // ...and at the release it goes to the edge, on the middle of where the panel was let go.
+    expect(ball().getBounds()).toEqual({
+      x: 4,
+      y: Math.round(200 + PAIR_PANEL.height / 2 - DOCK_SIZE / 2),
+      ...BALL_SIZE,
+    })
+    expect(ball().isVisible()).toBe(true)
+    expect(wm.getWindowSnapshot().collapsed).toBe(true)
+    await vi.waitFor(() => expect(data().window.dockEdge).toBe('left'))
+  })
+
+  it('puts the ball on whole pixels when a panel of odd height is let go at the edge', async () => {
+    await boot({ window: { bounds: { x: 600, y: 100, w: 400, h: 601 } } })
+
+    dragPanelTo(0, 200)
+    releasePanel()
+
+    await vi.waitFor(() => expect(ball().isVisible()).toBe(true))
+    const { x, y } = ball().getBounds()
+    expect(x).toBe(4)
+    expect(Number.isInteger(y)).toBe(true)
+    // The middle of the ball on the middle of the panel, to the nearest pixel.
+    expect(y).toBe(Math.round(200 + 601 / 2 - DOCK_SIZE / 2))
+    await vi.waitFor(() => expect(data().window.dockPosition).toEqual({ x, y }))
+  })
+})
+
+describe('dragging the ball takes the open panel along', () => {
+  it('moves the panel with every step, by as much as the ball has gone', async () => {
+    await bootPair()
+    await pressBall()
+
+    expect(await moveBallBy(100, 50)).toEqual({ moved: true })
+    expect(ball().getBounds()).toEqual({
+      x: PAIR_BALL.x + 100,
+      y: PAIR_BALL.y + 50,
+      ...BALL_SIZE,
+    })
+    expect(panel().getBounds()).toEqual({
+      ...PAIR_PANEL,
+      x: PAIR_PANEL.x + 100,
+      y: PAIR_PANEL.y + 50,
+    })
+
+    await moveBallBy(-300, 200)
+    expect(ball().getBounds()).toMatchObject({
+      x: PAIR_BALL.x - 300,
+      y: PAIR_BALL.y + 200,
+    })
+    expect(panel().getBounds()).toEqual({
+      ...PAIR_PANEL,
+      x: PAIR_PANEL.x - 300,
+      y: PAIR_PANEL.y + 200,
+    })
+  })
+
+  it('leaves the panel in its place beside the ball when the drag ends, and remembers both', async () => {
+    await bootPair()
+    await pressBall()
+    await moveBallBy(-300, 200)
+
+    expect(await releaseBallAt(-300, 200)).toEqual({ moved: true })
+
+    expect(ball().getBounds()).toEqual({
+      x: PAIR_BALL.x - 300,
+      y: PAIR_BALL.y + 200,
+      ...BALL_SIZE,
+    })
+    // Still on the left of the ball, top on top: not laid out afresh on its right.
+    expect(panel().getBounds()).toEqual({
+      ...PAIR_PANEL,
+      x: PAIR_PANEL.x - 300,
+      y: PAIR_PANEL.y + 200,
+    })
+    expect(data().window.bounds).toEqual({
+      x: PAIR_PANEL.x - 300,
+      y: PAIR_PANEL.y + 200,
+      w: PAIR_PANEL.width,
+      h: PAIR_PANEL.height,
+    })
+    expect(data().window.dockPosition).toEqual({
+      x: PAIR_BALL.x - 300,
+      y: PAIR_BALL.y + 200,
+    })
+    expect(data().window.dockEdge).toBeNull()
+  })
+
+  it('shifts the panel with the ball when the ball snaps to a screen edge', async () => {
+    await bootPair()
+    // The ball is let go 10 px short of where it stands when docked to the right edge.
+    const dx = RIGHT_EDGE_X - 10 - PAIR_BALL.x
+    await pressBall()
+    await moveBallBy(dx, 0)
+    expect(panel().getBounds().x).toBe(PAIR_PANEL.x + dx)
+
+    await releaseBallAt(dx, 0)
+
+    expect(ball().getBounds()).toMatchObject({
+      x: RIGHT_EDGE_X,
+      y: PAIR_BALL.y,
+    })
+    // The panel makes the same 10 px, so the gap between the two is what it was; it is not
+    // centred on the ball as a panel that is laid out afresh would be.
+    expect(panel().getBounds()).toEqual({
+      ...PAIR_PANEL,
+      x: PAIR_PANEL.x + dx + 10,
+    })
+    expect(ball().getBounds().x - panel().getBounds().x).toBe(
+      PAIR_BALL.x - PAIR_PANEL.x
+    )
+    expect(data().window.dockEdge).toBe('right')
+    expect(data().window.bounds).toMatchObject({
+      x: PAIR_PANEL.x + dx + 10,
+      y: PAIR_PANEL.y,
+    })
+  })
+
+  it('lays the panel out afresh when its place beside the ball is off the screen', async () => {
+    await bootPair()
+    // The panel stands on the left of the ball: at the left edge there is no room for it there.
+    const dx = 10 - PAIR_BALL.x
+    const dy = 400
+    await pressBall()
+    await moveBallBy(dx, dy)
+    // It has come along, most of it off the screen...
+    expect(panel().getBounds()).toEqual({
+      ...PAIR_PANEL,
+      x: PAIR_PANEL.x + dx,
+      y: PAIR_PANEL.y + dy,
+    })
+
+    await releaseBallAt(dx, dy)
+
+    expect(ball().getBounds()).toMatchObject({ x: 4, y: PAIR_BALL.y + dy })
+    // ...and is put on the other side of the docked ball, on the ball's middle.
+    const laidOut = {
+      x: 4 + DOCK_SIZE + 8,
+      y: Math.round(PAIR_BALL.y + dy + DOCK_SIZE / 2 - PAIR_PANEL.height / 2),
+    }
+    expect(panel().getBounds()).toEqual({
+      ...laidOut,
+      width: PAIR_PANEL.width,
+      height: PAIR_PANEL.height,
+    })
+    expect(data().window.dockEdge).toBe('left')
+    expect(data().window.bounds).toMatchObject(laidOut)
+  })
+
+  it('follows the pointer of the system once the press has become a drag', async () => {
+    await bootPair()
+    // Pressed 10 px into the ball; from then on the pointer is read from the system.
+    const press = { x: 10, y: 12 }
+    await wm.dragDock({ phase: 'start', ...press, offset: press })
+    fake.state.cursor = {
+      x: PAIR_BALL.x + press.x + 150,
+      y: PAIR_BALL.y + press.y + 80,
+    }
+
+    expect(await wm.dragDock({ phase: 'track', ...press })).toEqual({
+      moved: true,
+    })
+
+    const followed = {
+      ...PAIR_PANEL,
+      x: PAIR_PANEL.x + 150,
+      y: PAIR_PANEL.y + 80,
+    }
+    expect(ball().getBounds()).toMatchObject({
+      x: PAIR_BALL.x + 150,
+      y: PAIR_BALL.y + 80,
+    })
+    expect(panel().getBounds()).toEqual(followed)
+
+    await wm.dragDock({ phase: 'end', x: press.x + 150, y: press.y + 80 })
+    expect(panel().getBounds()).toEqual(followed)
+  })
+
+  it('keeps the size of both windows through a drag at a fractional display scale', async () => {
+    await bootPair()
+    // At 125% or 150% Windows hands a window that is only given a new position back a pixel
+    // larger, every time.
+    for (const window of [panel(), ball()])
+      window.setPosition = (x: number, y: number) => {
+        window.bounds = {
+          x,
+          y,
+          width: window.bounds.width + 1,
+          height: window.bounds.height + 1,
+        }
+      }
+
+    await pressBall()
+    for (let step = 1; step <= 5; step += 1) {
+      await moveBallBy(step * 20, step * 10)
+      // Neither has grown on the way: every step gives both windows their size again.
+      expect(ball().getBounds(), `step ${step}`).toMatchObject(BALL_SIZE)
+      expect(panel().getBounds(), `step ${step}`).toMatchObject({
+        width: PAIR_PANEL.width,
+        height: PAIR_PANEL.height,
+      })
+    }
+    await releaseBallAt(100, 50)
+
+    expect(ball().getBounds()).toEqual({
+      x: PAIR_BALL.x + 100,
+      y: PAIR_BALL.y + 50,
+      ...BALL_SIZE,
+    })
+    expect(panel().getBounds()).toEqual({
+      ...PAIR_PANEL,
+      x: PAIR_PANEL.x + 100,
+      y: PAIR_PANEL.y + 50,
+    })
+    expect(data().window.bounds).toEqual({
+      x: PAIR_PANEL.x + 100,
+      y: PAIR_PANEL.y + 50,
+      w: PAIR_PANEL.width,
+      h: PAIR_PANEL.height,
+    })
+  })
+
+  it('does not move a panel that is folded into the ball', async () => {
+    await bootPair()
+    await wm.collapseWindow()
+
+    await pressBall()
+    await moveBallBy(200, 50)
+    await releaseBallAt(200, 50)
+
+    expect(ball().getBounds()).toMatchObject({
+      x: PAIR_BALL.x + 200,
+      y: PAIR_BALL.y + 50,
+    })
+    expect(panel().isVisible()).toBe(false)
+    expect(panel().getBounds()).toEqual(PAIR_PANEL)
+    expect(data().window.dockPosition).toEqual({
+      x: PAIR_BALL.x + 200,
+      y: PAIR_BALL.y + 50,
+    })
+  })
+
+  it('moves neither window for a press that never became a drag', async () => {
+    await bootPair()
+    await pressBall()
+
+    expect(await releaseBallAt(2, 2)).toEqual({ moved: false })
+
+    expect(ball().getBounds()).toEqual({ ...PAIR_BALL, ...BALL_SIZE })
+    expect(panel().getBounds()).toEqual(PAIR_PANEL)
+    expect(data().window.dockEdge).toBeNull()
+  })
+})
+
+describe('the panel opens where it last stood beside the ball', () => {
+  const display = fake.screen.getPrimaryDisplay()
+  const workArea = { ...display.workArea }
+
+  afterEach(() => {
+    display.workArea = { ...workArea }
+  })
+
+  it('comes back to its place, not to the side the ball would pick for it', async () => {
+    await bootPair()
+    await wm.collapseWindow()
+    expect(panel().isVisible()).toBe(false)
+
+    await wm.showMainWindow()
+
+    // On the left of the ball, as it was. Laid out afresh it would stand on the right.
+    expect(panel().getBounds()).toEqual(PAIR_PANEL)
+    expect(ball().getBounds()).toEqual({ ...PAIR_BALL, ...BALL_SIZE })
+    expect(data().window.bounds).toEqual({
+      x: PAIR_PANEL.x,
+      y: PAIR_PANEL.y,
+      w: PAIR_PANEL.width,
+      h: PAIR_PANEL.height,
+    })
+  })
+
+  it('comes back to where a drag of the panel left the pair', async () => {
+    await bootPair()
+    dragPanelTo(PAIR_PANEL.x - 250, PAIR_PANEL.y + 60)
+    releasePanel()
+    await wm.collapseWindow()
+
+    await wm.showMainWindow('peek')
+
+    expect(panel().getBounds()).toEqual({
+      ...PAIR_PANEL,
+      x: PAIR_PANEL.x - 250,
+      y: PAIR_PANEL.y + 60,
+    })
+    expect(ball().getBounds()).toMatchObject({
+      x: PAIR_BALL.x - 250,
+      y: PAIR_BALL.y + 60,
+    })
+  })
+
+  it('comes back to where a drag of the ball left the pair', async () => {
+    await bootPair()
+    await pressBall()
+    await moveBallBy(-300, 200)
+    await releaseBallAt(-300, 200)
+    await wm.collapseWindow()
+
+    await wm.showMainWindow()
+
+    expect(panel().getBounds()).toEqual({
+      ...PAIR_PANEL,
+      x: PAIR_PANEL.x - 300,
+      y: PAIR_PANEL.y + 200,
+    })
+  })
+
+  it('is laid out afresh once the ball has been moved without it', async () => {
+    await bootPair()
+    await wm.collapseWindow()
+    await pressBall()
+    await moveBallBy(200, 50)
+    await releaseBallAt(200, 50)
+
+    await wm.showMainWindow()
+
+    // Where a free ball opens a panel: on its right, top on top, 8 px apart.
+    expect(panel().getBounds()).toEqual({
+      x: PAIR_BALL.x + 200 + DOCK_SIZE + 8,
+      y: PAIR_BALL.y + 50,
+      width: PAIR_PANEL.width,
+      height: PAIR_PANEL.height,
+    })
+  })
+
+  it('is laid out afresh when the screen no longer has room for it there', async () => {
+    await bootPair()
+    await wm.collapseWindow()
+    // The work area has become lower than the place of the panel needs (another screen, a
+    // taller taskbar).
+    display.workArea = { x: 0, y: 0, width: 1920, height: 650 }
+
+    await wm.showMainWindow()
+
+    expect(panel().getBounds()).toEqual({
+      x: PAIR_BALL.x + DOCK_SIZE + 8,
+      y: 650 - PAIR_PANEL.height,
+      width: PAIR_PANEL.width,
+      height: PAIR_PANEL.height,
+    })
+  })
+
+  it.each([
+    [1, -1],
+    [2, 2],
+    [-2, 1],
+  ])(
+    'still comes back to its place when the ball is reported %i and %i px off where it was put',
+    async (dx, dy) => {
+      await bootPair()
+      await wm.collapseWindow()
+      // On a scaled display Windows can hand a window back a pixel or two beside its place.
+      ball().setPosition(PAIR_BALL.x + dx, PAIR_BALL.y + dy)
+
+      await wm.showMainWindow()
+
+      expect(panel().getBounds()).toEqual(PAIR_PANEL)
+    }
+  )
+
+  it('takes a ball that is 3 px off for one that was moved', async () => {
+    await bootPair()
+    await wm.collapseWindow()
+    ball().setPosition(PAIR_BALL.x - 3, PAIR_BALL.y)
+
+    await wm.showMainWindow()
+
+    expect(panel().getBounds()).toEqual({
+      ...PAIR_PANEL,
+      x: PAIR_BALL.x - 3 + DOCK_SIZE + 8,
+    })
+  })
+
+  it('is laid out beside a ball that was dragged away from it before the restart', async () => {
+    // The panel was folded into the ball, the ball dragged across the screen, the app closed:
+    // the saved panel is where it last stood, nowhere near the saved ball.
+    const savedBall = { x: 1200, y: 300 }
+    await boot({
+      window: {
+        collapsed: true,
+        bounds: { x: 100, y: 50, w: 400, h: 600 },
+        dockPosition: savedBall,
+        dockEdge: null,
+      },
+    })
+    await vi.waitFor(() => expect(ball().isVisible()).toBe(true))
+    expect(ball().getBounds()).toMatchObject(savedBall)
+
+    await wm.activateDock('window')
+
+    const beside = { x: savedBall.x + DOCK_SIZE + 8, y: savedBall.y }
+    expect(panel().getBounds()).toEqual({ ...beside, width: 400, height: 600 })
+    expect(data().window.bounds).toEqual({ ...beside, w: 400, h: 600 })
+    // From now on that is its place.
+    await wm.collapseWindow()
+    await wm.showMainWindow()
+    expect(panel().getBounds()).toEqual({ ...beside, width: 400, height: 600 })
+  })
+
+  it('is laid out afresh when its remembered place would cover the ball', async () => {
+    // The saved ball stands inside the saved panel.
+    const savedBall = { x: 700, y: 300 }
+    await boot({
+      window: {
+        collapsed: true,
+        bounds: { x: 600, y: 100, w: 400, h: 600 },
+        dockPosition: savedBall,
+        dockEdge: null,
+      },
+    })
+    await vi.waitFor(() => expect(ball().isVisible()).toBe(true))
+
+    await wm.activateDock('window')
+
+    expect(panel().getBounds()).toEqual({
+      x: savedBall.x + DOCK_SIZE + 8,
+      y: savedBall.y,
+      width: 400,
+      height: 600,
+    })
+    expect(ball().getBounds()).toMatchObject(savedBall)
+  })
+
+  it('is laid out afresh after it was resized across the ball', async () => {
+    await bootPair()
+    // The user drags the right edge of the panel past the ball: the ball now stands in it.
+    panel().setBounds({ ...PAIR_PANEL, width: PAIR_PANEL.width + 200 })
+    panel().emit('resized')
+    await wm.collapseWindow()
+
+    await wm.showMainWindow()
+
+    expect(panel().getBounds()).toEqual({
+      ...PAIR_PANEL,
+      x: PAIR_BALL.x + DOCK_SIZE + 8,
+      width: PAIR_PANEL.width + 200,
+    })
+    expect(ball().getBounds()).toMatchObject(PAIR_BALL)
+  })
+})
+
+describe('at launch a ball saved at a screen edge is put flush against it', () => {
+  // Where a ball 16 px larger than the one of today stood when it was docked to the right edge.
+  const savedForLargerBall = { x: RIGHT_EDGE_X - 16, y: 500 }
+
+  it('moves the ball to the edge and remembers the new place', async () => {
+    await boot({
+      window: {
+        collapsed: true,
+        dockPosition: savedForLargerBall,
+        dockEdge: 'right',
+      },
+    })
+
+    await vi.waitFor(() => expect(ball().isVisible()).toBe(true))
+    expect(ball().getBounds()).toEqual({
+      x: RIGHT_EDGE_X,
+      y: 500,
+      ...BALL_SIZE,
+    })
+    expect(data().window.dockPosition).toEqual({ x: RIGHT_EDGE_X, y: 500 })
+    expect(data().window.dockEdge).toBe('right')
+    expect(data().window.collapsed).toBe(true)
+  })
+
+  it('lays the saved panel out beside the ball again, at the size it was saved with', async () => {
+    await boot({
+      window: {
+        bounds: { x: savedForLargerBall.x - 8 - 760, y: 300, w: 760, h: 600 },
+        dockPosition: savedForLargerBall,
+        dockEdge: 'right',
+      },
+    })
+
+    // 8 px to the left of the ball and on its middle, as a docked ball opens its panel.
+    const place = {
+      x: RIGHT_EDGE_X - 8 - 760,
+      y: Math.round(500 + DOCK_SIZE / 2 - 600 / 2),
+    }
+    expect(panel().getBounds()).toEqual({ ...place, width: 760, height: 600 })
+    expect(data().window.bounds).toEqual({ ...place, w: 760, h: 600 })
+
+    // The two are a pair: folding and opening moves neither.
+    await wm.collapseWindow()
+    expect(ball().getBounds()).toMatchObject({ x: RIGHT_EDGE_X, y: 500 })
+    await wm.showMainWindow()
+    expect(panel().getBounds()).toEqual({ ...place, width: 760, height: 600 })
+  })
+
+  it('puts a ball saved at the left edge 4 px off it', async () => {
+    await boot({
+      window: {
+        collapsed: true,
+        dockPosition: { x: 20, y: 300 },
+        dockEdge: 'left',
+      },
+    })
+
+    await vi.waitFor(() => expect(ball().isVisible()).toBe(true))
+    expect(ball().getBounds()).toMatchObject({ x: 4, y: 300 })
+    expect(data().window.dockPosition).toEqual({ x: 4, y: 300 })
+    expect(data().window.dockEdge).toBe('left')
+  })
+
+  it('takes a panel that was laid out for the larger ball for one that stood beside it', async () => {
+    // On the right of a left-docked ball that was 16 px wider, the gap of 8 px further on.
+    const savedBall = { x: 20, y: 400 }
+    await boot({
+      window: {
+        bounds: {
+          x: savedBall.x + DOCK_SIZE + 16 + 8,
+          y: 100,
+          w: 760,
+          h: 600,
+        },
+        dockPosition: savedBall,
+        dockEdge: 'left',
+      },
+    })
+
+    expect(panel().getBounds()).toEqual({
+      x: 4 + DOCK_SIZE + 8,
+      y: Math.round(400 + DOCK_SIZE / 2 - 600 / 2),
+      width: 760,
+      height: 600,
+    })
+    expect(data().window.dockPosition).toEqual({ x: 4, y: 400 })
+  })
+
+  it('leaves a panel the user put somewhere else where it is, and only moves the ball', async () => {
+    const bounds = { x: 100, y: 50, w: 760, h: 720 }
+    await boot({
+      window: {
+        bounds,
+        dockPosition: savedForLargerBall,
+        dockEdge: 'right',
+      },
+    })
+
+    expect(panel().getBounds()).toEqual({
+      x: 100,
+      y: 50,
+      width: 760,
+      height: 720,
+    })
+    expect(data().window.bounds).toBe(bounds)
+    expect(data().window.dockPosition).toEqual({ x: RIGHT_EDGE_X, y: 500 })
+    // The ball is at the edge when it shows.
+    await wm.collapseWindow()
+    expect(ball().getBounds()).toMatchObject({ x: RIGHT_EDGE_X, y: 500 })
+  })
+
+  it('leaves the panel where it is with the ball turned off, though it stood beside the ball', async () => {
+    const bounds = {
+      x: savedForLargerBall.x - 8 - 760,
+      y: 300,
+      w: 760,
+      h: 600,
+    }
+    await boot({
+      showBubble: false,
+      window: {
+        bounds,
+        dockPosition: savedForLargerBall,
+        dockEdge: 'right',
+      },
+    })
+
+    expect(panel().getBounds()).toEqual({
+      x: bounds.x,
+      y: 300,
+      width: 760,
+      height: 600,
+    })
+    expect(data().window.bounds).toBe(bounds)
+    // The ball is still put right, for the day it is turned on again.
+    expect(data().window.dockPosition).toEqual({ x: RIGHT_EDGE_X, y: 500 })
+  })
+
+  it('leaves a ball that is already flush alone, and the panel where the user put it', async () => {
+    const bounds = { x: 100, y: 50, w: 760, h: 720 }
+    const dockPosition = { x: RIGHT_EDGE_X, y: 500 }
+    await boot({ window: { bounds, dockPosition, dockEdge: 'right' } })
+
+    expect(panel().getBounds()).toEqual({
+      x: 100,
+      y: 50,
+      width: 760,
+      height: 720,
+    })
+    // Nothing was rewritten: these are the very objects that were loaded.
+    expect(data().window.bounds).toBe(bounds)
+    expect(data().window.dockPosition).toBe(dockPosition)
+  })
+
+  it('leaves a free ball where it is, however near the edge', async () => {
+    await boot({
+      window: {
+        collapsed: true,
+        dockPosition: savedForLargerBall,
+        dockEdge: null,
+      },
+    })
+
+    await vi.waitFor(() => expect(ball().isVisible()).toBe(true))
+    expect(ball().getBounds()).toMatchObject(savedForLargerBall)
+    expect(data().window.dockPosition).toEqual(savedForLargerBall)
+    expect(data().window.dockEdge).toBeNull()
+  })
+})
+
+describe('at launch a panel that was never resized gets the width its tab names need', () => {
+  /** The width the names of `lang` are given: what they need and ten pixels to spare. */
+  const roomFor = (lang: Prefs['lang'], zoom = 1, tabCount = 7) =>
+    Math.ceil((stackedMinWidth(lang, tabCount) + 10) * zoom)
+
+  it('widens the 400 px a Chinese start opened at for English, whose names are longer', async () => {
+    await boot({
+      prefs: { lang: 'en' },
+      window: { bounds: { x: 100, y: 50, w: 400, h: 720 } },
+    })
+
+    const width = roomFor('en')
+    expect(width).toBe(470)
+    expect(panel().getBounds()).toEqual({ x: 100, y: 50, width, height: 720 })
+    expect(data().window.bounds).toEqual({ x: 100, y: 50, w: width, h: 720 })
+    // What it is for: at 400 the English tabs are icons only, now they have their names.
+    expect(resolveTabMode('en', 400)).toBe('icons')
+    expect(resolveTabMode('en', width)).toBe('stacked')
+  })
+
+  it('grows to the left when the saved ball is on the right of the panel: its right edge stays', async () => {
+    await boot({
+      prefs: { lang: 'en' },
+      window: {
+        bounds: { x: 600, y: 100, w: 400, h: 600 },
+        dockPosition: PAIR_BALL,
+        dockEdge: null,
+      },
+    })
+
+    const width = roomFor('en')
+    expect(panel().getBounds()).toEqual({
+      x: 600 + 400 - width,
+      y: 100,
+      width,
+      height: 600,
+    })
+    expect(panel().getBounds().x + width).toBe(PAIR_BALL.x - 8)
+  })
+
+  it('never grows past the left edge of the screen: what is saved is where the window is', async () => {
+    await boot({
+      prefs: { lang: 'en' },
+      window: {
+        bounds: { x: 10, y: 100, w: 400, h: 600 },
+        dockPosition: { x: 10 + 400 + 8, y: 100 },
+        dockEdge: null,
+      },
+    })
+
+    const width = roomFor('en')
+    expect(panel().getBounds()).toEqual({ x: 0, y: 100, width, height: 600 })
+    expect(data().window.bounds).toEqual({ x: 0, y: 100, w: width, h: 600 })
+  })
+
+  it('keeps its left edge when the saved ball is on its left', async () => {
+    await boot({
+      prefs: { lang: 'en' },
+      window: {
+        bounds: { x: 600, y: 100, w: 400, h: 600 },
+        dockPosition: { x: 600 - 8 - DOCK_SIZE, y: 100 },
+        dockEdge: null,
+      },
+    })
+
+    expect(panel().getBounds()).toEqual({
+      x: 600,
+      y: 100,
+      width: roomFor('en'),
+      height: 600,
+    })
+  })
+
+  it('widens the panel beside a ball that was put back to the edge', async () => {
+    const savedBall = { x: RIGHT_EDGE_X - 16, y: 500 }
+    await boot({
+      prefs: { lang: 'en' },
+      window: {
+        bounds: { x: savedBall.x - 8 - 400, y: 220, w: 400, h: 600 },
+        dockPosition: savedBall,
+        dockEdge: 'right',
+      },
+    })
+
+    const width = roomFor('en')
+    expect(panel().getBounds()).toMatchObject({
+      x: RIGHT_EDGE_X - 8 - width,
+      width,
+    })
+    expect(data().window.dockPosition).toEqual({ x: RIGHT_EDGE_X, y: 500 })
+  })
+
+  it('leaves 400 px alone in Chinese, where the names fit', async () => {
+    const bounds = { x: 100, y: 50, w: 400, h: 720 }
+    await boot({ window: { bounds } })
+
+    expect(panel().getBounds()).toEqual({
+      x: 100,
+      y: 50,
+      width: 400,
+      height: 720,
+    })
+    expect(data().window.bounds).toBe(bounds)
+  })
+
+  it.each([380, 397, 403, 440])(
+    'leaves a width the user chose alone, though it shows icons only: %i in English',
+    async (w) => {
+      const bounds = { x: 100, y: 50, w, h: 720 }
+      await boot({ prefs: { lang: 'en' }, window: { bounds } })
+
+      expect(resolveTabMode('en', w)).toBe('icons')
+      expect(panel().getBounds()).toMatchObject({ x: 100, width: w })
+      expect(data().window.bounds).toBe(bounds)
+    }
+  )
+
+  it.each([398, 402])(
+    'takes a width within 2 px of a default one for a panel nobody resized: %i',
+    async (w) => {
+      await boot({
+        prefs: { lang: 'en' },
+        window: { bounds: { x: 100, y: 50, w, h: 720 } },
+      })
+
+      expect(panel().getBounds()).toMatchObject({
+        x: 100,
+        width: roomFor('en'),
+      })
+    }
+  )
+
+  it('knows the default widths of every language as widths nobody chose', async () => {
+    // The English default, zoomed until its names no longer fit.
+    await boot({
+      prefs: { lang: 'en', zoom: 1.2 },
+      window: {
+        bounds: { x: 100, y: 50, w: DEFAULT_PANEL_WIDTH.en, h: 720 },
+      },
+    })
+
+    const width = roomFor('en', 1.2)
+    expect(resolveTabMode('en', Math.round(DEFAULT_PANEL_WIDTH.en / 1.2))).toBe(
+      'icons'
+    )
+    expect(panel().getBounds()).toMatchObject({ x: 100, width })
+    expect(resolveTabMode('en', Math.round(width / 1.2))).toBe('stacked')
+  })
+
+  it('does not widen for categories that are hidden: fewer names need less room', async () => {
+    const bounds = { x: 100, y: 50, w: 400, h: 720 }
+    await boot({
+      prefs: {
+        lang: 'en',
+        hiddenTabs: ['apps', 'passwords', 'commands', 'notes'],
+      },
+      window: { bounds },
+    })
+
+    expect(panel().getBounds()).toMatchObject({ x: 100, width: 400 })
+    expect(data().window.bounds).toBe(bounds)
+  })
+
+  it('leaves a new installation to its first-run layout', async () => {
+    fake.state.fresh = true
+    await boot({ prefs: { lang: 'en' } })
+    await vi.waitFor(() => expect(ball().isVisible()).toBe(true))
+
+    expect(panel().getBounds()).toMatchObject({
+      x: RIGHT_EDGE_X - 8 - DEFAULT_PANEL_WIDTH.en,
+      width: DEFAULT_PANEL_WIDTH.en,
+    })
+  })
+})
+
+describe('a change of language, zoom or categories keeps the names on the tabs', () => {
+  const display = fake.screen.getPrimaryDisplay()
+  const workArea = { ...display.workArea }
+
+  afterEach(() => {
+    display.workArea = { ...workArea }
+  })
+
+  const prefs = (changes: Partial<Prefs> = {}): Prefs => ({
+    ...createDefaultAppData().prefs,
+    ...changes,
+  })
+  /** The width the names of `lang` are given: what they need and ten pixels to spare. */
+  const roomFor = (lang: Prefs['lang'], zoom = 1, tabCount = 7) =>
+    Math.ceil((stackedMinWidth(lang, tabCount) + 10) * zoom)
+
+  it('widens a 400 px panel for English, whose names are longer than the Chinese ones', async () => {
+    await boot()
+    const before = panel().getBounds()
+    expect(before.width).toBe(400)
+
+    await wm.keepTabNamesVisible(prefs({ lang: 'zh' }), prefs({ lang: 'en' }))
+
+    const width = roomFor('en')
+    expect(width).toBeGreaterThan(400)
+    // No ball on screen: the panel keeps its left edge.
+    expect(panel().getBounds()).toEqual({ ...before, width })
+    expect(resolveTabMode('en', width)).toBe('stacked')
+    expect(data().window.bounds).toEqual({
+      x: before.x,
+      y: before.y,
+      w: width,
+      h: before.height,
+    })
+  })
+
+  it('grows away from a ball on its right: the edge next to the ball stays', async () => {
+    await bootPair()
+
+    await wm.keepTabNamesVisible(prefs({ lang: 'zh' }), prefs({ lang: 'en' }))
+
+    const width = roomFor('en')
+    const widened = {
+      ...PAIR_PANEL,
+      x: PAIR_PANEL.x + PAIR_PANEL.width - width,
+      width,
+    }
+    expect(panel().getBounds()).toEqual(widened)
+    expect(ball().getBounds()).toEqual({ ...PAIR_BALL, ...BALL_SIZE })
+    expect(data().window.bounds).toMatchObject({ x: widened.x, w: width })
+
+    // The wider panel is what the ball opens from now on, in that same place.
+    await wm.collapseWindow()
+    await wm.showMainWindow()
+    expect(panel().getBounds()).toEqual(widened)
+  })
+
+  it('grows to the right with the ball on its left', async () => {
+    await bootPair({ x: PAIR_PANEL.x - 8 - DOCK_SIZE, y: PAIR_PANEL.y })
+
+    await wm.keepTabNamesVisible(prefs({ lang: 'zh' }), prefs({ lang: 'en' }))
+
+    expect(panel().getBounds()).toEqual({
+      ...PAIR_PANEL,
+      width: roomFor('en'),
+    })
+  })
+
+  it('widens for a larger zoom, by what the names need at that zoom', async () => {
+    await boot()
+    const before = panel().getBounds()
+
+    await wm.keepTabNamesVisible(prefs({ zoom: 1 }), prefs({ zoom: 1.4 }))
+
+    const width = roomFor('zh', 1.4)
+    expect(resolveTabMode('zh', Math.round(400 / 1.4))).toBe('icons')
+    expect(panel().getBounds()).toEqual({ ...before, width })
+    expect(resolveTabMode('zh', Math.round(width / 1.4))).toBe('stacked')
+  })
+
+  it('widens when hidden categories are shown again', async () => {
+    const hiddenTabs: Prefs['hiddenTabs'] = [
+      'apps',
+      'passwords',
+      'commands',
+      'notes',
+    ]
+    await boot({
+      prefs: { lang: 'en', hiddenTabs },
+      window: { bounds: { x: 100, y: 50, w: 400, h: 720 } },
+    })
+    // Three names fit in 400 px.
+    expect(panel().getBounds().width).toBe(400)
+
+    await wm.keepTabNamesVisible(
+      prefs({ lang: 'en', hiddenTabs }),
+      prefs({ lang: 'en', hiddenTabs: [] })
+    )
+
+    expect(panel().getBounds()).toEqual({
+      x: 100,
+      y: 50,
+      width: roomFor('en'),
+      height: 720,
+    })
+  })
+
+  it('needs less room for fewer categories', async () => {
+    await boot({
+      prefs: { lang: 'en' },
+      window: { bounds: { x: 100, y: 50, w: 330, h: 720 } },
+    })
+    const three: Prefs['hiddenTabs'] = [
+      'apps',
+      'passwords',
+      'commands',
+      'notes',
+    ]
+    const five: Prefs['hiddenTabs'] = ['commands', 'notes']
+    expect(resolveTabMode('en', 330, 3)).not.toBe('icons')
+    expect(resolveTabMode('en', 330, 5)).toBe('icons')
+
+    await wm.keepTabNamesVisible(
+      prefs({ lang: 'en', hiddenTabs: three }),
+      prefs({ lang: 'en', hiddenTabs: five })
+    )
+
+    const width = roomFor('en', 1, 5)
+    expect(width).toBeLessThan(roomFor('en'))
+    expect(panel().getBounds()).toMatchObject({ x: 100, width })
+    expect(resolveTabMode('en', width, 5)).not.toBe('icons')
+  })
+
+  it('leaves the panel alone while the names still fit', async () => {
+    await boot()
+    const before = panel().getBounds()
+    const saved = data().window.bounds
+
+    // Japanese names fit in 400 px, and so do the Chinese ones a little larger.
+    await wm.keepTabNamesVisible(prefs({ lang: 'zh' }), prefs({ lang: 'ja' }))
+    await wm.keepTabNamesVisible(prefs({ zoom: 1 }), prefs({ zoom: 1.2 }))
+    await wm.keepTabNamesVisible(prefs(), prefs({ theme: 'dark' }))
+
+    expect(panel().getBounds()).toEqual(before)
+    expect(data().window.bounds).toBe(saved)
+  })
+
+  it('does not bring back names the user had already given up for a narrow panel', async () => {
+    await boot({
+      prefs: { lang: 'en' },
+      window: { bounds: { x: 100, y: 50, w: 380, h: 720 } },
+    })
+
+    await wm.keepTabNamesVisible(
+      prefs({ lang: 'en' }),
+      prefs({ lang: 'en', zoom: 1.2 })
+    )
+    await wm.keepTabNamesVisible(prefs({ lang: 'en' }), prefs({ lang: 'ja' }))
+
+    expect(panel().getBounds()).toMatchObject({ x: 100, width: 380 })
+  })
+
+  it('keeps the widened panel on the screen', async () => {
+    await boot({ window: { bounds: { x: 1500, y: 50, w: 400, h: 720 } } })
+
+    await wm.keepTabNamesVisible(prefs({ lang: 'zh' }), prefs({ lang: 'en' }))
+
+    const width = roomFor('en')
+    expect(panel().getBounds()).toEqual({
+      x: AREA.width - width,
+      y: 50,
+      width,
+      height: 720,
+    })
+  })
+
+  it('does not make the panel wider than the screen has room for', async () => {
+    display.workArea = { x: 0, y: 0, width: 480, height: 800 }
+    await boot()
+    expect(panel().getBounds()).toMatchObject({
+      x: (480 - 400) / 2,
+      width: 400,
+    })
+
+    await wm.keepTabNamesVisible(prefs({ lang: 'zh' }), prefs({ lang: 'en' }))
+
+    // 12 px of margin on both sides is what a panel may take of a screen.
+    expect(panel().getBounds()).toMatchObject({ x: 24, width: 480 - 24 })
+  })
+
+  it('does nothing before there is a panel, and nothing while the app is quitting', async () => {
+    await expect(
+      wm.keepTabNamesVisible(prefs({ lang: 'zh' }), prefs({ lang: 'en' }))
+    ).resolves.toBeUndefined()
+    expect(fake.state.windows).toHaveLength(0)
+
+    await boot()
+    const before = panel().getBounds()
+    wm.prepareToQuit()
+    await wm.keepTabNamesVisible(prefs({ lang: 'zh' }), prefs({ lang: 'en' }))
+
+    expect(panel().getBounds()).toEqual(before)
+  })
+})
+
+describe('the theme the windows are told is the one that is drawn', () => {
+  const savedBall = { x: 300, y: 420 }
+
+  /** What the ball was told about its look, in the order it was told. */
+  const appearances = () =>
+    fake.state.sent
+      .filter(
+        (message) =>
+          message.windowId === ball().id &&
+          message.channel === IPC_CHANNELS.dockAppearance
+      )
+      .map((message) => message.args[0])
+
+  /** Windows switches between its light and its dark mode, and says so. */
+  function switchSystem(dark: boolean): void {
+    fake.nativeTheme.shouldUseDarkColors = dark
+    fake.nativeTheme.emit('updated')
+  }
+
+  it.each([
+    [true, 'dark'],
+    [false, 'light'],
+  ] as const)(
+    'loads both windows with what "system" comes to (Windows dark: %s): %s',
+    async (systemDark, theme) => {
+      fake.nativeTheme.shouldUseDarkColors = systemDark
+
+      await boot({ prefs: { theme: 'system', lang: 'en' } })
+
+      expect(panel().loadedQuery).toEqual({ theme, lang: 'en' })
+      expect(ball().loadedQuery).toEqual({ view: 'dock', theme, lang: 'en' })
+    }
+  )
+
+  it('does not let Windows change a theme the user chose', async () => {
+    fake.nativeTheme.shouldUseDarkColors = true
+
+    await boot({ prefs: { theme: 'light' } })
+
+    expect(panel().loadedQuery.theme).toBe('light')
+    expect(ball().loadedQuery.theme).toBe('light')
+  })
+
+  it('tells a restored ball the theme "system" comes to', async () => {
+    fake.nativeTheme.shouldUseDarkColors = true
+
+    await boot({
+      prefs: { theme: 'system', lang: 'en' },
+      window: { collapsed: true, dockPosition: savedBall },
+    })
+
+    await vi.waitFor(() => expect(ball().isVisible()).toBe(true))
+    expect(appearances()).toEqual([{ theme: 'dark', lang: 'en' }])
+  })
+
+  it('tells the ball of a new installation, and a ball the panel folds into', async () => {
+    fake.nativeTheme.shouldUseDarkColors = true
+    fake.state.fresh = true
+    await boot({ prefs: { theme: 'system' } })
+    await vi.waitFor(() => expect(ball().isVisible()).toBe(true))
+    expect(appearances()).toEqual([{ theme: 'dark', lang: 'zh' }])
+
+    // Windows goes light while the panel is open; the next collapse dresses the ball for it.
+    fake.nativeTheme.shouldUseDarkColors = false
+    fake.state.sent.length = 0
+    await wm.collapseWindow()
+
+    expect(appearances()).toEqual([{ theme: 'light', lang: 'zh' }])
+  })
+
+  it('tells the ball again when Windows switches its mode', async () => {
+    await boot({ prefs: { theme: 'system', lang: 'ja' } })
+    await wm.collapseWindow()
+    fake.state.sent.length = 0
+
+    switchSystem(true)
+    await vi.waitFor(() =>
+      expect(appearances()).toEqual([{ theme: 'dark', lang: 'ja' }])
+    )
+
+    switchSystem(false)
+    await vi.waitFor(() =>
+      expect(appearances()).toEqual([
+        { theme: 'dark', lang: 'ja' },
+        { theme: 'light', lang: 'ja' },
+      ])
+    )
+  })
+
+  it('follows a setting that was changed after the start', async () => {
+    await boot({ prefs: { theme: 'dark' } })
+    await wm.collapseWindow()
+    fake.state.sent.length = 0
+    // The user picks "follow the system" in the settings; Windows is in light mode.
+    data().prefs.theme = 'system'
+
+    switchSystem(false)
+
+    await vi.waitFor(() =>
+      expect(appearances()).toEqual([{ theme: 'light', lang: 'zh' }])
+    )
+  })
+
+  it('keeps a chosen theme on the ball whatever Windows switches to', async () => {
+    await boot({ prefs: { theme: 'light' } })
+    await wm.collapseWindow()
+    fake.state.sent.length = 0
+
+    switchSystem(true)
+
+    await vi.waitFor(() => expect(appearances().length).toBeGreaterThan(0))
+    for (const appearance of appearances())
+      expect(appearance).toEqual({ theme: 'light', lang: 'zh' })
+  })
+
+  it('stops listening to Windows once the ball is gone', async () => {
+    await boot({ prefs: { theme: 'system' } })
+    expect(fake.nativeTheme.listenerCount('updated')).toBe(1)
+    fake.state.sent.length = 0
+    const gone = ball()
+
+    wm.prepareToQuit()
+    gone.close()
+
+    expect(gone.destroyed).toBe(true)
+    expect(fake.nativeTheme.listenerCount('updated')).toBe(0)
+    switchSystem(true)
+    await vi.advanceTimersByTimeAsync(10)
+    expect(
+      fake.state.sent.filter(
+        (message) => message.channel === IPC_CHANNELS.dockAppearance
+      )
+    ).toEqual([])
+  })
+
+  describe('the first frame of the panel', () => {
+    it('is marked as light for the light theme, and only the panel is', async () => {
+      await boot({ prefs: { theme: 'light' } })
+
+      expect(panel().loadedHash).toBe('startup-light')
+      expect(ball().loadedHash).toBe('')
+    })
+
+    it('is not marked for the dark theme', async () => {
+      await boot({ prefs: { theme: 'dark' } })
+
+      expect(panel().loadedHash).toBe('')
+      expect(ball().loadedHash).toBe('')
+    })
+
+    it.each([
+      [false, 'startup-light'],
+      [true, ''],
+    ] as const)(
+      'follows Windows for "system" (dark: %s): %j',
+      async (systemDark, hash) => {
+        fake.nativeTheme.shouldUseDarkColors = systemDark
+
+        await boot({ prefs: { theme: 'system' } })
+
+        expect(panel().loadedHash).toBe(hash)
+        expect(ball().loadedHash).toBe('')
+      }
+    )
+
+    it('carries the mark in the address when the page comes from the development server', async () => {
+      const previous = process.env.ELECTRON_RENDERER_URL
+      process.env.ELECTRON_RENDERER_URL = 'http://localhost:5173/'
+      try {
+        await boot({ prefs: { theme: 'light', lang: 'en' } })
+
+        const panelUrl = new URL(panel().loadedUrl!)
+        expect(panelUrl.hash).toBe('#startup-light')
+        expect(panelUrl.searchParams.get('theme')).toBe('light')
+        expect(panelUrl.searchParams.get('lang')).toBe('en')
+        const ballUrl = new URL(ball().loadedUrl!)
+        expect(ballUrl.hash).toBe('')
+        expect(ballUrl.searchParams.get('view')).toBe('dock')
+        expect(ballUrl.searchParams.get('theme')).toBe('light')
+      } finally {
+        if (previous === undefined) delete process.env.ELECTRON_RENDERER_URL
+        else process.env.ELECTRON_RENDERER_URL = previous
+      }
+    })
   })
 })

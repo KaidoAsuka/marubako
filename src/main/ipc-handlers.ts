@@ -16,6 +16,7 @@ import { IPC_CHANNELS } from '../shared/ipc-channels'
 import type {
   AppData,
   DockDrag,
+  Prefs,
   QuickLaunchResult,
   StartupNoticeKind,
 } from '../shared/types'
@@ -37,6 +38,7 @@ import {
   setOpenAtLogin,
 } from './launch-settings'
 import { mainText } from './main-strings'
+import { resolveThemeSetting } from './system-theme'
 import { getFileIcon, openApp, openPath, openUrl } from './browser'
 import {
   dismissNotice,
@@ -66,6 +68,7 @@ import {
   getDockWindow,
   getWindowSnapshot,
   hideWindow,
+  keepTabNamesVisible,
   previewPanelOpacity,
   setWindowOpacity,
   togglePin,
@@ -79,6 +82,18 @@ function refreshMenusSoon(): void {
   void refreshTrayMenu().catch((error) =>
     log.warn('Could not refresh the tray menu', error)
   )
+}
+
+/** Widening the panel for the tab names is a nicety: it never turns a save into a failure. */
+async function keepTabNamesVisibleSafely(
+  before: Prefs,
+  after: Prefs
+): Promise<void> {
+  try {
+    await keepTabNamesVisible(before, after)
+  } catch (error) {
+    log.warn('Could not widen the panel for the category names', error)
+  }
 }
 
 function toResult<T>(value: T): QuickLaunchResult<T> {
@@ -152,7 +167,10 @@ export function registerIpcHandlers(): void {
       if (event.sender !== getDockWindow()?.webContents)
         throw new Error('Invalid dock sender')
       const { prefs } = await loadAppData()
-      return toResult({ lang: prefs.lang, theme: prefs.theme })
+      return toResult({
+        lang: prefs.lang,
+        theme: resolveThemeSetting(prefs.theme),
+      })
     } catch (error) {
       return toError(error)
     }
@@ -299,6 +317,8 @@ export function registerIpcHandlers(): void {
       // changed launch shortcut (or lets go of it) in the same breath.
       await applyBubblePreference(saved.prefs.showBubble)
       applyLaunchShortcut(saved.prefs)
+      // Another language (or zoom, or set of categories) must not leave the tabs without names.
+      await keepTabNamesVisibleSafely(current.prefs, saved.prefs)
       return toResult({
         data: saved,
         savedAt: new Date().toISOString(),
@@ -389,13 +409,15 @@ export function registerIpcHandlers(): void {
       })
       if (!confirmed) return toResult({ canceled: true })
 
-      const languageBefore = (await loadAppData()).prefs.lang
+      const prefsBefore = (await loadAppData()).prefs
       const imported = await importAppData(filePath)
-      if (imported.prefs.lang !== languageBefore) refreshMenusSoon()
+      if (imported.prefs.lang !== prefsBefore.lang) refreshMenusSoon()
       // The window on this computer keeps its own transparency; apply the imported preference.
       await setWindowOpacity(imported.prefs.opacity)
       await applyBubblePreference(imported.prefs.showBubble)
       applyLaunchShortcut(imported.prefs)
+      // The imported language may have longer category names than the window was sized for.
+      await keepTabNamesVisibleSafely(prefsBefore, imported.prefs)
 
       return toResult({
         canceled: false,

@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   contrast,
+  declarations,
   lastValue,
   loadCascade,
   loadRules,
@@ -213,7 +214,51 @@ describe('destructive actions', () => {
       '.modal-actions .primary-button.danger:hover:not(:disabled)',
     ]) {
       expect(win(selector, 'background'), selector).toBe('var(--danger-solid)')
-      expect(win(selector, 'color'), selector).toBe('var(--on-accent)')
+      // Not --on-accent: that is the text on an accent fill, which a palette may make dark
+      // (monokai, on its yellow). The red is the same in every palette, and so is its text.
+      expect(win(selector, 'color'), selector).toBe('var(--on-danger)')
+    }
+  })
+
+  it('writes on the solid red in a white of its own, which no theme or palette replaces', () => {
+    const holders = themes
+      .filter((rule) =>
+        declarations(rule.body).some(([name]) => name === '--on-danger')
+      )
+      .map((rule) => rule.selector)
+
+    expect(holders).toEqual([':root'])
+    expect(dark('--on-danger')).toBe('#ffffff')
+    for (const read of [dark, light]) {
+      expect(
+        contrast(dark('--on-danger'), read('--danger-solid'))
+      ).toBeGreaterThanOrEqual(4.5)
+    }
+    // Nothing draws the red fill anywhere else, in any palette.
+    expect(
+      themes
+        .filter((rule) =>
+          declarations(rule.body).some(([name]) => name === '--danger-solid')
+        )
+        .map((rule) => rule.selector)
+    ).toEqual([':root', '.theme-light'])
+  })
+
+  it('writes in that white wherever the solid red is a fill', () => {
+    const fills = cascade.filter((rule) =>
+      declarations(rule.body).some(
+        ([name, value]) =>
+          /^background(-color)?$/.test(name) &&
+          value.includes('var(--danger-solid)')
+      )
+    )
+
+    expect(fills.length).toBeGreaterThan(0)
+    for (const rule of fills) {
+      expect(
+        declarations(rule.body).find(([name]) => name === 'color')?.[1],
+        rule.selector
+      ).toBe('var(--on-danger)')
     }
   })
 

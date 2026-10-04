@@ -12,6 +12,7 @@ import DndProvider from '../../dnd/DndProvider'
 import type { SortableBindings } from '../../dnd/use-sortable-base'
 import { useSortableTask } from '../../dnd/use-sortable-task'
 import { useI18n } from '../../hooks/use-i18n'
+import { useOpenedByUser } from '../../hooks/use-opened-by-user'
 import { getTaskProgress, isFinished } from '../../store/data-helpers'
 import { toggleTaskDone } from '../../store/task-actions'
 import { useAppStore } from '../../store/use-app-store'
@@ -56,6 +57,8 @@ function TaskCardView({ date, task, sortable }: CardProps): JSX.Element {
   // One click completes the task, and one more takes it back to "todo". It changes the task only:
   // its subtasks keep their own state.
   const nextStatus = isFinished(task.status) ? 'todo' : 'done'
+
+  const unfold = useOpenedByUser(task.open)
 
   const toggleTask = () => {
     void updateData((draft) => {
@@ -161,7 +164,11 @@ function TaskCardView({ date, task, sortable }: CardProps): JSX.Element {
         </span>
       </div>
       {task.open && (
-        <div className="task-card-body" id={`task-body-${task.id}`}>
+        <div
+          className="task-card-body"
+          id={`task-body-${task.id}`}
+          data-unfold={unfold ? '' : undefined}
+        >
           <DndProvider
             ids={task.subtasks.map((subtask) => subtask.id)}
             onDragEnd={(activeId, overId) => {

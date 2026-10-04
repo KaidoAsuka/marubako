@@ -6,8 +6,12 @@ import path from 'node:path'
 
 import { test, expect, type Locator, type Page } from '@playwright/test'
 
-import { createDefaultAppData } from '../src/shared/default-data'
-import { closeApp, launchApp, type AppContext } from './test-utils'
+import {
+  createDefaultAppData,
+  closeApp,
+  launchApp,
+  type AppContext,
+} from './test-utils'
 
 async function launchSlender(width = 400): Promise<AppContext> {
   const userDataDir = await fs.mkdtemp(

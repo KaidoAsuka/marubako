@@ -10,13 +10,20 @@ import type {
   DockEdge,
   DockPosition,
   Lang,
+  Prefs,
   WindowBounds,
   WindowSnapshot,
   WindowPresentation,
   WindowState,
 } from '../shared/types'
 import { IPC_CHANNELS } from '../shared/ipc-channels'
+import {
+  DEFAULT_PANEL_WIDTH,
+  resolveTabMode,
+  stackedMinWidth,
+} from '../shared/layout-widths'
 import { toStartupQuery } from '../shared/startup-params'
+import { visibleTabs } from '../shared/tabs'
 import {
   flushPendingWriteSync,
   isFreshInstall,
@@ -35,14 +42,18 @@ import { getLaunchWindowState } from './window-state'
 import { attachEditMenu } from './edit-menu'
 import { createLauncherMenu } from './launcher-menu'
 import { motionTimeScale } from './motion-scale'
+import { onSystemThemeChange, resolveThemeSetting } from './system-theme'
 import {
   DOCK_SIZE,
   DOCK_SNAP_DISTANCE,
+  fitsInArea,
   getDockBounds,
   getDockEdge,
   getExpandedPosition,
   getFirstRunLayout,
   isAtScreenEdge,
+  redockToEdge,
+  standsBeside,
 } from './dock-geometry'
 
 let mainWindow: BrowserWindow | null = null
@@ -53,10 +64,19 @@ let windowTransition: Promise<void> | null = null
 let dockDragOrigin: {
   pointer: DockPosition
   window: Electron.Rectangle
+  // Where the open panel stood when the drag began; it travels with the ball. Null without one.
+  panel: Electron.Rectangle | null
   moved: boolean
   cursor: DockPosition
   native: boolean
   armed: boolean
+} | null = null
+// A drag of the panel by its title bar, while the ball is on screen: where the two stood when it
+// began, and where the panel was last seen. The ball follows by the distance the panel has gone.
+let panelDrag: {
+  panel: Electron.Rectangle
+  dock: Electron.Rectangle
+  last: Electron.Rectangle
 } | null = null
 let dockDragTimer: NodeJS.Timeout | undefined
 let dockEdge: DockEdge = null
@@ -92,6 +112,9 @@ const pendingFrames = new Map<
   number,
   { senderId: number; resolve: () => void }
 >()
+// How much wider than the tab names need a panel is made when it is widened for them, so that
+// rounding to device pixels cannot tip the tabs back to icons.
+const TAB_NAMES_SPARE_WIDTH = 10
 // A pointer within this distance of the panel or ball only slipped off it; give it more time.
 const PEEK_NEAR_DISTANCE = 28
 const PEEK_NEAR_GRACE = 450
@@ -395,6 +418,117 @@ function getSafeWindowBounds(
   }
 }
 
+/**
+ * Where the ball belongs once the panel has been dragged to `bounds`: as far from where it stood
+ * as the panel is from where it stood, kept on the screen.
+ */
+function ballBesideDraggedPanel(
+  origin: { panel: Electron.Rectangle; dock: Electron.Rectangle },
+  bounds: Electron.Rectangle
+): Electron.Rectangle {
+  const position = {
+    x: origin.dock.x + bounds.x - origin.panel.x,
+    y: origin.dock.y + bounds.y - origin.panel.y,
+  }
+  return getDockBounds(
+    screen.getDisplayMatching({
+      ...position,
+      width: DOCK_SIZE,
+      height: DOCK_SIZE,
+    }).workArea,
+    position
+  )
+}
+
+// How far from the ball a saved panel may stand and still count as laid out beside it: the gap,
+// rounding, and the 16 pixels by which the ball of earlier versions was larger.
+const SAVED_PANEL_SLACK = 18
+
+/**
+ * A ball saved as docked to an edge is put flush against that edge for the size the ball has now
+ * (it was larger in earlier versions, and a screen can change). A panel that stood beside it is
+ * laid out beside it again; one the user put somewhere else (while the ball was off screen, or
+ * turned off) stays where it is. Anything else is returned as it is.
+ */
+function withRedockedBall(
+  state: WindowState,
+  showBubble: boolean
+): WindowState {
+  const { dockPosition, dockEdge, bounds } = state
+  if (!dockPosition || !dockEdge) return state
+  const area = screen.getDisplayMatching({
+    ...dockPosition,
+    width: DOCK_SIZE,
+    height: DOCK_SIZE,
+  }).workArea
+  const dock = redockToEdge(area, dockPosition, dockEdge)
+  if (dock.x === dockPosition.x) return state
+  if (
+    !bounds ||
+    !showBubble ||
+    !standsBeside(
+      { x: bounds.x, y: bounds.y, width: bounds.w, height: bounds.h },
+      dockPosition,
+      SAVED_PANEL_SLACK
+    )
+  )
+    return { ...state, dockPosition: dock }
+  const panel = getExpandedPosition(
+    area,
+    dock,
+    { width: bounds.w, height: bounds.h },
+    dockEdge
+  )
+  return {
+    ...state,
+    dockPosition: dock,
+    bounds: { ...bounds, x: panel.x, y: panel.y },
+  }
+}
+
+/**
+ * A panel that was never resized still has the default width of the language it first opened in.
+ * In a language with longer category names that width shows icons only (data from a version that
+ * did not widen the panel when the language was changed): such a panel is given the width the
+ * names need, growing away from the ball. A width the user chose is never touched.
+ */
+function withRoomForTabNames(state: WindowState, prefs: Prefs): WindowState {
+  const { bounds, dockPosition } = state
+  if (!bounds) return state
+  const untouched = Object.values(DEFAULT_PANEL_WIDTH).some(
+    (width) => Math.abs(bounds.w - width) <= 2
+  )
+  const tabCount = visibleTabs(prefs.hiddenTabs).length
+  if (
+    !untouched ||
+    resolveTabMode(prefs.lang, Math.round(bounds.w / prefs.zoom), tabCount) !==
+      'icons'
+  )
+    return state
+  const width = Math.ceil(
+    (stackedMinWidth(prefs.lang, tabCount) + TAB_NAMES_SPARE_WIDTH) * prefs.zoom
+  )
+  const ballOnTheRight =
+    dockPosition !== undefined && dockPosition.x >= bounds.x + bounds.w
+  // Never past the left edge of its screen: what is saved here is where the window will be.
+  const area = screen.getDisplayMatching({
+    x: bounds.x,
+    y: bounds.y,
+    width: bounds.w,
+    height: bounds.h,
+  }).workArea
+  return {
+    ...state,
+    bounds: {
+      ...bounds,
+      w: width,
+      x: ballOnTheRight
+        ? Math.max(area.x, bounds.x + bounds.w - width)
+        : bounds.x,
+    },
+  }
+}
+
 async function persistWindowBounds(): Promise<void> {
   if (!mainWindow) {
     return
@@ -429,17 +563,22 @@ async function loadRenderer(
     (typeof MAIN_WINDOW_VITE_DEV_SERVER_URL !== 'undefined'
       ? MAIN_WINDOW_VITE_DEV_SERVER_URL
       : undefined)
+  // The panel's loading screen is painted before any script runs; the fragment is how its
+  // stylesheet learns that the first frame is light (startup.css).
+  const hash = !dock && appearance.theme === 'light' ? 'startup-light' : ''
   if (rendererUrl) {
     const url = new URL(rendererUrl)
     if (dock) url.searchParams.set('view', 'dock')
     for (const [key, value] of Object.entries(appearance))
       url.searchParams.set(key, value)
+    url.hash = hash
     await window.loadURL(url.toString())
     return
   }
 
   await window.loadFile(path.join(__dirname, '../renderer/index.html'), {
     query: dock ? { view: 'dock', ...appearance } : { ...appearance },
+    ...(hash ? { hash } : {}),
   })
 }
 
@@ -491,7 +630,10 @@ async function buildMainWindow(): Promise<BrowserWindow> {
     isFreshInstall()
   const launchWindowState = firstRunBubble
     ? withFirstRunLayout(resolvedState, data.prefs.lang)
-    : resolvedState
+    : withRoomForTabNames(
+        withRedockedBall(resolvedState, showBubblePref),
+        data.prefs
+      )
 
   if (launchWindowState !== data.window) {
     await updateWindowData(() => launchWindowState)
@@ -595,10 +737,35 @@ async function buildMainWindow(): Promise<BrowserWindow> {
   )
 
   mainWindow.on('will-move', () => {
+    // Windows reports every step of a title-bar drag here, before the panel moves, and does not
+    // say when a drag begins. A new one is recognised by the panel not standing where the last
+    // step left it; where the panel and the ball stand at that moment is what the ball's following
+    // is measured from.
+    const bounds = mainWindow?.getBounds()
+    if (
+      bounds &&
+      (!panelDrag ||
+        Math.abs(bounds.x - panelDrag.last.x) > 1 ||
+        Math.abs(bounds.y - panelDrag.last.y) > 1)
+    )
+      panelDrag = dockWindow?.isVisible()
+        ? { panel: bounds, dock: dockWindow.getBounds(), last: bounds }
+        : null
     manuallyMoving = true
+  })
+  mainWindow.on('move', () => {
+    // The ball travels with a panel the user is dragging, step by step, so the two move as one.
+    // (The app's own moves of the panel report here as well; they are not a drag.)
+    if (!manuallyMoving || !panelDrag || !mainWindow) return
+    const bounds = mainWindow.getBounds()
+    panelDrag.last = bounds
+    if (dockWindow?.isVisible())
+      dockWindow.setBounds(ballBesideDraggedPanel(panelDrag, bounds))
   })
   mainWindow.on('moved', () => {
     const bounds = mainWindow?.getBounds()
+    const drag = panelDrag
+    panelDrag = null
     // Without the ball there is nothing to dock into, so dragging to the edge must not hide the panel.
     const dockOnRelease =
       showBubblePref &&
@@ -606,34 +773,24 @@ async function buildMainWindow(): Promise<BrowserWindow> {
       bounds &&
       mainWindow?.isVisible() &&
       isAtScreenEdge(bounds, screen.getDisplayMatching(bounds).workArea)
-    if (
-      manuallyMoving &&
-      !dockOnRelease &&
-      bounds &&
-      expandedAnchor &&
-      dockWindow?.isVisible()
-    ) {
-      const current = dockWindow.getBounds()
-      const position = {
-        x: current.x + bounds.x - expandedAnchor.panel.x,
-        y: current.y + bounds.y - expandedAnchor.panel.y,
+    if (manuallyMoving && !dockOnRelease && bounds && dockWindow?.isVisible()) {
+      // A drag whose steps were not reported is measured from where the pair was last laid out.
+      const origin =
+        drag ??
+        (expandedAnchor
+          ? { panel: expandedAnchor.panel, dock: dockWindow.getBounds() }
+          : null)
+      if (origin) {
+        const dock = ballBesideDraggedPanel(origin, bounds)
+        dockWindow.setBounds(dock)
+        dockEdge = null
+        expandedAnchor = { dock, edge: null, panel: bounds }
+        void updateWindowData((state) => ({
+          ...state,
+          dockPosition: { x: dock.x, y: dock.y },
+          dockEdge: null,
+        }))
       }
-      const dock = getDockBounds(
-        screen.getDisplayMatching({
-          ...position,
-          width: DOCK_SIZE,
-          height: DOCK_SIZE,
-        }).workArea,
-        position
-      )
-      dockWindow.setBounds(dock)
-      dockEdge = null
-      expandedAnchor = { dock, edge: null, panel: bounds }
-      void updateWindowData((state) => ({
-        ...state,
-        dockPosition: { x: dock.x, y: dock.y },
-        dockEdge: null,
-      }))
     }
     manuallyMoving = false
     void persistWindowBounds()
@@ -644,7 +801,7 @@ async function buildMainWindow(): Promise<BrowserWindow> {
           Math.abs(bounds.x - area.x) <= DOCK_SNAP_DISTANCE
             ? area.x
             : area.x + area.width - DOCK_SIZE,
-        y: bounds.y + bounds.height / 2 - DOCK_SIZE / 2,
+        y: Math.round(bounds.y + bounds.height / 2 - DOCK_SIZE / 2),
       })
     }
   })
@@ -689,7 +846,7 @@ async function buildMainWindow(): Promise<BrowserWindow> {
     false,
     toStartupQuery({
       lang: data.prefs.lang,
-      theme: data.prefs.theme,
+      theme: resolveThemeSetting(data.prefs.theme),
       firstRun: firstRunExperienceEnabled() && isFreshInstall(),
     })
   )
@@ -815,7 +972,16 @@ async function createDockWindow(): Promise<BrowserWindow> {
       if (!isQuitting && process.env.QUICKLAUNCH_E2E !== '1')
         event.preventDefault()
     })
+    // With the theme set to follow the system, the ball changes with Windows as the panel does.
+    const stopFollowingTheme = onSystemThemeChange(() => {
+      void loadAppData()
+        .then(({ prefs }) => {
+          if (!window.isDestroyed()) sendDockAppearance(window, prefs)
+        })
+        .catch((error) => log.warn('Could not follow the system theme', error))
+    })
     window.on('closed', () => {
+      stopFollowingTheme()
       dockWindow = null
       clearDockDrag()
     })
@@ -839,7 +1005,7 @@ async function createDockWindow(): Promise<BrowserWindow> {
     try {
       await Promise.all([
         loadRenderer(window, true, {
-          theme: data.prefs.theme,
+          theme: resolveThemeSetting(data.prefs.theme),
           lang: data.prefs.lang,
         }),
         ready,
@@ -859,6 +1025,17 @@ export function getDockWindow(): BrowserWindow | null {
   return dockWindow
 }
 
+/** Tells the ball how to dress: the language, and the theme the setting comes to right now. */
+function sendDockAppearance(
+  window: BrowserWindow,
+  prefs: Pick<Prefs, 'lang' | 'theme'>
+): void {
+  window.webContents.send(IPC_CHANNELS.dockAppearance, {
+    theme: resolveThemeSetting(prefs.theme),
+    lang: prefs.lang,
+  })
+}
+
 export async function showMainWindow(
   mode: 'peek' | 'window' = 'window',
   // Who asked, told to the panel: the first-run card ticks its line about the shortcut.
@@ -873,12 +1050,22 @@ export async function showMainWindow(
       const dock = dockWindow.getBounds()
       const display = screen.getDisplayMatching(dock)
       const current = window.getBounds()
-      const origin = getExpandedPosition(
-        display.workArea,
-        dock,
-        current,
-        dockEdge
-      )
+      // The panel opens where it last stood beside the ball. It is laid out afresh when the ball
+      // has been moved since (a pixel or two is only rounding on a scaled display), when the
+      // remembered place is not beside the ball (the panel was moved or resized while the ball was
+      // off screen), or when the screen has no room for the panel there any more.
+      const remembered =
+        expandedAnchor &&
+        Math.abs(expandedAnchor.dock.x - dock.x) <= 2 &&
+        Math.abs(expandedAnchor.dock.y - dock.y) <= 2
+          ? { ...current, x: expandedAnchor.panel.x, y: expandedAnchor.panel.y }
+          : null
+      const origin =
+        remembered &&
+        standsBeside(remembered, dock) &&
+        fitsInArea(remembered, display.workArea)
+          ? { x: remembered.x, y: remembered.y }
+          : getExpandedPosition(display.workArea, dock, current, dockEdge)
       const target = getSafeWindowBounds(
         {
           ...origin,
@@ -1047,10 +1234,7 @@ async function showRestoredBubble(): Promise<void> {
     const data = await loadAppData()
     // The panel never shows during this start, so the ball must not wait for its renderer: it is
     // placed at the saved position by createDockWindow and only has to be shown.
-    window.webContents.send(IPC_CHANNELS.dockAppearance, {
-      theme: data.prefs.theme,
-      lang: data.prefs.lang,
-    })
+    sendDockAppearance(window, data.prefs)
     window.showInactive()
     window.moveTop()
   })
@@ -1067,10 +1251,7 @@ async function showFirstRunBubble(): Promise<void> {
     const window = await createDockWindow()
     if (window.isVisible()) return
     const data = await loadAppData()
-    window.webContents.send(IPC_CHANNELS.dockAppearance, {
-      theme: data.prefs.theme,
-      lang: data.prefs.lang,
-    })
+    sendDockAppearance(window, data.prefs)
     await settleBubble('expand', data.prefs.motion)
   })
 }
@@ -1078,6 +1259,50 @@ async function showFirstRunBubble(): Promise<void> {
 export async function closeWindow(): Promise<void> {
   if (isQuitting) mainWindow?.close()
   else await hideWindow()
+}
+
+/**
+ * A change of language, zoom or shown categories must not take the names off the tabs. When the
+ * names stood whole before the change and the same window would now show icons only (English names
+ * are longer than Chinese ones), the panel is widened to what the names need
+ * (shared/layout-widths.ts). The side next to the ball stays where it is.
+ */
+export async function keepTabNamesVisible(
+  before: Prefs,
+  after: Prefs
+): Promise<void> {
+  const window = mainWindow
+  if (!window || window.isDestroyed() || isQuitting) return
+  const bounds = window.getBounds()
+  const tabModeWith = (prefs: Prefs) =>
+    resolveTabMode(
+      prefs.lang,
+      Math.round(bounds.width / prefs.zoom),
+      visibleTabs(prefs.hiddenTabs).length
+    )
+  if (tabModeWith(before) === 'icons' || tabModeWith(after) !== 'icons') return
+  const area = screen.getDisplayMatching(bounds).workArea
+  const needed = Math.ceil(
+    (stackedMinWidth(after.lang, visibleTabs(after.hiddenTabs).length) +
+      TAB_NAMES_SPARE_WIDTH) *
+      after.zoom
+  )
+  const width = Math.min(
+    needed,
+    Math.max(MIN_EXPANDED_WIDTH, area.width - WINDOW_MARGIN * 2)
+  )
+  if (width <= bounds.width) return
+  const ball = dockWindow?.isVisible() ? dockWindow.getBounds() : null
+  const ballOnTheRight = ball !== null && ball.x >= bounds.x + bounds.width
+  const x = clamp(
+    ballOnTheRight ? bounds.x + bounds.width - width : bounds.x,
+    area.x,
+    area.x + area.width - width
+  )
+  window.setBounds({ ...bounds, x, width })
+  if (expandedAnchor)
+    expandedAnchor = { ...expandedAnchor, panel: window.getBounds() }
+  await persistWindowBounds()
 }
 
 export async function togglePin(): Promise<WindowSnapshot> {
@@ -1190,10 +1415,7 @@ export async function collapseWindow(
           : null
     clearDockDrag()
     window.setBounds(bounds)
-    window.webContents.send(IPC_CHANNELS.dockAppearance, {
-      theme: data.prefs.theme,
-      lang: data.prefs.lang,
-    })
+    sendDockAppearance(window, data.prefs)
     collapsedState = true
     openMode = 'window'
     outsideSince = 0
@@ -1279,7 +1501,18 @@ function moveDockToPointer(
     x: Math.round(dockDragOrigin.window.x + dx),
     y: Math.round(dockDragOrigin.window.y + dy),
   })
-  dockWindow.setPosition(bounds.x, bounds.y)
+  // Both windows are given their size with every step: at a fractional display scale a window
+  // that is only told a new position comes out a pixel larger each time.
+  dockWindow.setBounds(bounds)
+  // An open panel travels with the ball and keeps its place beside it, so the two move as one.
+  const panel = dockDragOrigin.panel
+  if (panel && mainWindow?.isVisible() && !collapsedState)
+    mainWindow.setBounds({
+      x: panel.x + bounds.x - dockDragOrigin.window.x,
+      y: panel.y + bounds.y - dockDragOrigin.window.y,
+      width: panel.width,
+      height: panel.height,
+    })
 }
 
 export async function dragDock(drag: DockDrag): Promise<{ moved: boolean }> {
@@ -1306,6 +1539,10 @@ export async function dragDock(drag: DockDrag): Promise<{ moved: boolean }> {
           ? { x: bounds.x + drag.offset.x, y: bounds.y + drag.offset.y }
           : screen.getCursorScreenPoint(),
       window: bounds,
+      panel:
+        mainWindow?.isVisible() && !mainWindow.isMinimized() && !collapsedState
+          ? mainWindow.getBounds()
+          : null,
       moved: false,
       native: true,
       armed: false,
@@ -1352,6 +1589,7 @@ export async function dragDock(drag: DockDrag): Promise<{ moved: boolean }> {
       dockDragOrigin.pointer
     )
   const moved = dockDragOrigin.moved
+  const panelOrigin = dockDragOrigin.panel
   const releasedPosition = dockWindow.getBounds()
   clearDockDrag()
   const area = screen.getDisplayMatching(releasedPosition).workArea
@@ -1359,9 +1597,25 @@ export async function dragDock(drag: DockDrag): Promise<{ moved: boolean }> {
   if (moved) dockEdge = getDockEdge(area, bounds)
   dockWindow.setBounds(bounds)
   if (moved && mainWindow?.isVisible() && !collapsedState) {
-    const panel = mainWindow.getBounds()
-    const position = getExpandedPosition(area, bounds, panel, dockEdge)
-    mainWindow.setPosition(position.x, position.y)
+    const followed = mainWindow.getBounds()
+    // The size the panel had when the drag began: what it reports now may be a pixel off.
+    const panel = {
+      ...followed,
+      width: panelOrigin?.width ?? followed.width,
+      height: panelOrigin?.height ?? followed.height,
+    }
+    // The panel came along with the ball. It stays in its place beside the ball (the snap to an
+    // edge included) when the screen has room for it there; otherwise it is laid out afresh.
+    const beside = {
+      ...panel,
+      x: panel.x + bounds.x - releasedPosition.x,
+      y: panel.y + bounds.y - releasedPosition.y,
+    }
+    const position =
+      panelOrigin && fitsInArea(beside, area)
+        ? { x: beside.x, y: beside.y }
+        : getExpandedPosition(area, bounds, panel, dockEdge)
+    mainWindow.setBounds({ ...panel, x: position.x, y: position.y })
     expandedAnchor = {
       dock: { x: bounds.x, y: bounds.y },
       edge: dockEdge,

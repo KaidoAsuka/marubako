@@ -24,6 +24,8 @@ function folder(id: string): FolderItem {
 function seed(): AppData {
   const data = createDefaultAppData()
   data.prefs.lang = 'en'
+  // The grid layout: a group is a tile there, and its menu can open it in its popup.
+  data.prefs.viewMode = 'grid'
   data.folders = [
     {
       id: 'g1',
@@ -203,6 +205,23 @@ describe('right-click', () => {
 
     expect(shown[0]!.map((item) => item.label ?? item.type)).toEqual([
       'Open',
+      'Rename…',
+      'separator',
+      'Delete',
+    ])
+  })
+
+  it('does not offer to open a group in the list layout, where a group has no popup', async () => {
+    const data = seed()
+    data.prefs.viewMode = 'list'
+    useAppStore.setState({ data })
+    const shown = choose(null)
+
+    await act(async () => {
+      fireEvent.contextMenu(screen.getByTestId('group'))
+    })
+
+    expect(shown[0]!.map((item) => item.label ?? item.type)).toEqual([
       'Rename…',
       'separator',
       'Delete',

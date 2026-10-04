@@ -4,8 +4,12 @@ import path from 'node:path'
 
 import { expect, test } from '@playwright/test'
 
-import { createDefaultAppData } from '../src/shared/default-data'
-import { closeApp, launchApp, type AppContext } from './test-utils'
+import {
+  createDefaultAppData,
+  closeApp,
+  launchApp,
+  type AppContext,
+} from './test-utils'
 
 type Shown = Array<{ role?: string; label: string; enabled: boolean }>
 

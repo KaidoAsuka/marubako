@@ -180,7 +180,7 @@ describe('data status in the store', () => {
 
     await useAppStore
       .getState()
-      .updateData((draft) => void (draft.prefs.theme = 'light'), {
+      .updateData((draft) => void (draft.prefs.theme = 'dark'), {
         successMessage: 'Saved',
       })
 
@@ -190,7 +190,7 @@ describe('data status in the store', () => {
   it('says "saved" when nothing is wrong', async () => {
     await useAppStore
       .getState()
-      .updateData((draft) => void (draft.prefs.theme = 'light'), {
+      .updateData((draft) => void (draft.prefs.theme = 'dark'), {
         successMessage: 'Saved',
       })
 

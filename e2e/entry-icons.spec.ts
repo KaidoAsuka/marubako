@@ -4,8 +4,7 @@ import path from 'node:path'
 
 import { expect, test, type Page } from '@playwright/test'
 
-import { createDefaultAppData } from '../src/shared/default-data'
-import { closeApp, launchApp } from './test-utils'
+import { createDefaultAppData, closeApp, launchApp } from './test-utils'
 
 // The 12 tile colours of the catalog and the glyph colours that go on them.
 const BRAND_PURPLE = { hex: '#7C6CF0', rgb: 'rgb(124, 108, 240)' }

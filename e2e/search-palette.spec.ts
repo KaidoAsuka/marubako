@@ -6,9 +6,13 @@ import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 
-import { createDefaultAppData } from '../src/shared/default-data'
 import type { AppData } from '../src/shared/types'
-import { closeApp, launchApp, type AppContext } from './test-utils'
+import {
+  createDefaultAppData,
+  closeApp,
+  launchApp,
+  type AppContext,
+} from './test-utils'
 
 const SCRIPT = 'Get-ChildItem | Sort-Object Length'
 
@@ -209,7 +213,7 @@ test('an empty search lists the category in front, then what was used lately, an
     // Nothing used yet: the entries of the category in front (the folders of the sample data).
     await openSearch(page)
     await expect(page.getByTestId('command-caption')).toHaveText('当前分类')
-    await expect(page.getByRole('option').first()).toContainText('桌面')
+    await expect(page.getByRole('option').first()).toContainText('Desktop')
     await expect(palette(page)).not.toContainText('快捷访问')
     await page.keyboard.press('Escape')
     await expect(palette(page)).toHaveCount(0)

@@ -27,10 +27,14 @@ const press = (
 })
 
 describe('the default shortcut', () => {
-  it('is Ctrl+Alt+Space and is itself a valid launch shortcut in its canonical spelling', () => {
-    expect(DEFAULT_SHORTCUT).toBe('CommandOrControl+Alt+Space')
+  it('is Ctrl+Shift+Space and is itself a valid launch shortcut in its canonical spelling', () => {
+    expect(DEFAULT_SHORTCUT).toBe('CommandOrControl+Shift+Space')
+    expect(validateAccelerator(DEFAULT_SHORTCUT)).toEqual({
+      ok: true,
+      accelerator: DEFAULT_SHORTCUT,
+    })
     expect(normalizeAccelerator(DEFAULT_SHORTCUT)).toBe(DEFAULT_SHORTCUT)
-    expect(formatAccelerator(DEFAULT_SHORTCUT)).toBe('Ctrl + Alt + Space')
+    expect(formatAccelerator(DEFAULT_SHORTCUT)).toBe('Ctrl + Shift + Space')
   })
 })
 
@@ -189,6 +193,9 @@ describe('acceleratorFromKeyPress', () => {
     ).toBe('CommandOrControl+Shift+7')
     expect(
       acceleratorFromKeyPress(press('Space', { ctrlKey: true, altKey: true }))
+    ).toBe('CommandOrControl+Alt+Space')
+    expect(
+      acceleratorFromKeyPress(press('Space', { ctrlKey: true, shiftKey: true }))
     ).toBe(DEFAULT_SHORTCUT)
     expect(
       acceleratorFromKeyPress(press('ArrowUp', { altKey: true, metaKey: true }))

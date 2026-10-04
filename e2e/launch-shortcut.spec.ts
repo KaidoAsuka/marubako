@@ -6,8 +6,12 @@ import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 
-import { createDefaultAppData } from '../src/shared/default-data'
-import { closeApp, launchApp, type AppContext } from './test-utils'
+import {
+  createDefaultAppData,
+  closeApp,
+  launchApp,
+  type AppContext,
+} from './test-utils'
 
 const F11 = 'CommandOrControl+Alt+Shift+F11'
 const F12 = 'CommandOrControl+Alt+Shift+F12'

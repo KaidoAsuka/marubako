@@ -21,10 +21,10 @@ describe('DockBubble first frame', () => {
   })
 
   it('uses the saved theme and language from the URL', () => {
-    window.history.replaceState({}, '', '/?view=dock&theme=light&lang=en')
+    window.history.replaceState({}, '', '/?view=dock&theme=dark&lang=en')
     const { container } = render(<DockBubble />)
 
-    expect(container.querySelector('.dock-root')).toHaveClass('theme-light')
+    expect(container.querySelector('.dock-root')).toHaveClass('theme-dark')
     expect(screen.getByTestId('dock-bubble')).toHaveAttribute(
       'aria-label',
       'Open Marubako'
@@ -35,7 +35,7 @@ describe('DockBubble first frame', () => {
     window.history.replaceState({}, '', '/?view=dock&theme=neon&lang=xx')
     const { container } = render(<DockBubble />)
 
-    expect(container.querySelector('.dock-root')).toHaveClass('theme-dark')
+    expect(container.querySelector('.dock-root')).toHaveClass('theme-light')
     expect(screen.getByTestId('dock-bubble')).toHaveAttribute(
       'aria-label',
       '打开 Marubako'
@@ -46,6 +46,6 @@ describe('DockBubble first frame', () => {
     window.history.replaceState({}, '', '/?view=dock')
     const { container } = render(<DockBubble />)
 
-    expect(container.querySelector('.dock-root')).toHaveClass('theme-dark')
+    expect(container.querySelector('.dock-root')).toHaveClass('theme-light')
   })
 })

@@ -5,33 +5,63 @@
 [![CI](https://github.com/KaidoAsuka/marubako/actions/workflows/ci.yml/badge.svg)](https://github.com/KaidoAsuka/marubako/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-Marubako is a small launcher panel for Windows: your folders, websites, apps, notes, commands, passwords you want at hand, and daily tasks live in one window. It sits at the edge of your screen as a floating bubble, opens with a global shortcut, and is built to be driven from the keyboard.
+Marubako is a small panel for Windows that keeps the things you open again and again at work in one place: folders and documents, the pages of every environment, accounts and passwords, the commands you keep typing, notes and the tasks of the day. Most of the time it is a small bubble at the edge of the screen; one shortcut brings it up.
 
 <p align="center">
-  <img src="docs/images/hero.jpg" width="760" alt="Marubako's panel in dark and light themes, with the floating bubble on the right">
+  <img src="docs/images/demo-open.gif" width="460" alt="The shortcut brings the panel out of the floating bubble; one click opens the folder of the design documents, and on the Sites page one click opens the admin console of the test environment">
 </p>
 
-## Features
+## Why I made it
 
-- **Seven categories in one panel.** Folders, Sites, Apps, Passwords, Commands, Notes and Tasks. Put items in groups, and show them as tiles or as a list.
-- **A floating bubble that gets out of the way.** Collapse the panel into a small bubble that stays on top at your screen edge. Click it to peek, double-click to keep the panel open.
-- **Keyboard first.** `Ctrl + Alt + Space` brings the panel up from any program. `Ctrl + K` searches everything, `Alt + 1` to `Alt + 7` switch categories, `Ctrl + N` adds an item, `Esc` collapses the panel.
-- **Add by pasting or dropping.** Paste a link or a path with `Ctrl + V`, or drop files, folders, shortcuts and web addresses onto the panel. Marubako files them in the right category.
-- **Commands you can copy.** Keep scripts in PowerShell, Bash, Batch, Python, JavaScript, TypeScript, SQL, JSON or YAML with syntax highlighting. They are copied, never run.
+I thought of this tool while working as a software developer.
+
+There was too much to keep track of: reference material and design documents, documents that live online, more development and test pages than I could count, and the user names and passwords that go with them. The server accounts came as one set per environment. Every time I needed one of these, I first had to open some document and look it up, and switching between environments made it worse.
+
+Now all of it is in Marubako, and it is much simpler: one shortcut, one click to open what I need, one click to copy what I have to type. My desktop is empty too. It used to be covered with files and shortcuts; they are all in here now.
+
+## How it helps
+
+The demos below use made-up data.
+
+### Documents and pages open with one click
+
+`Ctrl + Shift + Space` brings the panel up from any program (see the demo at the top). Folders, sites and apps each have a page, and you can group them by project or by environment; `Alt + 1` to `Alt + 7` switch categories. Adding something needs no form: drop files, folders or web addresses onto the panel, or paste a link or a path with `Ctrl + V`, and Marubako files it in the right category.
+
+### The accounts, passwords and commands of every environment copy with one click
+
+<p align="center">
+  <img src="docs/images/demo-copy.gif" width="460" alt="On the Passwords page one click copies the user name of a test account and another copies its password; on the Commands page one click copies the command that follows the logs">
+</p>
+
+One group each for development, test and staging. User name and password are copied separately, and the password stays hidden. The commands you use all the time (log in to a server, follow the logs, restart a service) are kept here as well, with syntax highlighting; a click copies a command and never runs it.
+
+### When you cannot remember where it is, search
+
+<p align="center">
+  <img src="docs/images/demo-search.gif" width="460" alt="Ctrl + K, the word test, and the results from every category are listed; the arrow keys choose one and Enter opens it">
+</p>
+
+`Ctrl + K` searches every category. `Enter` opens an item or copies its content, `Shift + Enter` edits it, and `Alt + 1` to `Alt + 9` jump straight to a result.
+
+### A small bubble when you do not need it, and an empty desktop
+
+<p align="center">
+  <img src="docs/images/demo-ball.gif" width="560" alt="The button in the title bar collapses the panel into the floating bubble; a double click on the bubble opens it again; dragging the panel takes the bubble along">
+</p>
+
+`Esc` or the purple button in the title bar collapses the panel into a small bubble that stays on top. Click the bubble to peek (the panel collapses again when the pointer leaves); double-click it to keep the panel open. The bubble and the panel are a pair: drag either one and the other comes along.
+
+### And also
+
 - **Daily tasks.** A task list per day with subtasks, a week strip and a calendar.
+- **Notes.** Release steps, contacts, anything you want to jot down; one click copies a note.
 - **Local only.** No account and no cloud. Your data is one plain JSON file on your PC, with automatic daily backups and export and import. The only network traffic is the update check.
-- **Yours to style.** Dark and light themes, five accent colors, interface size, opacity and animation speed. The interface comes in English, Chinese and Japanese and follows your system language at first start.
-
-## Screenshots
+- **Yours to style.** Light and dark themes (or whichever Windows is in), six accent colors including a Monokai palette, items as a list or as tiles, interface size, opacity and animation speed. The interface comes in English, Chinese and Japanese and follows your system language at first start.
 
 <table>
   <tr>
-    <td><img src="docs/images/group.png" width="380" alt="A group of folders opened as a popup"></td>
-    <td><img src="docs/images/search.png" width="380" alt="Searching everything with Ctrl + K"></td>
-  </tr>
-  <tr>
-    <td><img src="docs/images/sites.png" width="380" alt="Websites as tiles in the light theme"></td>
-    <td><img src="docs/images/settings.png" width="380" alt="The settings dialog"></td>
+    <td><img src="docs/images/group.png" width="380" alt="A group of folders opened as a popup, in the dark theme with items as tiles"></td>
+    <td><img src="docs/images/settings.png" width="380" alt="The settings dialog: three theme choices and six accent colors"></td>
   </tr>
 </table>
 
@@ -57,9 +87,9 @@ Get-FileHash .\Marubako-Setup-<version>.exe -Algorithm SHA256
 
 ## Getting started
 
-- Press `Ctrl + Alt + Space` from anywhere to open the panel. You can change this shortcut in the settings.
-- Press `Esc` or click the purple button in the title bar to collapse the panel into the bubble <img src="docs/images/ball.png" width="22" alt="the floating bubble">. Click the bubble to peek; double-click to keep the panel open. The close button hides Marubako to the system tray instead; use the tray menu to quit.
-- `Ctrl + K` searches every category. `Enter` launches an item or copies its content, `Shift + Enter` edits it, `Alt + 1` to `Alt + 9` jump straight to a result.
+- A new installation comes with a sample in every category. Replace them with your own: the **+** button, `Ctrl + N`, a drop or a paste all add an item.
+- `Ctrl + Shift + Space` opens the panel from anywhere. You can change this shortcut, or turn it off, in the settings.
+- The bubble <img src="docs/images/ball.png" width="22" alt="the floating bubble"> is where the panel goes when you press `Esc`. The close button hides Marubako to the system tray instead; use the tray menu to quit.
 - Right-click an item for the menu, or press `F2` to rename or edit it and `Del` to delete it. A delete can be undone for a few seconds with `Ctrl + Z`.
 
 All the details of how the panel behaves are in the [behavior notes](docs/behavior.zh-CN.md) (written in Chinese).
@@ -79,7 +109,7 @@ To make a backup, or to move to another computer, use **Settings > Language & da
 
 ## About the passwords category
 
-The passwords category is a convenience, not a password manager: each password is encrypted for your Windows account on this PC, but there is no master password, so anyone who can sign in to that Windows account can read them, and a copied password stays on the clipboard until you copy something else. Keep the passwords that really matter (banking, your main e-mail, recovery codes) in a dedicated password manager.
+The passwords category is for accounts you want at hand, such as those of test environments and development servers. It is a convenience, not a password manager: each password is encrypted for your Windows account on this PC, but there is no master password, so anyone who can sign in to that Windows account can read them, and a copied password stays on the clipboard until you copy something else. Keep the passwords that really matter (banking, your main e-mail, recovery codes) in a dedicated password manager.
 
 ## Build from source
 

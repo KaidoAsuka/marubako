@@ -6,7 +6,6 @@ import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 
-import { createDefaultAppData } from '../src/shared/default-data'
 import {
   DEFAULT_PANEL_WIDTH,
   ROW_MIN_WIDTH,
@@ -15,7 +14,12 @@ import {
   stackedMinWidth,
 } from '../src/shared/layout-widths'
 import type { Lang, Tab } from '../src/shared/types'
-import { closeApp, launchApp, type AppContext } from './test-utils'
+import {
+  createDefaultAppData,
+  closeApp,
+  launchApp,
+  type AppContext,
+} from './test-utils'
 
 const TABS = [
   'folders',

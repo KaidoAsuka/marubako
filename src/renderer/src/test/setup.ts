@@ -1,7 +1,15 @@
 import '@testing-library/jest-dom/vitest'
 import { vi } from 'vitest'
 
+import {
+  DEFAULT_SHORTCUT,
+  formatAccelerator,
+} from '../../../shared/accelerator'
 import { createDefaultAppData } from '../../../shared/default-data'
+
+// What the main process reports for a new installation: the default shortcut as it reads, and the
+// default (light) theme for the ball.
+const SHORTCUT_TEXT = formatAccelerator(DEFAULT_SHORTCUT)
 
 Object.assign(window, {
   quickLaunch: {
@@ -61,7 +69,7 @@ Object.assign(window, {
       data: {
         openAtLogin: false,
         canAutoStart: false,
-        shortcut: 'Ctrl + Alt + Space',
+        shortcut: SHORTCUT_TEXT,
         shortcutAvailable: true,
       },
     })),
@@ -75,7 +83,7 @@ Object.assign(window, {
       data: {
         openAtLogin: enabled,
         canAutoStart: true,
-        shortcut: 'Ctrl + Alt + Space',
+        shortcut: SHORTCUT_TEXT,
         shortcutAvailable: true,
       },
     })),
@@ -83,7 +91,7 @@ Object.assign(window, {
     onPrepareShow: vi.fn(() => () => {}),
     getDockAppearance: vi.fn(async () => ({
       ok: true,
-      data: { lang: 'zh', theme: 'dark' },
+      data: { lang: 'zh', theme: 'light' },
     })),
     onDockAppearance: vi.fn(() => () => {}),
     onWindowState: vi.fn(() => () => {}),

@@ -868,14 +868,20 @@ button {
   opacity: 0.72;
 }
 
-/* Switching category: the content is already there, it only brightens a little. */
-@keyframes sectionIn {
+/* Switching category: the page slides in a short way from the side its tab is on and fades in.
+   There is no `to`: the page ends as it is styled, with no transform left on it (one would make it
+   the containing block of the drag overlay). */
+@keyframes pageInForward {
   from {
-    opacity: 0.6;
+    opacity: 0;
+    transform: translateX(16px);
   }
+}
 
-  to {
-    opacity: 1;
+@keyframes pageInBackward {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
   }
 }
 

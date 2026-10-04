@@ -13,6 +13,7 @@ import { createDefaultAppData } from '../src/shared/default-data'
 import { translations } from '../src/renderer/src/i18n/translations'
 import { workspaceStrings } from '../src/renderer/src/i18n/workspace'
 import { closeApp, launchApp, type AppContext } from './test-utils'
+import { DOCK_SIZE } from '../src/shared/dock-size'
 
 const TAB_KEYS = [
   'tab_folders',
@@ -81,8 +82,9 @@ test('without a posed locale the e2e runs start in Chinese with no first-run car
 for (const [locale, lang, htmlLang, firstGroup, firstSite] of [
   ['en-US', 'en', 'en', 'Work files', 'Google'],
   ['de-DE', 'en', 'en', 'Work files', 'Google'],
-  ['ja-JP', 'ja', 'ja', '仕事のファイル', 'Google'],
-  ['zh-TW', 'zh', 'zh-CN', '工作文件', '必应'],
+  // The interface follows the computer; the sample entries have the same English words everywhere.
+  ['ja-JP', 'ja', 'ja', 'Work files', 'Google'],
+  ['zh-TW', 'zh', 'zh-CN', 'Work files', 'Google'],
 ] as const) {
   test(`a first launch on a ${locale} computer is in ${lang}, sample data included`, async () => {
     const context = await launchAs({ locale })
@@ -247,14 +249,14 @@ test('a new installation shows the ball beside the panel from the first second, 
     // the 8 px gap, on the same middle. (A window is sized in device pixels: a pixel or two off on
     // a scaled display is not a difference.)
     expect(
-      Math.abs(ball!.x + 56 + 4 - (area.x + area.width))
+      Math.abs(ball!.x + DOCK_SIZE + 4 - (area.x + area.width))
     ).toBeLessThanOrEqual(2)
     expect(
-      Math.abs(ball!.y + 28 - (area.y + area.height / 2))
+      Math.abs(ball!.y + DOCK_SIZE / 2 - (area.y + area.height / 2))
     ).toBeLessThanOrEqual(2)
     expect(Math.abs(panel.x + panel.width + 8 - ball!.x)).toBeLessThanOrEqual(2)
     expect(
-      Math.abs(panel.y + panel.height / 2 - (ball!.y + 28))
+      Math.abs(panel.y + panel.height / 2 - (ball!.y + DOCK_SIZE / 2))
     ).toBeLessThanOrEqual(2)
     expect(panel.visible).toBe(true)
 
@@ -336,7 +338,19 @@ test('the card ticks a line when it is done: an added entry, a trip into the bal
 })
 
 test('an empty category says what it is for, in the language of the computer', async () => {
-  const context = await launchAs({ locale: 'ja-JP' })
+  // A new installation has a sample in every category but the tasks, so the others are emptied.
+  const userDataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'ql-empty-'))
+  const data = createDefaultAppData('ja')
+  data.apps = []
+  data.commands = []
+  data.topOrder.apps = []
+  data.topOrder.commands = []
+  await fs.writeFile(
+    path.join(userDataDir, 'quicklaunch-data.json'),
+    JSON.stringify(data),
+    'utf8'
+  )
+  const context = await launchAs({ locale: 'ja-JP' }, userDataDir)
   try {
     const { page } = context
     for (const [tab, key] of [

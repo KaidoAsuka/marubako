@@ -144,9 +144,12 @@ describe('the stylesheets use the tokens', () => {
 
   it('declare each animation once, in motion.css', () => {
     for (const selector of [
-      '.section-content',
-      '.group-card-body',
-      '.task-card-body',
+      // The page of a category animates only when it was switched to, and the body of a group or
+      // a task only when the user opened it (category-switch.test.ts).
+      ".section-content[data-enter='forward']",
+      ".section-content[data-enter='backward']",
+      '.group-card-body[data-unfold]',
+      '.task-card-body[data-unfold]',
       '.widget-popup',
       '.widget-popup-card',
       '.command-dialog',
@@ -171,6 +174,8 @@ describe('the stylesheets use the tokens', () => {
     const everything = CASCADE_ORDER.map((file) => readStyle(file)).join('\n')
 
     expect(everything).not.toContain('@keyframes commandIn')
+    // The page of a category slides in now (pageInForward, pageInBackward).
+    expect(everything).not.toContain('@keyframes sectionIn')
     expect(everything).not.toMatch(
       /\.loading-(screen|stack|mark|ring|core|line|dots)\b/
     )

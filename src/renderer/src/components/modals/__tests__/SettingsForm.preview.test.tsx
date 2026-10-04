@@ -20,6 +20,10 @@ const state = () => useAppStore.getState()
 function open(configure: (data: AppData) => void = () => {}): void {
   const data = createDefaultAppData()
   data.prefs.lang = 'en'
+  // The tests below switch to the light theme and away from violet, so they start from the dark
+  // theme and violet, whatever a new installation starts with.
+  data.prefs.theme = 'dark'
+  data.prefs.background = 'aurora'
   configure(data)
   useAppStore.setState({
     data,

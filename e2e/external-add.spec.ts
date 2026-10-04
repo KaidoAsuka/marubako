@@ -237,7 +237,7 @@ test('a drop on a group card goes into that group', async () => {
       saved.data.folders
         .find((group) => group.id === 'grp-folders-life')!
         .items.map((item) => item.name)
-    ).toEqual(['下载', 'a.txt'])
+    ).toEqual(['Downloads', 'a.txt'])
     expect(saved.data.loose.folders).toHaveLength(0)
   } finally {
     await closeApp(context)

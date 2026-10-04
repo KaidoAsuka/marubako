@@ -9,10 +9,12 @@ import { BACKGROUNDS } from '../../../../shared/types'
 import { getBackgroundUiVariables } from '../background-theme'
 import {
   contrast,
+  isPaletteChoice,
   loadCascade,
   loadRules,
   lastValue,
   over,
+  paletteValue,
   parseColor,
   type Rgba,
 } from './css-utils'
@@ -22,9 +24,14 @@ const strip = loadRules('feedback.css')
 const own = (selector: string, property: string) =>
   lastValue(strip, selector, property)
 const themes = loadRules('themes.css')
-const token = (theme: 'dark' | 'light', name: string): string =>
-  lastValue(themes, theme === 'dark' ? ':root' : '.theme-light', name) ??
-  lastValue(themes, ':root', name)!
+// A token of the theme, or of an accent choice that is a whole palette (monokai) when `key` names
+// one: for every other choice this comes to the theme's own value.
+const token = (
+  theme: 'dark' | 'light',
+  name: string,
+  key: string = 'aurora'
+): string => paletteValue(themes, theme, key, name)!
+const PALETTES = BACKGROUNDS.filter((key) => isPaletteChoice(themes, key))
 
 /** `color-mix(in srgb, top share%, bottom)` of two opaque colours. */
 function mix(top: Rgba, share: number, bottom: Rgba): Rgba {
@@ -185,11 +192,11 @@ describe('readable in both themes', () => {
 
   for (const theme of ['dark', 'light'] as const) {
     for (const [name, toneToken] of tones) {
-      const fill = () =>
+      const fill = (key?: string) =>
         mix(
-          parseColor(token(theme, toneToken)),
+          parseColor(token(theme, toneToken, key)),
           0.12,
-          parseColor(token(theme, '--sidebar-bg'))
+          parseColor(token(theme, '--sidebar-bg', key))
         )
 
       it(`keeps the words at 4.5:1 or better on the ${name} strip (${theme})`, () => {
@@ -199,25 +206,42 @@ describe('readable in both themes', () => {
         ).toBeGreaterThanOrEqual(4.5)
       })
 
-      // The button is the accent, whichever of the five the user chose, at rest and with its hover
-      // tint (--accent-soft) on; in the light theme the accent leans toward the text colour.
+      // The button is the accent, whichever one the user chose, at rest and with its hover tint
+      // (--accent-soft) on; in the light theme the accent leans toward the text colour. A choice
+      // that is a whole palette (monokai) brings the strip's own colours with it.
       for (const key of BACKGROUNDS) {
         it(`keeps the button words at 4.5:1 or better on the ${name} strip, ${key} (${theme})`, () => {
           const accent = parseColor(
             getBackgroundUiVariables(theme, key)['--accent']!
           )
+          const ground = fill(key)
           const words =
             theme === 'light'
-              ? mix(accent, 0.6, parseColor(token(theme, '--text')))
+              ? mix(accent, 0.6, parseColor(token(theme, '--text', key)))
               : accent
           const share =
             Number.parseFloat(
-              /(\d+(?:\.\d+)?)%/.exec(token(theme, '--accent-soft'))?.[1] ?? '0'
+              /(\d+(?:\.\d+)?)%/.exec(
+                token(theme, '--accent-soft', key)
+              )?.[1] ?? '0'
             ) / 100
-          const hover = over({ ...accent, a: share }, fill())
+          const hover = over({ ...accent, a: share }, ground)
 
-          expect(contrast(words, fill()), 'at rest').toBeGreaterThanOrEqual(4.5)
+          expect(contrast(words, ground), 'at rest').toBeGreaterThanOrEqual(4.5)
           expect(contrast(words, hover), 'hovered').toBeGreaterThanOrEqual(4.5)
+        })
+      }
+
+      for (const key of PALETTES) {
+        it(`keeps the words at 4.5:1 and the icon and the line at 3:1 on the ${name} strip of the ${key} palette (${theme})`, () => {
+          expect(
+            contrast(token(theme, '--text', key), fill(key)),
+            'words'
+          ).toBeGreaterThanOrEqual(4.5)
+          expect(
+            contrast(token(theme, toneToken, key), fill(key)),
+            'icon and line'
+          ).toBeGreaterThanOrEqual(3)
         })
       }
 

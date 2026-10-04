@@ -3,9 +3,8 @@ import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 
-import { createDefaultAppData } from '../src/shared/default-data'
 import type { FolderItem } from '../src/shared/types'
-import { closeApp, launchApp } from './test-utils'
+import { createDefaultAppData, closeApp, launchApp } from './test-utils'
 
 function folder(id: string, name: string): FolderItem {
   return { id, kind: 'folder', name, icon: '📁', path: `C:\\Work\\${name}` }

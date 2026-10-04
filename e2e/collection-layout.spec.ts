@@ -2,8 +2,7 @@ import { test, expect } from '@playwright/test'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import os from 'node:os'
-import { createDefaultAppData } from '../src/shared/default-data'
-import { closeApp, launchApp } from './test-utils'
+import { createDefaultAppData, closeApp, launchApp } from './test-utils'
 
 async function launchCollection() {
   const userDataDir = await fs.mkdtemp(

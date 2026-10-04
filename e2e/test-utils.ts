@@ -9,6 +9,27 @@ import {
   type Page,
 } from '@playwright/test'
 
+import { createDefaultAppData as createStarterData } from '../src/shared/default-data'
+import type { AppData, Lang } from '../src/shared/types'
+
+/**
+ * Sample data for a spec that writes its own data file. It has the look the specs were written
+ * against (dark, violet, a grid): the same one the app gives a first start under QUICKLAUNCH_E2E
+ * (src/main/first-run.ts). new-install-look.spec.ts covers the look a real installation starts with.
+ */
+export function createDefaultAppData(lang: Lang = 'zh'): AppData {
+  const data = createStarterData(lang)
+  return {
+    ...data,
+    prefs: {
+      ...data.prefs,
+      theme: 'dark',
+      background: 'aurora',
+      viewMode: 'grid',
+    },
+  }
+}
+
 export type AppContext = {
   electronApp: ElectronApplication
   page: Page

@@ -13,6 +13,7 @@ import {
   declarations,
   hoverFill,
   isBlue,
+  isPaletteChoice,
   lastValue,
   loadRules,
   parseColor,
@@ -38,6 +39,9 @@ function walk(dir: string): string[] {
 const themes = loadRules('themes.css')
 const light = (name: string) => lastValue(themes, '.theme-light', name)
 const dark = (name: string) => lastValue(themes, ':root', name)
+// The choices that only replace the accent. Monokai is a whole palette with a dark text on its
+// fills: monokai-palette.test.ts checks it against its own surfaces.
+const PLAIN_ACCENTS = BACKGROUNDS.filter((key) => !isPaletteChoice(themes, key))
 
 describe('accent seed', () => {
   it('uses the violet of the app icon in both themes', () => {
@@ -114,7 +118,8 @@ describe('accent seed', () => {
   })
 
   it('keeps white text readable on the solid fill, resting and hovered', () => {
-    // --on-accent is white in both themes, so it is declared once, on :root.
+    // --on-accent is white in both themes, so it is declared once, on :root (only the monokai
+    // palette, whose fills are yellow, replaces it).
     const onAccent = dark('--on-accent')!
     expect(light('--on-accent')).toBeUndefined()
 
@@ -267,8 +272,16 @@ describe('no blue left in the stylesheets', () => {
 })
 
 describe('background palettes', () => {
-  it('keep the five keys and the same shape', () => {
+  it('keep the five old keys in their order, with monokai added after them', () => {
     expect(BACKGROUNDS).toEqual([
+      'aurora',
+      'sunset',
+      'forest',
+      'ocean',
+      'minimal',
+      'monokai',
+    ])
+    expect(PLAIN_ACCENTS).toEqual([
       'aurora',
       'sunset',
       'forest',
@@ -320,7 +333,7 @@ describe('background palettes', () => {
     }
   })
 
-  it.each(BACKGROUNDS)(
+  it.each(PLAIN_ACCENTS)(
     'keeps white text readable on the solid fill of %s, resting and hovered',
     (key) => {
       for (const theme of ['dark', 'light'] as const) {

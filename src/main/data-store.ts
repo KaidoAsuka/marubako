@@ -37,6 +37,7 @@ import {
 } from './data-file'
 import { normalizeAppData, UnsupportedSchemaError } from './data-normalize'
 import { DataDecryptError } from './encryption'
+import { starterLookOverride } from './first-run'
 import { detectInitialLang } from './initial-lang'
 import { normalizeWindowState } from './window-state'
 import { createWriteQueue } from './write-queue'
@@ -342,7 +343,11 @@ async function readBackups(filePath: string): Promise<LoadedBackup[]> {
 
 /** Data for a new installation: the sample entries speak the language of the computer. */
 function starterData(): AppData {
-  return normalizeAppData(createDefaultAppData(detectInitialLang()))
+  const starter = createDefaultAppData(detectInitialLang())
+  return normalizeAppData({
+    ...starter,
+    prefs: { ...starter.prefs, ...starterLookOverride() },
+  })
 }
 
 async function recover(

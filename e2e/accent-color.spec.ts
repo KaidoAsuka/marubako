@@ -1,4 +1,5 @@
-// color-4: "background" became "accent colour": five solid dots, no blob layer behind the canvas.
+// color-4: "background" became "accent colour": one solid dot per choice (five accents and the
+// Monokai palette), no blob layer behind the canvas.
 import { test, expect, type Page } from '@playwright/test'
 
 import { ACCENT_CHOICES } from '../src/renderer/src/styles/background-theme'
@@ -16,6 +17,7 @@ const NAMES_ZH: Record<BackgroundKey, string> = {
   forest: '青',
   ocean: '海蓝',
   minimal: '石墨',
+  monokai: 'Monokai',
 }
 
 async function openAppearance(page: Page): Promise<void> {
@@ -60,7 +62,7 @@ async function chooseAndSave(
 }
 
 for (const theme of ['dark', 'light'] as const) {
-  test(`the setting is five solid 24px dots with a 28px hit area, a ring and a check on the chosen one (${theme})`, async () => {
+  test(`the setting is one solid 24px dot per choice with a 28px hit area, a ring and a check on the chosen one (${theme})`, async () => {
     const context = await launchApp()
     const { page } = context
     try {
@@ -71,7 +73,7 @@ for (const theme of ['dark', 'light'] as const) {
       const group = page.getByRole('radiogroup', { name: '强调色' })
       await expect(group).toBeVisible()
       await expect(page.getByText('背景', { exact: true })).toHaveCount(0)
-      await expect(group.getByRole('radio')).toHaveCount(5)
+      await expect(group.getByRole('radio')).toHaveCount(BACKGROUNDS.length)
 
       for (const key of BACKGROUNDS) {
         const dot = page.getByTestId(`background-${key}`)
@@ -157,11 +159,11 @@ test('the dots are one stop in the tab order and the arrow keys move the choice'
       'true'
     )
     await page.keyboard.press('End')
-    await expect(page.getByTestId('background-minimal')).toBeFocused()
+    await expect(page.getByTestId('background-monokai')).toBeFocused()
     await page.keyboard.press('ArrowRight')
     await expect(page.getByTestId('background-aurora')).toBeFocused()
 
-    // Tab leaves the group in one step instead of walking five dots.
+    // Tab leaves the group in one step instead of walking every dot.
     await page.keyboard.press('Tab')
     await expect(page.getByTestId('background-sunset')).not.toBeFocused()
     await expect(page.getByLabel('界面大小')).toBeFocused()

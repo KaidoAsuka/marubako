@@ -13,6 +13,7 @@ import { BACKGROUNDS, type BackgroundKey } from '../../../../../shared/types'
 import { translations } from '../../../i18n/translations'
 import { ACCENT_CHOICES } from '../../../styles/background-theme'
 import { useAppStore } from '../../../store/use-app-store'
+import { installSystemTheme } from '../../../test/system-theme'
 import AccentDots from '../AccentDots'
 import SettingsForm from '../SettingsForm'
 
@@ -53,7 +54,7 @@ describe('AccentDots', () => {
 
     const group = screen.getByRole('radiogroup', { name: 'Accent color' })
     const dots = within(group).getAllByRole('radio')
-    expect(dots).toHaveLength(5)
+    expect(dots).toHaveLength(6)
     expect(dots.map((dot) => dot.getAttribute('data-testid'))).toEqual(
       BACKGROUNDS.map((key) => `background-${key}`)
     )
@@ -69,6 +70,7 @@ describe('AccentDots', () => {
       'Teal',
       'Blue',
       'Graphite',
+      'Monokai',
     ])
   })
 
@@ -143,16 +145,20 @@ describe('AccentDots', () => {
     expect(onChange).toHaveBeenLastCalledWith('sunset')
     expect(screen.getByTestId('background-sunset')).toHaveFocus()
 
+    // The ends wrap round: the last dot is monokai.
     press('aurora', 'ArrowLeft')
-    expect(onChange).toHaveBeenLastCalledWith('minimal')
-    press('minimal', 'ArrowRight')
+    expect(onChange).toHaveBeenLastCalledWith('monokai')
+    expect(screen.getByTestId('background-monokai')).toHaveFocus()
+    press('monokai', 'ArrowRight')
     expect(onChange).toHaveBeenLastCalledWith('aurora')
+    press('minimal', 'ArrowRight')
+    expect(onChange).toHaveBeenLastCalledWith('monokai')
     press('forest', 'ArrowDown')
     expect(onChange).toHaveBeenLastCalledWith('ocean')
     press('forest', 'ArrowUp')
     expect(onChange).toHaveBeenLastCalledWith('sunset')
     press('forest', 'End')
-    expect(onChange).toHaveBeenLastCalledWith('minimal')
+    expect(onChange).toHaveBeenLastCalledWith('monokai')
     press('forest', 'Home')
     expect(onChange).toHaveBeenLastCalledWith('aurora')
 
@@ -187,15 +193,26 @@ describe('the accent colour in the settings dialog', () => {
   }
 
   it.each([
-    ['zh', '强调色', ['紫罗兰', '珊瑚橙', '青', '海蓝', '石墨']],
-    ['en', 'Accent color', ['Violet', 'Coral', 'Teal', 'Blue', 'Graphite']],
+    ['zh', '强调色', ['紫罗兰', '珊瑚橙', '青', '海蓝', '石墨', 'Monokai']],
+    [
+      'en',
+      'Accent color',
+      ['Violet', 'Coral', 'Teal', 'Blue', 'Graphite', 'Monokai'],
+    ],
     [
       'ja',
       'アクセントカラー',
-      ['バイオレット', 'コーラル', 'ティール', 'ブルー', 'グラファイト'],
+      [
+        'バイオレット',
+        'コーラル',
+        'ティール',
+        'ブルー',
+        'グラファイト',
+        'Monokai',
+      ],
     ],
   ] as const)(
-    'is named "%s" with five dots named in that language',
+    'is named "%s" with six dots named in that language',
     async (lang, title, labels) => {
       setLang(lang)
       await openAppearance()
@@ -232,14 +249,73 @@ describe('the accent colour in the settings dialog', () => {
     expect(useAppStore.getState().data?.prefs.background).toBe('forest')
   })
 
+  it('starts on graphite, the accent of a new installation', async () => {
+    setLang('en')
+    await openAppearance()
+
+    for (const key of BACKGROUNDS) {
+      expect(screen.getByTestId(`background-${key}`)).toHaveAttribute(
+        'aria-checked',
+        String(key === 'minimal')
+      )
+    }
+  })
+
+  it('saves monokai like any other choice', async () => {
+    setLang('en')
+    await openAppearance()
+
+    fireEvent.click(screen.getByTestId('background-monokai'))
+    expect(screen.getByTestId('background-monokai')).toHaveAttribute(
+      'aria-checked',
+      'true'
+    )
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('settings-save'))
+    })
+
+    expect(useAppStore.getState().data?.prefs.background).toBe('monokai')
+  })
+
   it('shows the dots in the solid colours of the theme chosen in the same dialog', async () => {
     setLang('en')
     await openAppearance()
     const dot = () =>
       screen.getByTestId('background-ocean').style.getPropertyValue('--dot')
 
+    fireEvent.click(screen.getByTestId('theme-dark'))
     expect(dot()).toBe(ACCENT_CHOICES.ocean.solidDark)
     fireEvent.click(screen.getByTestId('theme-light'))
     expect(dot()).toBe(ACCENT_CHOICES.ocean.solidLight)
+  })
+
+  it('shows the dots in the light theme of a new installation', async () => {
+    setLang('en')
+    await openAppearance()
+
+    for (const key of BACKGROUNDS) {
+      expect(
+        screen.getByTestId(`background-${key}`).style.getPropertyValue('--dot'),
+        key
+      ).toBe(ACCENT_CHOICES[key].solidLight)
+    }
+  })
+
+  it('shows the dots in the theme "system" comes to: the one Windows is in, and follows it', async () => {
+    const system = installSystemTheme(true)
+    try {
+      setLang('en')
+      await openAppearance()
+      const dot = () =>
+        screen.getByTestId('background-ocean').style.getPropertyValue('--dot')
+
+      fireEvent.click(screen.getByTestId('theme-system'))
+      expect(dot()).toBe(ACCENT_CHOICES.ocean.solidDark)
+
+      system.set(false)
+      expect(dot()).toBe(ACCENT_CHOICES.ocean.solidLight)
+    } finally {
+      system.restore()
+    }
   })
 })

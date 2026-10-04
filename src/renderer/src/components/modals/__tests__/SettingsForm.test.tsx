@@ -20,7 +20,7 @@ function reportLaunchSettings(openAtLogin: boolean): void {
   const data: LaunchSettings = {
     openAtLogin,
     canAutoStart: true,
-    shortcut: 'Ctrl + Alt + Space',
+    shortcut: 'Ctrl + Shift + Space',
     shortcutAvailable: true,
   }
   vi.mocked(window.quickLaunch.getLaunchSettings).mockResolvedValue({
@@ -109,7 +109,7 @@ describe('SettingsForm login switch', () => {
         data: {
           openAtLogin: actual,
           canAutoStart: true,
-          shortcut: 'Ctrl + Alt + Space',
+          shortcut: 'Ctrl + Shift + Space',
           shortcutAvailable: true,
         },
       })

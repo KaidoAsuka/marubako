@@ -1,8 +1,9 @@
+import { DOCK_SIZE } from '../../../shared/dock-size'
 import type { DockPosition } from '../../../shared/types'
 import type { SpringOptions } from './spring'
 
-/** Half of the 56px native ball window: the ball's centre relative to its corner. */
-const BALL_CENTER = 28
+/** Half of the native ball window: the ball's centre relative to its corner. */
+const BALL_CENTER = DOCK_SIZE / 2
 /** How far the far edge of the panel travels while it scales in, in pixels. */
 const EXPAND_TRAVEL = 48
 /** How far the far edge travels while it scales out. */
@@ -12,7 +13,7 @@ const COLLAPSE_TRAVEL = 32
 export const BALL_SPRING: SpringOptions = { bounce: 0.45, response: 300 }
 export const PANEL_SPRING: SpringOptions = { bounce: 0.2, response: 340 }
 
-/** Drawn size of the ball while the panel is open, relative to the 50px resting size. */
+/** Drawn size of the ball while the panel is open, relative to its resting size. */
 export const DOT_SCALE = 0.52
 export const BALL_RADIUS = '28% 28% 28% 50%'
 export const DOT_RADIUS = '50%'

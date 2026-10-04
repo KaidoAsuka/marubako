@@ -15,6 +15,7 @@ import {
   loadRules,
   mixOpaque,
   over,
+  paletteValue,
   parseColor,
   rulesMatching,
 } from './css-utils'
@@ -117,8 +118,6 @@ describe('prefers-reduced-motion', () => {
 describe('the active tab', () => {
   it('reads at 4.5:1 on the marker in both themes and every accent colour', () => {
     const themes = loadRules('themes.css')
-    const token = (theme: 'dark' | 'light', name: string) =>
-      lastValue(themes, theme === 'light' ? '.theme-light' : ':root', name)!
     expect(win('.theme-light .tab-button.active', 'color')).toBe(
       'color-mix(in srgb, var(--accent) 60%, var(--text))'
     )
@@ -128,12 +127,13 @@ describe('the active tab', () => {
         const accent = parseColor(
           getBackgroundUiVariables(theme, key)['--accent']!
         )
-        const bar = parseColor(token(theme, '--sidebar-bg'))
+        // The bar and the text are the choice's own where it is a whole palette (monokai).
+        const token = (name: string) =>
+          parseColor(paletteValue(themes, theme, key, name)!)
+        const bar = token('--sidebar-bg')
         const marker = over({ ...accent, a: 0.18 }, bar)
         const label =
-          theme === 'light'
-            ? mixOpaque(accent, 0.6, parseColor(token(theme, '--text')))
-            : accent
+          theme === 'light' ? mixOpaque(accent, 0.6, token('--text')) : accent
 
         expect(
           contrast(label, marker),

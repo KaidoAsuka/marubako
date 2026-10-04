@@ -7,8 +7,10 @@ import {
   ROW_MIN_WIDTH,
   rowMinWidth,
   SEARCH_ICON_BELOW_WIDTH,
+  showsViewToggle,
   STACKED_MIN_WIDTH,
   stackedMinWidth,
+  VIEW_TOGGLE_MIN_WIDTH,
 } from '../layout-widths'
 import { ALL_TABS, LANGS } from '../types'
 
@@ -52,9 +54,15 @@ describe('the widths that decide the category row', () => {
     }
   })
 
-  it('make Chinese about 600 the width where icon and name go side by side', () => {
-    expect(ROW_MIN_WIDTH.zh).toBeGreaterThanOrEqual(600)
-    expect(ROW_MIN_WIDTH.zh).toBeLessThanOrEqual(620)
+  it('make Chinese about 640 the width where icon and name go side by side', () => {
+    // About 600 for the names and the two buttons beside them, and the 34 px of the switch
+    // between grid and list that the folders, sites and apps pages carry as a third.
+    expect(ROW_MIN_WIDTH.zh).toBeGreaterThanOrEqual(634)
+    expect(ROW_MIN_WIDTH.zh).toBeLessThanOrEqual(654)
+  })
+
+  it('have room in the one-row layout for the three buttons of the folders, sites and apps pages', () => {
+    expect(ROW_MIN_WIDTH).toEqual({ zh: 644, ja: 700, en: 740 })
   })
 })
 
@@ -106,8 +114,64 @@ describe('resolveSearchMode', () => {
       expect(resolveSearchMode(lang, ROW_MIN_WIDTH[lang]), lang).toBe('full')
   })
 
-  it('has an icon width of about 420', () => {
-    expect(SEARCH_ICON_BELOW_WIDTH).toBe(420)
+  it('has an icon width of 454: below it the label would leave the row no free stretch to drag the window by', () => {
+    expect(SEARCH_ICON_BELOW_WIDTH).toBe(454)
+  })
+
+  it('keeps the label out of the slender default window in Chinese and Japanese, and shows it in English', () => {
+    expect(resolveSearchMode('zh', DEFAULT_PANEL_WIDTH.zh)).toBe('icon')
+    expect(resolveSearchMode('ja', DEFAULT_PANEL_WIDTH.ja)).toBe('icon')
+    expect(resolveSearchMode('en', DEFAULT_PANEL_WIDTH.en)).toBe('label')
+  })
+
+  it('switches from the icon to the label exactly at the icon width', () => {
+    for (const lang of LANGS) {
+      expect(resolveSearchMode(lang, SEARCH_ICON_BELOW_WIDTH - 1), lang).toBe(
+        'icon'
+      )
+      expect(resolveSearchMode(lang, SEARCH_ICON_BELOW_WIDTH), lang).toBe(
+        'label'
+      )
+    }
+  })
+})
+
+describe('showsViewToggle', () => {
+  it('shows the switch between grid and list from 262 px on', () => {
+    expect(VIEW_TOGGLE_MIN_WIDTH).toBe(262)
+    expect(showsViewToggle(VIEW_TOGGLE_MIN_WIDTH - 1)).toBe(false)
+    expect(showsViewToggle(VIEW_TOGGLE_MIN_WIDTH)).toBe(true)
+    expect(showsViewToggle(VIEW_TOGGLE_MIN_WIDTH + 1)).toBe(true)
+  })
+
+  it('only ever goes from hidden to shown as the window widens', () => {
+    let shown = false
+
+    for (let width = 0; width <= 1400; width += 1) {
+      if (shown) expect(showsViewToggle(width), String(width)).toBe(true)
+      shown = showsViewToggle(width)
+    }
+    expect(showsViewToggle(0)).toBe(false)
+    expect(shown).toBe(true)
+  })
+
+  it('shows it in every window at the normal interface size: the narrowest one allowed is 320', () => {
+    expect(VIEW_TOGGLE_MIN_WIDTH).toBeLessThanOrEqual(320)
+    expect(showsViewToggle(320)).toBe(true)
+    for (const lang of LANGS)
+      expect(showsViewToggle(DEFAULT_PANEL_WIDTH[lang]), lang).toBe(true)
+  })
+
+  it('takes the zoom setting to hide it: the narrowest window at the largest zoom', () => {
+    // Widths are those of the window divided by the zoom: 320 px at 140% are 229.
+    expect(showsViewToggle(Math.round(320 / 1.4))).toBe(false)
+    expect(showsViewToggle(Math.round(320 / 1.2))).toBe(true)
+  })
+
+  it('is already there while the tabs are still icons only', () => {
+    // The switch needs less room than the names of any language.
+    for (const lang of LANGS)
+      expect(VIEW_TOGGLE_MIN_WIDTH, lang).toBeLessThan(STACKED_MIN_WIDTH[lang])
   })
 })
 
@@ -192,8 +256,10 @@ describe('the widths for fewer categories', () => {
   })
 
   it('puts the search label and shortcut with the row layout for the count in use', () => {
+    // Three Chinese names go side by side below the icon width of the search: still the icon.
+    expect(rowMinWidth('zh', 3)).toBeLessThan(SEARCH_ICON_BELOW_WIDTH)
     expect(resolveSearchMode('zh', rowMinWidth('zh', 3), 3)).toBe('icon')
-    expect(resolveSearchMode('zh', 430, 3)).toBe('full')
-    expect(resolveSearchMode('zh', 430, 7)).toBe('label')
+    expect(resolveSearchMode('zh', SEARCH_ICON_BELOW_WIDTH, 3)).toBe('full')
+    expect(resolveSearchMode('zh', SEARCH_ICON_BELOW_WIDTH, 7)).toBe('label')
   })
 })

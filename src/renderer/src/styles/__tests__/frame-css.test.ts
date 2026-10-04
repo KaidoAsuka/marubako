@@ -94,6 +94,18 @@ describe('the three layouts of the tabs', () => {
     expect(win('.section-actions .section-group-add', 'width')).toBe('28px')
     expect(win('.section-action-label', 'display')).toBeUndefined()
   })
+
+  it('draws the layout switch as a 28px square like "new group", in either row', () => {
+    for (const property of ['width', 'padding'] as const) {
+      expect(win('.section-actions .section-view-toggle', property)).toBe(
+        win('.section-actions .section-group-add', property)
+      )
+    }
+    expect(win('.section-actions .section-view-toggle', 'width')).toBe('28px')
+    expect(win('.section-actions .secondary-button', 'height')).toBe('28px')
+    // The buttons of the row stand 6px apart: the switch costs the row 34px.
+    expect(win('.section-actions', 'gap')).toBe('6px')
+  })
 })
 
 describe('the three layouts of the search', () => {
@@ -146,7 +158,7 @@ describe('what the frame replaced is gone', () => {
     for (const rule of cascade) {
       if (!rule.at.some((at) => /max-width:\s*(480|620)px/.test(at))) continue
       expect(rule.selector, rule.at.join(' ')).not.toMatch(
-        /titlebar|workspace-nav|tab-button|tabbar|section-add|section-group-add/
+        /titlebar|workspace-nav|tab-button|tabbar|section-add|section-group-add|section-view-toggle/
       )
     }
   })

@@ -1,6 +1,7 @@
+import { DOCK_SIZE } from '../shared/dock-size'
 import type { DockPosition, DockEdge } from '../shared/types'
 
-export const DOCK_SIZE = 56
+export { DOCK_SIZE }
 export const DOCK_MARGIN = 4
 export const DOCK_SNAP_DISTANCE = 24
 export const DOCK_PANEL_GAP = 8
@@ -53,7 +54,9 @@ export function getExpandedPosition(
       : dock.x - area.x > area.x + area.width - dock.x - DOCK_SIZE
         ? left
         : right
-  const y = edge ? dock.y + DOCK_SIZE / 2 - size.height / 2 : dock.y
+  // Whole pixels: a panel of odd height would otherwise be centred on a half one, and a window
+  // cannot be placed there.
+  const y = edge ? Math.round(dock.y + DOCK_SIZE / 2 - size.height / 2) : dock.y
   return {
     x: Math.max(area.x, Math.min(area.x + area.width - size.width, x)),
     y: Math.max(area.y, Math.min(area.y + area.height - size.height, y)),
@@ -79,6 +82,61 @@ export function getFirstRunLayout(
     panel: getExpandedPosition(area, dock, size, 'right'),
     edge: 'right',
   }
+}
+
+/** Whether a window with these bounds lies wholly inside the work area. */
+export function fitsInArea(bounds: Area, area: Area): boolean {
+  return (
+    bounds.x >= area.x &&
+    bounds.y >= area.y &&
+    bounds.x + bounds.width <= area.x + area.width &&
+    bounds.y + bounds.height <= area.y + area.height
+  )
+}
+
+/**
+ * Whether a panel stands beside the ball: the two do not overlap, and are no further apart than
+ * the gap the app leaves between them (plus `slack` for rounding), across and down. A panel that
+ * was moved or resized while the ball was not on screen can be anywhere, and is not beside it.
+ */
+export function standsBeside(
+  panel: Area,
+  dock: DockPosition,
+  slack = 2
+): boolean {
+  const apartX = Math.max(
+    panel.x - (dock.x + DOCK_SIZE),
+    dock.x - (panel.x + panel.width)
+  )
+  const apartY = Math.max(
+    panel.y - (dock.y + DOCK_SIZE),
+    dock.y - (panel.y + panel.height)
+  )
+  const reach = DOCK_PANEL_GAP + slack
+  return (
+    (apartX >= 0 || apartY >= 0) &&
+    Math.max(apartX, 0) <= reach &&
+    Math.max(apartY, 0) <= reach
+  )
+}
+
+/**
+ * Where a ball saved as docked to an edge sits for the current ball size: flush against that edge.
+ * A saved position was computed for the size the ball had then, and the ball has been made smaller
+ * since; one docked to the right edge would otherwise stand off it by the difference.
+ */
+export function redockToEdge(
+  area: Area,
+  position: DockPosition,
+  edge: DockEdge
+): DockPosition {
+  if (edge === 'left') return { x: area.x + DOCK_MARGIN, y: position.y }
+  if (edge === 'right')
+    return {
+      x: area.x + area.width - DOCK_SIZE - DOCK_MARGIN,
+      y: position.y,
+    }
+  return position
 }
 
 export function isAtScreenEdge(bounds: Area, area: Area): boolean {

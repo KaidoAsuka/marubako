@@ -88,15 +88,15 @@ test('hides a category from the tabs, the search and Alt+number, keeps its data 
   try {
     const { page } = first
     // The starter note is found by its name before anything is hidden.
-    expect(await searchHits(page, '使用说明')).toBe(1)
+    expect(await searchHits(page, 'How to use')).toBe(1)
 
     await setShown(page, { notes: false })
 
     await expect(page.getByTestId('tab-notes')).toHaveCount(0)
     await expect(page.locator('.tab-button')).toHaveCount(6)
-    expect(await searchHits(page, '使用说明')).toBe(0)
+    expect(await searchHits(page, 'How to use')).toBe(0)
     // Even the group that holds it is gone from the search.
-    expect(await searchHits(page, '备忘')).toBe(0)
+    expect(await searchHits(page, 'Notes')).toBe(0)
 
     // Alt+number counts the categories that are shown: the sixth is now the task page.
     await page.getByTestId('tab-folders').click()
@@ -129,14 +129,14 @@ test('hides a category from the tabs, the search and Alt+number, keeps its data 
     const { page } = second
     await expect(page.getByTestId('tab-notes')).toHaveCount(0)
     await expect(page.locator('.tab-button')).toHaveCount(6)
-    expect(await searchHits(page, '使用说明')).toBe(0)
+    expect(await searchHits(page, 'How to use')).toBe(0)
 
     await setShown(page, { notes: true })
 
     await expect(page.getByTestId('tab-notes')).toBeVisible()
-    expect(await searchHits(page, '使用说明')).toBe(1)
+    expect(await searchHits(page, 'How to use')).toBe(1)
     await page.getByTestId('tab-notes').click()
-    await expect(page.getByTestId('section-notes')).toContainText('使用说明')
+    await expect(page.getByTestId('section-notes')).toContainText('How to use')
     // Back in its old place: the sixth tab again.
     await page.getByTestId('tab-folders').click()
     await page.keyboard.press('Alt+6')

@@ -18,9 +18,11 @@ import { useDataStatus } from './hooks/use-data-status'
 import { useUndoShortcut } from './hooks/use-undo-shortcut'
 import { useWindowPresentation } from './hooks/use-window-presentation'
 import { usePeekInteraction } from './hooks/use-peek-interaction'
+import { useSystemDark } from './hooks/use-system-dark'
 import { HTML_LANG } from './i18n/resolve-lang'
 import { useAppStore } from './store/use-app-store'
 import { applyMotionTokens } from './utils/motion-tokens'
+import { getStartupParams } from './utils/startup-params'
 import {
   getBackgroundUiVariables,
   resolveBackground,
@@ -43,7 +45,12 @@ export default function App(): JSX.Element {
   useWindowPresentation()
   usePeekInteraction()
   const motion = preview?.motion ?? data?.prefs.motion
-  const theme = resolveTheme(preview?.theme ?? data?.prefs.theme)
+  const systemDark = useSystemDark()
+  // Until the data has arrived, the theme is the one the main process put in the URL.
+  const theme = resolveTheme(
+    preview?.theme ?? data?.prefs.theme ?? getStartupParams().theme,
+    systemDark
+  )
   const background = resolveBackground(
     preview?.background ?? data?.prefs.background
   )

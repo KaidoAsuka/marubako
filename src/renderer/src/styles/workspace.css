@@ -121,7 +121,7 @@ kbd {
 }
 .primary-button.danger:hover:not(:disabled),
 .modal-actions .primary-button.danger:hover:not(:disabled) {
-  color: var(--on-accent);
+  color: var(--on-danger);
   background: var(--danger-solid);
   border-color: var(--danger-solid);
 }
@@ -964,4 +964,29 @@ kbd {
     margin-bottom: -20px;
     padding: 14px 20px;
   }
+}
+
+/* Monokai on the light theme: the yellow fill is too close to the paper to mark a value by itself.
+   The sliders are drawn in the darker accent, and the chosen day and the switches that are on get
+   it as their line. (Text on the yellow fill is dark and reads well.) */
+.theme-light[data-background='monokai']
+  .range-row
+  input[type='range']::-webkit-slider-runnable-track {
+  background: linear-gradient(
+    to right,
+    var(--accent) calc(8px + (100% - 16px) * var(--range-fill, 0)),
+    color-mix(in srgb, var(--text-dim) 30%, transparent)
+      calc(8px + (100% - 16px) * var(--range-fill, 0))
+  );
+}
+.theme-light[data-background='monokai']
+  .range-row
+  input[type='range']::-webkit-slider-thumb {
+  background: var(--accent);
+}
+.theme-light[data-background='monokai'] .calendar-day.active,
+.theme-light[data-background='monokai'] .setting-switch-row input:checked,
+.theme-light[data-background='monokai'] .category-switch input:checked,
+.theme-light[data-background='monokai'] .shortcut-switch:checked {
+  border-color: var(--accent);
 }

@@ -260,12 +260,21 @@ body:not(.dnd-active)
   transition-delay: 0s;
 }
 
-.section-content {
-  animation: sectionIn var(--motion-instant) var(--ease-out) both;
+/* Switching category: the page comes in from the side its tab lies on, the way the marker above
+   travels, with a short slide and a fade. The whole page moves as one, so a group at the very top
+   is seen to arrive like everything else. The first page of a session is simply there. */
+.section-content[data-enter='forward'] {
+  animation: pageInForward var(--motion-normal) var(--ease-out);
 }
 
-.group-card-body,
-.task-card-body {
+.section-content[data-enter='backward'] {
+  animation: pageInBackward var(--motion-normal) var(--ease-out);
+}
+
+/* Only a body the user opened unfolds. One that is open when its page arrives is part of the page
+   (use-opened-by-user.ts). */
+.group-card-body[data-unfold],
+.task-card-body[data-unfold] {
   animation: expandIn var(--motion-normal) var(--ease-out) both;
 }
 

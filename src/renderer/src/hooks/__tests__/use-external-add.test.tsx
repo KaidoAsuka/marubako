@@ -207,9 +207,9 @@ describe('adding by paste and drop', () => {
 
     it('counts what was already there instead of adding it twice', async () => {
       const existing = state().data!.websites[0]!.items[0]!
-      expect(existing.url).toBe('https://cn.bing.com')
+      expect(existing.url).toBe('https://google.com')
 
-      pasteText('https://cn.bing.com\nhttps://new.example.org')
+      pasteText('https://google.com\nhttps://new.example.org')
       await settle()
 
       expect(state().data!.loose.websites).toHaveLength(1)
@@ -217,7 +217,7 @@ describe('adding by paste and drop', () => {
     })
 
     it('says so when everything pasted is already there, and changes nothing', async () => {
-      pasteText('https://CN.BING.com/')
+      pasteText('https://GOOGLE.com/')
       await settle()
 
       expect(window.quickLaunch.saveData).not.toHaveBeenCalled()
@@ -326,7 +326,7 @@ describe('adding by paste and drop', () => {
         state()
           .data!.websites.find((group) => group.id === 'grp-sites-fun')!
           .items.map((item) => item.name)
-      ).toEqual(['哔哩哔哩', 'example.org'])
+      ).toEqual(['YouTube', 'example.org'])
       expect(state().data!.loose.websites).toHaveLength(0)
     })
 
@@ -403,7 +403,7 @@ describe('adding by paste and drop', () => {
       drag('dragOver', { files: [{ path: 'C:\\x' }] }, inner)
 
       expect(screen.getByTestId('external-drop-zone')).toHaveTextContent(
-        'Add to "工作文件"'
+        'Add to "Work files"'
       )
       expect(card).toHaveClass('external-drop-target')
 
@@ -463,7 +463,7 @@ describe('adding by paste and drop', () => {
         state()
           .data!.folders.find((group) => group.id === 'grp-folders-life')!
           .items.map((item) => item.name)
-      ).toEqual(['下载', 'Atlas'])
+      ).toEqual(['Downloads', 'Atlas'])
       expect(state().data!.loose.folders).toHaveLength(0)
     })
 

@@ -12,9 +12,13 @@ import {
   over,
   parseColor,
 } from '../src/renderer/src/styles/__tests__/css-utils'
-import { createDefaultAppData } from '../src/shared/default-data'
 import { DEFAULT_PANEL_WIDTH } from '../src/shared/layout-widths'
-import { closeApp, launchApp, type AppContext } from './test-utils'
+import {
+  createDefaultAppData,
+  closeApp,
+  launchApp,
+  type AppContext,
+} from './test-utils'
 
 const TEN_CHARACTERS = '一二三四五六七八九十'
 const LONG_CHINESE = '这是一个非常非常长的文件夹名称用来检查省略号'

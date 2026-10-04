@@ -1,10 +1,19 @@
 import { cleanup, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { DOCK_SIZE } from '../../../../shared/dock-size'
 import type { WindowPresentation } from '../../../../shared/types'
 import { useWindowPresentation } from '../use-window-presentation'
 
 type Handler = (presentation: WindowPresentation) => Promise<void>
+
+// The ball window sits 8px left of the panel, and the ball is drawn in the middle of its window:
+// the panel scales from a point that far outside its own left edge.
+const GAP = 8
+const BALL_LEFT = { x: -(DOCK_SIZE + GAP), y: 0 }
+const CENTER = DOCK_SIZE / 2
+const OUTSIDE = GAP + CENTER
+const ORIGIN = `${-OUTSIDE}px ${CENTER}px`
 
 interface FakeAnimation {
   target: Element
@@ -89,7 +98,7 @@ function presentation(
     stage: 'prepare',
     direction: 'expand',
     surface: 'panel',
-    origin: { x: -64, y: 0 },
+    origin: BALL_LEFT,
     timeScale: 1,
     ...overrides,
   }
@@ -161,14 +170,14 @@ describe('panel expansion', () => {
     send(presentation())
     await advance(0)
     const style = document.body.style
-    // The ball's centre is 36px outside the panel's left edge, so the far edge is
-    // at the right: 48px of travel over innerWidth + 36px of reach.
+    // The ball's centre is outside the panel's left edge, so the far edge is at the
+    // right: 48px of travel over innerWidth plus that distance of reach.
     expect(Number(style.transform.match(/scale\(([\d.]+)\)/)?.[1])).toBeCloseTo(
-      1 - 48 / (window.innerWidth + 36),
+      1 - 48 / (window.innerWidth + OUTSIDE),
       5
     )
     expect(style.opacity).toBe('0')
-    expect(style.transformOrigin).toBe('-36px 28px')
+    expect(style.transformOrigin).toBe(ORIGIN)
     expect(style.clipPath).toBe('')
     expect(style.pointerEvents).toBe('')
     expect(document.getElementById('root')!.dataset.presentation).toBe(
@@ -245,10 +254,10 @@ describe('panel expansion', () => {
     await advance(0)
     expect(tail.every((animation) => animation.canceled)).toBe(true)
     expect(document.body.style.pointerEvents).toBe('none')
-    expect(document.body.style.transformOrigin).toBe('-36px 28px')
+    expect(document.body.style.transformOrigin).toBe(ORIGIN)
     // The cancelled tail's own completion must not reach into the new styles.
     await advance(1000)
-    expect(document.body.style.transformOrigin).toBe('-36px 28px')
+    expect(document.body.style.transformOrigin).toBe(ORIGIN)
     expect(document.body.style.pointerEvents).toBe('none')
   })
 })
@@ -264,7 +273,7 @@ describe('panel collapse', () => {
     await advance(0)
     expect(document.body.style.pointerEvents).toBe('none')
     expect(document.body.style.clipPath).toBe('')
-    expect(document.body.style.transformOrigin).toBe('-36px 28px')
+    expect(document.body.style.transformOrigin).toBe(ORIGIN)
 
     const stage = send(
       presentation({ stage: 'animate', direction: 'collapse', timeScale: 1.5 })

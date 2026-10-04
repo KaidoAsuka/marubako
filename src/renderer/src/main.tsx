@@ -22,9 +22,13 @@ import './styles/onboarding.css'
 import { HTML_LANG } from './i18n/resolve-lang'
 import { getStartupParams } from './utils/startup-params'
 
-// The first frame already reads in the saved language (the main process puts it in the URL).
-const startupLang = getStartupParams().lang
-if (startupLang) document.documentElement.lang = HTML_LANG[startupLang]
+// The first frame already reads in the saved language and wears the saved theme (the main process
+// puts both in the URL), so the loading screen does not change colour when the data arrives.
+const startup = getStartupParams()
+if (startup.lang) document.documentElement.lang = HTML_LANG[startup.lang]
+if (startup.theme)
+  for (const target of [document.documentElement, document.body])
+    target.classList.add(`theme-${startup.theme}`)
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>

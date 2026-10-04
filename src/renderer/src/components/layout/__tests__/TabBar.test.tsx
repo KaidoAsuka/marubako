@@ -107,6 +107,11 @@ describe('TabBar names and counts', () => {
     'puts the name, the groups and entries and the shortcut into the title and the accessible name in %s',
     (lang, first, firstText, second, secondText) => {
       load(lang)
+      // A category with nothing in it: the sample data has an entry in every one.
+      const data = useAppStore.getState().data!
+      data.apps = []
+      data.topOrder.apps = []
+      useAppStore.setState({ data: { ...data } })
       render(<TabBar />)
 
       for (const [id, text] of [
@@ -118,6 +123,26 @@ describe('TabBar names and counts', () => {
       }
     }
   )
+
+  it('counts the sample entries of a new installation: no category starts empty', () => {
+    load('zh')
+    render(<TabBar />)
+
+    for (const [id, counts] of [
+      ['tab-folders', '2 个分组 3 个条目'],
+      ['tab-websites', '2 个分组 3 个条目'],
+      // Two terminals, a sample account, a note and a sample command.
+      ['tab-apps', '1 个分组 2 个条目'],
+      ['tab-passwords', '1 个分组 1 个条目'],
+      ['tab-notes', '1 个分组 1 个条目'],
+      ['tab-commands', '1 个分组 1 个条目'],
+    ] as const) {
+      expect(screen.getByTestId(id), id).toHaveAttribute(
+        'title',
+        expect.stringContaining(` · ${counts} · `)
+      )
+    }
+  })
 
   it('counts loose entries together with the entries of groups', () => {
     load('en')

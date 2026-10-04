@@ -19,8 +19,10 @@ const PRESS_FALLBACK_MS = 400
 
 // Two clicks closer together than this are a double click (the Windows default is 500 ms).
 const DOUBLE_CLICK_MS = 500
-// A click on an open panel collapses it only after this long, so that a second click can turn it
-// into a kept-open window without the panel folding away and back first.
+// A click on a temporary panel collapses it only after this long, so that a second click can turn it
+// into a kept-open window without the panel folding away and back first. A panel that is already
+// kept open (opened as a window, or pinned) has nothing a second click could turn it into: it
+// collapses at once.
 const COLLAPSE_DELAY_MS = 250
 
 /** The main process puts the saved appearance in the URL, so the first frame is already right. */
@@ -28,7 +30,7 @@ function initialAppearance(): DockAppearance {
   const query = new URLSearchParams(window.location.search)
   return {
     lang: resolveLang(query.get('lang')),
-    theme: query.get('theme') === 'light' ? 'light' : 'dark',
+    theme: query.get('theme') === 'dark' ? 'dark' : 'light',
   }
 }
 
@@ -42,8 +44,18 @@ export default function DockBubble(): JSX.Element {
   const [expanded, setExpanded] = useState(false)
   // Read by the click handler, which must not be rebuilt on every state change.
   const expandedRef = useRef(false)
+  // Whether the open panel stays until it is closed: a window rather than a temporary panel, or pinned.
+  // The ref is for the click handler, the state for the hint.
+  const keptOpenRef = useRef(false)
+  const [keptOpen, setKeptOpen] = useState(false)
   const collapseTimer = useRef<number | null>(null)
-  const lastClick = useRef<{ time: number; x: number; y: number } | null>(null)
+  const lastClick = useRef<{
+    time: number
+    x: number
+    y: number
+    // This click has already collapsed the panel: a second one right after it has nothing to add.
+    collapsed?: boolean
+  } | null>(null)
   const button = useRef<HTMLButtonElement>(null)
   const pressTimer = useRef<number | undefined>(undefined)
   const pointer = useRef<{
@@ -69,6 +81,8 @@ export default function DockBubble(): JSX.Element {
     const unsubscribe = window.quickLaunch.onDockAppearance(setAppearance)
     const unsubscribeState = window.quickLaunch.onWindowState((state) => {
       expandedRef.current = !state.collapsed
+      keptOpenRef.current = state.alwaysOnTop || state.mode === 'window'
+      setKeptOpen(keptOpenRef.current)
       setExpanded(!state.collapsed)
       // Something else (a very short auto-collapse delay, a shortcut, Win+D) already closed the
       // panel: the delayed collapse would only make the main process open it again.
@@ -93,6 +107,9 @@ export default function DockBubble(): JSX.Element {
     void window.quickLaunch.window.getState().then((result) => {
       if (!active || !result.ok) return
       expandedRef.current = !result.data.collapsed
+      keptOpenRef.current =
+        result.data.alwaysOnTop || result.data.mode === 'window'
+      setKeptOpen(keptOpenRef.current)
       setExpanded(!result.data.collapsed)
     })
     return () => {
@@ -165,11 +182,22 @@ export default function DockBubble(): JSX.Element {
             Date.now() - previous.time < DOUBLE_CLICK_MS &&
             Math.hypot(event.screenX - previous.x, event.screenY - previous.y) <
               5
+          // An open panel that is kept open collapses on the click itself, with no wait.
+          const collapseNow =
+            !double && expandedRef.current && keptOpenRef.current
           lastClick.current = double
             ? null
-            : { time: Date.now(), x: event.screenX, y: event.screenY }
+            : {
+                time: Date.now(),
+                x: event.screenX,
+                y: event.screenY,
+                collapsed: collapseNow,
+              }
           cancelCollapse()
-          if (double) await activate('window')
+          if (double) {
+            // The second click of a double click whose first one collapsed the panel is spent.
+            if (!previous?.collapsed) await activate('window')
+          } else if (collapseNow) await activate('peek')
           else if (expandedRef.current)
             collapseTimer.current = window.setTimeout(() => {
               collapseTimer.current = null
@@ -277,7 +305,11 @@ export default function DockBubble(): JSX.Element {
         aria-expanded={expanded}
         title={
           error ||
-          (expanded ? strings.dock_bubble_hint_open : strings.dock_bubble_hint)
+          (expanded
+            ? keptOpen
+              ? strings.dock_bubble_hint_kept
+              : strings.dock_bubble_hint_open
+            : strings.dock_bubble_hint)
         }
         onPointerDown={startDrag}
         onPointerMove={moveDrag}

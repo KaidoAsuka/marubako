@@ -8,6 +8,10 @@ import {
 } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import {
+  DEFAULT_SHORTCUT,
+  formatAccelerator,
+} from '../../../../../shared/accelerator'
 import { createDefaultAppData } from '../../../../../shared/default-data'
 import type {
   AppData,
@@ -21,6 +25,8 @@ import SettingsForm from '../SettingsForm'
 
 const state = () => useAppStore.getState()
 const text = (key: string, lang: Lang = 'en') => workspaceStrings[lang][key]!
+// The shortcut of a new installation, as it is stored and as it reads.
+const DEFAULT_TEXT = formatAccelerator(DEFAULT_SHORTCUT)
 
 function reportLaunch(overrides: Partial<LaunchSettings> = {}): void {
   vi.mocked(window.quickLaunch.getLaunchSettings).mockResolvedValue({
@@ -28,9 +34,9 @@ function reportLaunch(overrides: Partial<LaunchSettings> = {}): void {
     data: {
       openAtLogin: false,
       canAutoStart: true,
-      shortcut: 'Ctrl + Alt + Space',
+      shortcut: DEFAULT_TEXT,
       shortcutAvailable: true,
-      shortcutAccelerator: 'CommandOrControl+Alt+Space',
+      shortcutAccelerator: DEFAULT_SHORTCUT,
       shortcutEnabled: true,
       ...overrides,
     },
@@ -104,8 +110,9 @@ describe('SettingsForm: the global shortcut', () => {
   it('shows the saved shortcut as it reads, with the switch on', async () => {
     await open()
 
+    expect(DEFAULT_SHORTCUT).toBe('CommandOrControl+Shift+Space')
     expect(screen.getByTestId('shortcut-value')).toHaveTextContent(
-      'Ctrl + Alt + Space'
+      'Ctrl + Shift + Space'
     )
     expect(screen.getByTestId('shortcut-enabled')).toBeChecked()
     expect(status()).toBeNull()
@@ -196,7 +203,7 @@ describe('SettingsForm: the global shortcut', () => {
       expect(event).toBe(false)
       expect(change()).not.toHaveAttribute('data-recording')
       expect(screen.getByTestId('shortcut-value')).toHaveTextContent(
-        'Ctrl + Alt + Space'
+        DEFAULT_TEXT
       )
       expect(state().modal).toEqual({ kind: 'settings' })
     })
@@ -230,7 +237,7 @@ describe('SettingsForm: the global shortcut', () => {
       keys('KeyQ', { ctrlKey: true, altKey: true })
 
       expect(screen.getByTestId('shortcut-value')).toHaveTextContent(
-        'Ctrl + Alt + Space'
+        DEFAULT_TEXT
       )
     })
   })
@@ -307,10 +314,25 @@ describe('SettingsForm: the global shortcut', () => {
     it('does not check the combination that is already saved', async () => {
       await open()
 
-      await record('Space', { ctrlKey: true, altKey: true })
+      await record('Space', { ctrlKey: true, shiftKey: true })
 
+      expect(screen.getByTestId('shortcut-value')).toHaveTextContent(
+        DEFAULT_TEXT
+      )
       expect(window.quickLaunch.checkShortcut).not.toHaveBeenCalled()
       expect(screen.getByTestId('settings-save')).toBeEnabled()
+    })
+
+    it('checks the default of older versions like any other new combination', async () => {
+      await open()
+
+      await record('Space', { ctrlKey: true, altKey: true })
+
+      await waitFor(() =>
+        expect(window.quickLaunch.checkShortcut).toHaveBeenCalledWith(
+          'CommandOrControl+Alt+Space'
+        )
+      )
     })
 
     it('does not hold Save when the check itself failed', async () => {
@@ -366,7 +388,7 @@ describe('SettingsForm: the global shortcut', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
 
       expect(window.quickLaunch.saveData).not.toHaveBeenCalled()
-      expect(state().data?.prefs.shortcut).toBe('CommandOrControl+Alt+Space')
+      expect(state().data?.prefs.shortcut).toBe(DEFAULT_SHORTCUT)
     })
 
     it('resets to the default combination', async () => {
@@ -382,12 +404,12 @@ describe('SettingsForm: the global shortcut', () => {
       fireEvent.click(screen.getByTestId('settings-save'))
 
       expect(screen.getByTestId('shortcut-value')).toHaveTextContent(
-        'Ctrl + Alt + Space'
+        DEFAULT_TEXT
       )
       await waitFor(() =>
         expect(window.quickLaunch.saveData).toHaveBeenCalled()
       )
-      expect(savedPrefs().shortcut).toBe('CommandOrControl+Alt+Space')
+      expect(savedPrefs().shortcut).toBe(DEFAULT_SHORTCUT)
     })
 
     it('has nothing to reset while the default is chosen', async () => {
@@ -446,7 +468,7 @@ describe('SettingsForm: the global shortcut', () => {
       )
       expect(savedPrefs().shortcutEnabled).toBe(false)
       // The choice itself is kept for when it is switched on again.
-      expect(savedPrefs().shortcut).toBe('CommandOrControl+Alt+Space')
+      expect(savedPrefs().shortcut).toBe(DEFAULT_SHORTCUT)
     })
 
     it('shows a shortcut that is saved as off', async () => {

@@ -46,9 +46,25 @@ describe('DockBubble clicks', () => {
     await flush()
   }
 
-  function setPanelOpen(open: boolean): void {
+  /**
+   * How long an open panel stays: a temporary one folds away by itself, one opened as a window or
+   * pinned stays until it is closed.
+   */
+  type Stay = 'temporary' | 'window' | 'pinned'
+
+  function panelState(open: boolean, stay: Stay = 'temporary'): WindowSnapshot {
+    return {
+      alwaysOnTop: stay === 'pinned',
+      collapsed: !open,
+      opacity: 1,
+      mode: stay === 'window' ? 'window' : 'peek',
+    }
+  }
+
+  /** The main process reports the panel; an open one is temporary unless said otherwise. */
+  function setPanelOpen(open: boolean, stay: Stay = 'temporary'): void {
     act(() => {
-      pushState({ alwaysOnTop: false, collapsed: !open, opacity: 1 })
+      pushState(panelState(open, stay))
     })
   }
 
@@ -84,7 +100,7 @@ describe('DockBubble clicks', () => {
     expect(modes()).toEqual(['peek'])
   })
 
-  it('waits before collapsing an open panel so a second click can still keep it open', async () => {
+  it('waits before collapsing a temporary panel so a second click can still keep it open', async () => {
     await flush()
     setPanelOpen(true)
 
@@ -97,7 +113,7 @@ describe('DockBubble clicks', () => {
     expect(modes()).toEqual(['peek'])
   })
 
-  it('keeps an open panel open when the ball is double-clicked', async () => {
+  it('keeps a temporary panel open when the ball is double-clicked', async () => {
     await flush()
     setPanelOpen(true)
 
@@ -287,5 +303,190 @@ describe('DockBubble clicks', () => {
       'title',
       '单击收起 · 双击保持打开 · 拖动移动'
     )
+  })
+
+  it.each(['window', 'pinned'] as const)(
+    'does not promise that a double click keeps a panel open that is kept open already (%s)',
+    async (stay) => {
+      await flush()
+      setPanelOpen(true, stay)
+
+      expect(screen.getByTestId('dock-bubble')).toHaveAttribute(
+        'title',
+        '单击收起 · 拖动移动'
+      )
+
+      // Back to a temporary panel, back to the offer.
+      setPanelOpen(true)
+      expect(screen.getByTestId('dock-bubble')).toHaveAttribute(
+        'title',
+        '单击收起 · 双击保持打开 · 拖动移动'
+      )
+    }
+  )
+
+  // A panel that is kept open (opened as a window, or pinned) has nothing a second click could turn
+  // it into, so the 250 ms wait would only be a delay.
+  describe('a panel that is kept open', () => {
+    it.each(['window', 'pinned'] as const)(
+      'collapses on the click itself, with no wait (%s)',
+      async (stay) => {
+        await flush()
+        setPanelOpen(true, stay)
+
+        await click()
+
+        expect(modes()).toEqual(['peek'])
+      }
+    )
+
+    it('leaves no delayed collapse behind that would open the panel again', async () => {
+      await flush()
+      setPanelOpen(true, 'window')
+
+      await click()
+      setPanelOpen(false)
+      await flush(1000)
+
+      expect(modes()).toEqual(['peek'])
+    })
+
+    it('ignores the second click of a double click: the first one has collapsed the panel', async () => {
+      await flush()
+      setPanelOpen(true, 'window')
+
+      await click()
+      // The main process reports the collapse between the two clicks.
+      setPanelOpen(false)
+      await flush(120)
+      await click()
+      await flush(1000)
+
+      // Neither kept open again ('window') nor opened as a temporary panel (a second 'peek').
+      expect(modes()).toEqual(['peek'])
+    })
+
+    it('ignores that second click even before the collapse has been reported', async () => {
+      await flush()
+      setPanelOpen(true, 'pinned')
+
+      await click()
+      await flush(60)
+      await click()
+      await flush(1000)
+
+      expect(modes()).toEqual(['peek'])
+    })
+
+    it('opens the panel again on a click that comes after the double-click time', async () => {
+      await flush()
+      setPanelOpen(true, 'window')
+
+      await click()
+      setPanelOpen(false)
+      await flush(520)
+      await click()
+
+      expect(modes()).toEqual(['peek', 'peek'])
+    })
+
+    it('counts the click after an ignored one as a new click', async () => {
+      await flush()
+      setPanelOpen(true, 'window')
+
+      await click()
+      setPanelOpen(false)
+      await flush(100)
+      await click()
+      await flush(100)
+      await click()
+
+      // Collapsed by the first, the second spent, opened as a temporary panel by the third.
+      expect(modes()).toEqual(['peek', 'peek'])
+    })
+
+    it('is recognised by a ball that appears while the panel is already open', async () => {
+      cleanup()
+      vi.mocked(window.quickLaunch.window.getState).mockResolvedValue({
+        ok: true,
+        data: panelState(true, 'window'),
+      })
+      render(<DockBubble />)
+      // No state is pushed: the ball has to ask.
+      await flush()
+
+      await click()
+
+      expect(modes()).toEqual(['peek'])
+    })
+
+    it('starts as soon as a temporary panel is kept open: by a double click or the pin', async () => {
+      await flush()
+      setPanelOpen(true)
+      setPanelOpen(true, 'window')
+
+      await click()
+      expect(modes()).toEqual(['peek'])
+    })
+
+    it('ends when the panel becomes temporary again: the wait and the double click are back', async () => {
+      await flush()
+      setPanelOpen(true, 'pinned')
+      setPanelOpen(true)
+
+      await click()
+      expect(modes()).toEqual([])
+      await flush(120)
+      await click()
+      await flush(1000)
+
+      expect(modes()).toEqual(['window'])
+    })
+
+    it('collapses from the keyboard as before', async () => {
+      await flush()
+      setPanelOpen(true, 'window')
+
+      fireEvent.click(screen.getByTestId('dock-bubble'), { detail: 0 })
+      await flush()
+
+      expect(modes()).toEqual(['peek'])
+    })
+  })
+
+  // What did not change: a temporary panel keeps the wait and the double click.
+  describe('a temporary panel', () => {
+    it('says so in the state the main process reports, and still waits 250 ms', async () => {
+      await flush()
+      act(() => {
+        pushState({
+          alwaysOnTop: false,
+          collapsed: false,
+          opacity: 1,
+          mode: 'peek',
+        })
+      })
+
+      await click()
+      expect(modes()).toEqual([])
+      await flush(249)
+      expect(modes()).toEqual([])
+      await flush(2)
+
+      expect(modes()).toEqual(['peek'])
+    })
+
+    it('is what a state without a mode counts as, like the state of an older main process', async () => {
+      await flush()
+      act(() => {
+        pushState({ alwaysOnTop: false, collapsed: false, opacity: 1 })
+      })
+
+      await click()
+
+      expect(modes()).toEqual([])
+      await flush(300)
+      expect(modes()).toEqual(['peek'])
+    })
   })
 })

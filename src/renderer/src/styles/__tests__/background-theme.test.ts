@@ -1,6 +1,8 @@
-// color-4: the "background" setting is an accent colour: five solid choices, four values each, and
-// no blob layer. The contrast figures are the ones listed in 17-design-improvements.md; this
-// recomputes every one of them from the real values and the real theme tokens.
+// color-4: the "background" setting is an accent colour: solid choices of four values each, and no
+// blob layer. The contrast figures are the ones listed in 17-design-improvements.md; this
+// recomputes every one of them from the real values and the real theme tokens. Five of the choices
+// only replace the accent and are checked here against the theme's own surfaces; the sixth, monokai,
+// brings surfaces and a text colour of its own and is checked in monokai-palette.test.ts.
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
@@ -18,6 +20,7 @@ import {
 import {
   contrast,
   hoverFill,
+  isPaletteChoice,
   loadRules,
   lastValue,
   mixOpaque,
@@ -31,20 +34,39 @@ const tokens = (theme: 'dark' | 'light') => (name: string) =>
   lastValue(themes, theme === 'dark' ? ':root' : '.theme-light', name) ??
   lastValue(themes, ':root', name)!
 
+type PlainAccent = Exclude<BackgroundKey, 'monokai'>
+const PLAIN_ACCENTS = BACKGROUNDS.filter(
+  (key): key is PlainAccent => !isPaletteChoice(themes, key)
+)
+
 /** What the CSS makes of `--accent-solid-hover` for a solid fill. */
 const hoverOf = (theme: 'dark' | 'light', solid: string): Rgba =>
   hoverFill(tokens(theme)('--accent-solid-hover'), solid)
 
 describe('what the setting is now', () => {
-  it('keeps the five stored keys, so saved data and the data-background attribute still match', () => {
+  it('keeps the five stored keys and adds monokai, so saved data and the data-background attribute still match', () => {
     expect(BACKGROUNDS).toEqual([
       'aurora',
       'sunset',
       'forest',
       'ocean',
       'minimal',
+      'monokai',
     ])
     expect(Object.keys(ACCENT_CHOICES)).toEqual([...BACKGROUNDS])
+  })
+
+  it('has one choice that is a whole palette, monokai; the other five only replace the accent', () => {
+    expect(PLAIN_ACCENTS).toEqual([
+      'aurora',
+      'sunset',
+      'forest',
+      'ocean',
+      'minimal',
+    ])
+    expect(BACKGROUNDS.filter((key) => isPaletteChoice(themes, key))).toEqual([
+      'monokai',
+    ])
   })
 
   it('is a table of four values per choice and nothing else', () => {
@@ -117,12 +139,27 @@ describe('lookups', () => {
     }
   )
 
-  it('falls back to dark for an unknown theme', () => {
-    expect(resolveTheme('light')).toBe('light')
-    expect(resolveTheme('dark')).toBe('dark')
-    expect(resolveTheme('sepia')).toBe('dark')
-    expect(resolveTheme(undefined)).toBe('dark')
+  it('draws the two themes as they are named, whatever Windows is in', () => {
+    for (const systemDark of [false, true]) {
+      expect(resolveTheme('light', systemDark)).toBe('light')
+      expect(resolveTheme('dark', systemDark)).toBe('dark')
+    }
   })
+
+  it('follows Windows for the system setting, and takes Windows for light when it is not told', () => {
+    expect(resolveTheme('system', true)).toBe('dark')
+    expect(resolveTheme('system', false)).toBe('light')
+    expect(resolveTheme('system')).toBe('light')
+  })
+
+  it.each(['sepia', '', 'System', 'DARK', 42, null, undefined])(
+    'falls back to light, the default, for the stored theme %j',
+    (value) => {
+      expect(resolveTheme(value)).toBe('light')
+      // An unknown value is not "follow the system" either.
+      expect(resolveTheme(value, true)).toBe('light')
+    }
+  )
 
   it('sets only --accent and --accent-solid, in the colours of the theme', () => {
     for (const key of BACKGROUNDS) {
@@ -137,8 +174,9 @@ describe('lookups', () => {
     }
   })
 
-  it('agrees with themes.css for the default, violet', () => {
-    // The two files must not drift: the default accent is written in both places.
+  it('agrees with themes.css for violet, what the stylesheet draws before a choice is applied', () => {
+    // The two files must not drift: this accent is written in both places. (The default of a new
+    // installation is graphite; violet is the fallback of resolveBackground and of the stylesheet.)
     for (const theme of ['dark', 'light'] as const) {
       const read = tokens(theme)
       const vars = getBackgroundUiVariables(theme, 'aurora')
@@ -152,7 +190,7 @@ describe('lookups', () => {
 // [dark text on canvas / card / active tab, light text on white / active tab, white on solid]
 // as listed in the color-4 spec and its review note.
 const SPEC: Record<
-  BackgroundKey,
+  PlainAccent,
   {
     darkText: [number, number, number]
     lightText: [number, number]
@@ -186,7 +224,7 @@ const SPEC: Record<
   },
 }
 
-describe.each(BACKGROUNDS)('the %s accent', (key) => {
+describe.each(PLAIN_ACCENTS)('the %s accent', (key) => {
   const dark = tokens('dark')
   const light = tokens('light')
   const choice = ACCENT_CHOICES[key]

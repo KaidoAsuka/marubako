@@ -5,6 +5,11 @@ import { IPC_CHANNELS } from '../src/shared/ipc-channels'
 import { closeApp, launchApp, type AppContext } from './test-utils'
 import { dragNativeMouse } from './native-mouse'
 import { getExpandedPosition } from '../src/main/dock-geometry'
+import { DOCK_BALL_SIZE, DOCK_SIZE } from '../src/shared/dock-size'
+import {
+  ROW_MIN_WIDTH,
+  SEARCH_ICON_BELOW_WIDTH,
+} from '../src/shared/layout-widths'
 
 async function getBubble(
   context: AppContext,
@@ -66,8 +71,8 @@ test('docks to an always-on-top bubble and restores the same panel without resiz
     expect(compact.panelSize).toEqual(expandedSize)
     expect(compact.bubbleOnTop).toBe(true)
     expect(compact.bubbleFocusable).toBe(true)
-    expect(compact.bounds!.width).toBe(56)
-    expect(compact.bounds!.height).toBe(56)
+    expect(compact.bounds!.width).toBe(DOCK_SIZE)
+    expect(compact.bounds!.height).toBe(DOCK_SIZE)
     expect(compact.bounds!.x).toBe(expandedBounds.x)
     expect(compact.bounds!.y).toBe(expandedBounds.y)
     await bubble.screenshot({ path: 'artifacts/dock-bubble.png' })
@@ -100,7 +105,10 @@ test('snaps a dragged bubble to the opposite edge and remembers it across restar
     await first.page.getByTestId('dock-panel').click()
     const bubble = await getBubble(first)
     const state = await windowState(first)
-    const point = { x: state.bounds!.x + 28, y: state.bounds!.y + 28 }
+    const point = {
+      x: state.bounds!.x + DOCK_SIZE / 2,
+      y: state.bounds!.y + DOCK_SIZE / 2,
+    }
     const destination = { x: state.area!.x + 38, y: state.area!.y + 200 }
     const results = await bubble.evaluate(
       async ({ point, destination }) => {
@@ -116,7 +124,7 @@ test('snaps a dragged bubble to the opposite edge and remembers it across restar
     expect(results.every((result) => result.ok)).toBe(true)
     const moved = await windowState(first)
     expect(moved.bounds!.x).toBe(moved.area!.x + 4)
-    expect(moved.bounds!.y).toBe(moved.area!.y + 172)
+    expect(moved.bounds!.y).toBe(moved.area!.y + 200 - DOCK_SIZE / 2)
     await bubble.getByTestId('dock-bubble').dblclick()
     await expect
       .poll(async () => (await windowState(first)).panelReady)
@@ -138,7 +146,7 @@ test('snaps a dragged bubble to the opposite edge and remembers it across restar
     const restored = await windowState(second)
     expect(restored.panelSize).toEqual([820, 600])
     expect(restored.bounds!.x).toBe(restored.area!.x + 4)
-    expect(restored.bounds!.y).toBe(restored.area!.y + 172)
+    expect(restored.bounds!.y).toBe(restored.area!.y + 200 - DOCK_SIZE / 2)
   } finally {
     await closeApp(second)
   }
@@ -182,7 +190,10 @@ test('dragging the bubble moves it without opening the panel on release', async 
     const bubble = await getBubble(context)
     const button = bubble.getByTestId('dock-bubble')
     const initial = await windowState(context)
-    const start = { x: initial.bounds!.x + 28, y: initial.bounds!.y + 28 }
+    const start = {
+      x: initial.bounds!.x + DOCK_SIZE / 2,
+      y: initial.bounds!.y + DOCK_SIZE / 2,
+    }
     await dragNativeMouse(context, start, { x: start.x + 100, y: start.y + 60 })
     await expect
       .poll(async () => (await windowState(context)).bounds!.y)
@@ -213,16 +224,19 @@ test('real mouse dragging snaps at either edge and subsequent clicks still expan
       const targetX =
         edge === 'left'
           ? state.area!.x + 10
-          : state.area!.x + state.area!.width - 66
+          : state.area!.x + state.area!.width - DOCK_SIZE - 10
       await dragNativeMouse(
         context,
-        { x: state.bounds!.x + 28, y: state.bounds!.y + 28 },
-        { x: targetX + 28, y: state.area!.y + 250 }
+        {
+          x: state.bounds!.x + DOCK_SIZE / 2,
+          y: state.bounds!.y + DOCK_SIZE / 2,
+        },
+        { x: targetX + DOCK_SIZE / 2, y: state.area!.y + 250 }
       )
       const expectedX =
         edge === 'left'
           ? state.area!.x + 4
-          : state.area!.x + state.area!.width - 60
+          : state.area!.x + state.area!.width - DOCK_SIZE - 4
       await expect
         .poll(async () => (await windowState(context)).bounds!.x)
         .toBe(expectedX)
@@ -236,7 +250,7 @@ test('real mouse dragging snaps at either edge and subsequent clicks still expan
       const expanded = await windowState(context)
       const expectedPanelX =
         edge === 'left'
-          ? state.area!.x + 68
+          ? state.area!.x + 4 + DOCK_SIZE + 8
           : expectedX - expanded.panelBounds.width - 8
       expect(expanded.panelBounds.x).toBe(expectedPanelX)
       await expect(context.page.getByTestId('command-input')).toHaveCount(0)
@@ -257,9 +271,10 @@ test('the window row keeps the search at the left and the buttons at the right, 
     await pin.click()
     expect((await windowState(context)).panelOnTop).toBe(false)
     await expect(context.page.getByTestId('toggle-collapse')).toHaveCount(0)
-    // In Chinese the tabs go side by side from 610px: below that "new group" and "add" sit beside the
-    // search, above it they are at the right end of the category row.
+    // In Chinese the tabs go side by side from ROW_MIN_WIDTH.zh: below that "new group" and "add" sit
+    // beside the search, above it they are at the right end of the category row.
     for (const width of [1100, 760, 420, 320]) {
+      const row = width >= ROW_MIN_WIDTH.zh
       await context.electronApp.evaluate(
         ({ BrowserWindow }, width) =>
           BrowserWindow.getAllWindows()
@@ -270,6 +285,11 @@ test('the window row keeps the search at the left and the buttons at the right, 
       await expect
         .poll(() => context.page.evaluate(() => innerWidth))
         .toBe(width)
+      // The row is laid out again a frame after the window has its new width: measure it then.
+      await expect(context.page.locator('.titlebar')).toHaveAttribute(
+        'data-search',
+        row ? 'full' : width < SEARCH_ICON_BELOW_WIDTH ? 'icon' : 'label'
+      )
       const where = async (testId: string) =>
         (await context.page.getByTestId(testId).boundingBox())!
       const search = await where('open-command')
@@ -287,7 +307,7 @@ test('the window row keeps the search at the left and the buttons at the right, 
       const beside = context.page
         .locator('.titlebar')
         .getByTestId('add-loose-item-folders')
-      if (width < 610) {
+      if (!row) {
         await expect(beside).toBeVisible()
         const add = (await beside.boundingBox())!
         expect(add.x).toBeGreaterThanOrEqual(search.x + search.width)
@@ -721,10 +741,10 @@ test('a bubble stays at a free position through clicks, edits and restart', asyn
     const state = await windowState(first)
     savedPosition = { x: state.area!.x + 300, y: state.area!.y + 250 }
     await bubble.evaluate(
-      async ({ bounds, target }) => {
+      async ({ bounds, target, half }) => {
         const api = window.quickLaunch.window
-        const start = { x: bounds.x + 28, y: bounds.y + 28 }
-        const end = { x: target.x + 28, y: target.y + 28 }
+        const start = { x: bounds.x + half, y: bounds.y + half }
+        const end = { x: target.x + half, y: target.y + half }
         await api.dragDock({ phase: 'start', ...start })
         await api.dragDock({ phase: 'move', ...end })
         await api.dragDock({ phase: 'end', ...end })
@@ -732,7 +752,7 @@ test('a bubble stays at a free position through clicks, edits and restart', asyn
         await api.dragDock({ phase: 'start', ...end })
         await api.dragDock({ phase: 'end', ...end })
       },
-      { bounds: state.bounds!, target: savedPosition }
+      { bounds: state.bounds!, target: savedPosition, half: DOCK_SIZE / 2 }
     )
     expect((await windowState(first)).bounds).toMatchObject(savedPosition)
     await bubble.getByTestId('dock-bubble').dblclick()
@@ -769,17 +789,17 @@ async function dragBubbleTo(
 ) {
   const bounds = (await windowState(context)).bounds!
   const results = await bubble.evaluate(
-    async ({ bounds, target }) => {
+    async ({ bounds, target, half }) => {
       const api = window.quickLaunch.window
-      const start = { x: bounds.x + 28, y: bounds.y + 28 }
-      const end = { x: target.x + 28, y: target.y + 28 }
+      const start = { x: bounds.x + half, y: bounds.y + half }
+      const end = { x: target.x + half, y: target.y + half }
       return [
         await api.dragDock({ phase: 'start', ...start }),
         await api.dragDock({ phase: 'move', ...end }),
         await api.dragDock({ phase: 'end', ...end }),
       ]
     },
-    { bounds, target }
+    { bounds, target, half: DOCK_SIZE / 2 }
   )
   expect(results.every((result) => result.ok)).toBe(true)
 }
@@ -820,7 +840,7 @@ test('resizing the panel from its left edge does not move the ball when the pane
     const state = await windowState(context)
     // Dock the ball to the right edge: the panel then expands to its left.
     const rightEdge = {
-      x: state.area!.x + state.area!.width - 60,
+      x: state.area!.x + state.area!.width - DOCK_SIZE - 4,
       y: state.area!.y + 250,
     }
     await dragBubbleTo(context, bubble, {
@@ -1181,7 +1201,7 @@ async function holdPointerOnBall(context: AppContext) {
     ({ screen }, point) => {
       screen.getCursorScreenPoint = () => point
     },
-    { x: bounds.x + 28, y: bounds.y + 28 }
+    { x: bounds.x + DOCK_SIZE / 2, y: bounds.y + DOCK_SIZE / 2 }
   )
 }
 
@@ -1211,10 +1231,8 @@ test('mode changes animate through intermediate frames without resizing the nati
     await expect(surface).toHaveCSS('border-bottom-left-radius', '50%')
     expect(await button.boundingBox()).toEqual(hitArea)
     await expect(button).toHaveAttribute('aria-label', '收起 Marubako')
-    await expect(button).toHaveAttribute(
-      'title',
-      '单击收起 · 双击保持打开 · 拖动移动'
-    )
+    // The panel was opened to stay (a double click), so the hint offers no second click.
+    await expect(button).toHaveAttribute('title', '单击收起 · 拖动移动')
     // The panel's tail has ended too, and left nothing behind on the body.
     await expect
       .poll(() => leftoverBodyStyles(context.page))
@@ -1238,7 +1256,7 @@ test('mode changes animate through intermediate frames without resizing the nati
     const ball = await readBallFrames(bubble)
     const expandBall = ball.filter((frame) => frame.direction === 'expand')
     const collapseBall = ball.filter((frame) => frame.direction === 'collapse')
-    // The ball is a drawn shape in a 56px window: it may spring, but never past the glass.
+    // The ball is a drawn shape in a small window: it may spring, but never past the glass.
     expect(Math.max(...ball.map((frame) => frame.scale))).toBeLessThanOrEqual(
       1.08
     )
@@ -1364,18 +1382,18 @@ test('the ball is drawn in the shape of the app icon', async () => {
         }
       })
     const resting = await look()
-    expect(resting.size).toEqual([50, 50])
+    expect(resting.size).toEqual([DOCK_BALL_SIZE, DOCK_BALL_SIZE])
     // Three 28% corners and one 50% corner at the bottom left, as in the icon.
     expect(resting.radii).toEqual(['28%', '28%', '28%', '50%'])
     expect(resting.image).toContain('linear-gradient(135deg')
     expect(resting.image).toContain('rgb(154, 133, 255)')
     expect(resting.image).toContain('rgb(85, 68, 218)')
-    // A thin ring, nothing that the 56px window would cut off when the ball swells.
+    // A thin ring, nothing that the small window would cut off when the ball swells.
     expect(resting.shadow).toBe(
       'rgba(255, 255, 255, 0.22) 0px 0px 0px 1px inset, rgba(10, 12, 20, 0.18) 0px 0px 0px 1px'
     )
     expect(resting.opacity).toBe(resting.hovered ? '1' : '0.92')
-    expect(resting.dot.size).toEqual([14, 14])
+    expect(resting.dot.size).toEqual([8, 8])
     expect(resting.dot.x).toBeCloseTo(0.406, 2)
     expect(resting.dot.y).toBeCloseTo(0.594, 2)
     expect(resting.dot.color).toBe('rgb(255, 255, 255)')
@@ -1400,7 +1418,7 @@ test('the ball is drawn in the shape of the app icon', async () => {
       /rgba\(10, 12, 20, [\d.]+\) 0px 0px 0px \d+px inset/
     )
     // The global `button:focus-visible` accent outline must not be drawn on top of that: it would
-    // sit outside the 50px ball and be cut off by the 56px window.
+    // sit half outside the small window of the ball and be cut off.
     expect(
       await button.evaluate((element) => getComputedStyle(element).outlineStyle)
     ).toBe('none')
@@ -1771,7 +1789,7 @@ test('right-clicking the bubble opens the launcher menu and Quit exits completel
     const bubble = await getBubble(context)
     // Far from the screen origin, screen coordinates cannot pass for window coordinates.
     const bubbleBounds = (await windowState(context)).bounds!
-    expect(Math.max(bubbleBounds.x, bubbleBounds.y)).toBeGreaterThan(56)
+    expect(Math.max(bubbleBounds.x, bubbleBounds.y)).toBeGreaterThan(DOCK_SIZE)
     await bubble.getByTestId('dock-bubble').click({ button: 'right' })
     await expect
       .poll(() =>
@@ -1799,9 +1817,9 @@ test('right-clicking the bubble opens the launcher menu and Quit exits completel
     })
     expect(popup.hasWindow).toBe(true)
     expect(popup.x).toBeGreaterThanOrEqual(0)
-    expect(popup.x).toBeLessThanOrEqual(56)
+    expect(popup.x).toBeLessThanOrEqual(DOCK_SIZE)
     expect(popup.y).toBeGreaterThanOrEqual(0)
-    expect(popup.y).toBeLessThanOrEqual(56)
+    expect(popup.y).toBeLessThanOrEqual(DOCK_SIZE)
     expect((await windowState(context)).panelVisible).toBe(false)
     await expect(bubble.getByTestId('dock-bubble')).not.toHaveClass(/dragging/)
     await context.electronApp.evaluate(() => {
@@ -1850,8 +1868,14 @@ test('dragging and clicking recover when Chromium pointer capture is unavailable
     const before = await windowState(context)
     await dragNativeMouse(
       context,
-      { x: before.bounds!.x + 28, y: before.bounds!.y + 28 },
-      { x: before.bounds!.x + 88, y: before.bounds!.y + 58 }
+      {
+        x: before.bounds!.x + DOCK_SIZE / 2,
+        y: before.bounds!.y + DOCK_SIZE / 2,
+      },
+      {
+        x: before.bounds!.x + DOCK_SIZE / 2 + 60,
+        y: before.bounds!.y + DOCK_SIZE / 2 + 30,
+      }
     )
     await expect
       .poll(async () => (await windowState(context)).bounds!.x)

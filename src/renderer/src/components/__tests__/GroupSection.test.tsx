@@ -62,15 +62,18 @@ describe('GroupSection', () => {
   })
 
   it.each([
-    'folders',
-    'websites',
-    'apps',
-    'passwords',
-    'commands',
-    'notes',
+    ['folders', 'grid'],
+    ['folders', 'list'],
+    ['websites', 'grid'],
+    ['websites', 'list'],
+    ['apps', 'grid'],
+    ['apps', 'list'],
+    ['passwords', 'list'],
+    ['commands', 'list'],
+    ['notes', 'list'],
   ] as const)(
-    'carries no title row, filter box or buttons of its own on %s',
-    (tab) => {
+    'carries no title row, filter box or buttons of its own on %s (%s)',
+    (tab, viewMode) => {
       // jsdom has no matchMedia, and the grid view asks for it.
       Object.defineProperty(window, 'matchMedia', {
         configurable: true,
@@ -80,16 +83,85 @@ describe('GroupSection', () => {
           removeEventListener: () => {},
         }),
       })
-      useAppStore.setState({ currentTab: tab })
+      const data = useAppStore.getState().data!
+      useAppStore.setState({
+        currentTab: tab,
+        data: { ...data, prefs: { ...data.prefs, viewMode } },
+      })
       const { container } = render(<GroupSection tab={tab} />)
 
       expect(container.querySelector('.section-toolbar')).toBeNull()
       expect(container.querySelector('.search-box')).toBeNull()
       expect(screen.queryByTestId(`search-${tab}`)).toBeNull()
       expect(screen.queryByTestId(`toggle-view-${tab}`)).toBeNull()
-      // "New group" and "add" are in the bar above the content (SectionActions).
+      // "New group", "add" and the layout switch are in the bar above the content (SectionActions).
       expect(screen.queryByTestId(`add-group-${tab}`)).toBeNull()
       expect(screen.queryByTestId(`add-loose-item-${tab}`)).toBeNull()
+      expect(screen.queryByTestId('toggle-view-mode')).toBeNull()
+      expect(container.querySelector('button.section-view-toggle')).toBeNull()
+    }
+  )
+
+  it.each([
+    ['folders', 'list', 'list-section-folders'],
+    ['folders', 'grid', 'widget-grid-folders'],
+    ['apps', 'list', 'list-section-apps'],
+    ['apps', 'grid', 'widget-grid-apps'],
+    // The pages without the two layouts are always a list.
+    ['notes', 'grid', 'list-section-notes'],
+    ['passwords', 'grid', 'list-section-passwords'],
+  ] as const)('draws %s in the saved layout (%s)', (tab, viewMode, testId) => {
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: () => ({
+        matches: false,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      }),
+    })
+    const data = useAppStore.getState().data!
+    useAppStore.setState({
+      currentTab: tab,
+      data: { ...data, prefs: { ...data.prefs, viewMode } },
+    })
+    render(<GroupSection tab={tab} />)
+
+    expect(screen.getByTestId(testId)).toBeInTheDocument()
+  })
+
+  it('draws the three pages with two layouts as a list in a new installation', () => {
+    // The sample data as it is: no layout chosen by the test.
+    useAppStore.setState({
+      data: createDefaultAppData(),
+      currentTab: 'folders',
+    })
+    render(<GroupSection tab="folders" />)
+
+    expect(screen.getByTestId('list-section-folders')).toBeInTheDocument()
+    expect(screen.queryByTestId('widget-grid-folders')).toBeNull()
+  })
+
+  it.each(['forward', 'backward'] as const)(
+    'carries the side it comes in from (%s) for the stylesheet, and nothing when it is simply there',
+    (enter) => {
+      const slid = render(<GroupSection tab="notes" enter={enter} />)
+      expect(screen.getByTestId('section-notes')).toHaveAttribute(
+        'data-enter',
+        enter
+      )
+      expect(screen.getByTestId('section-notes')).toHaveClass('section-content')
+      slid.unmount()
+
+      const there = render(<GroupSection tab="notes" enter={null} />)
+      expect(screen.getByTestId('section-notes')).not.toHaveAttribute(
+        'data-enter'
+      )
+      there.unmount()
+
+      render(<GroupSection tab="notes" />)
+      expect(screen.getByTestId('section-notes')).not.toHaveAttribute(
+        'data-enter'
+      )
     }
   )
 

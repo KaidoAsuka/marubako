@@ -4,7 +4,9 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { createDefaultAppData } from '../../../../shared/default-data'
 import {
   ROW_MIN_WIDTH,
+  SEARCH_ICON_BELOW_WIDTH,
   STACKED_MIN_WIDTH,
+  VIEW_TOGGLE_MIN_WIDTH,
 } from '../../../../shared/layout-widths'
 import type { Lang } from '../../../../shared/types'
 import { useAppStore } from '../../store/use-app-store'
@@ -33,14 +35,21 @@ describe('useLayoutMode', () => {
 
     const { result } = renderHook(() => useLayoutMode())
 
-    expect(result.current).toEqual({ tabMode: 'stacked', searchMode: 'icon' })
+    expect(result.current).toEqual({
+      tabMode: 'stacked',
+      searchMode: 'icon',
+      viewToggle: true,
+    })
   })
 
+  // The widths at which a layout changes are constants (shared/layout-widths.ts).
   it.each([
-    [280, 'icons', 'icon'],
+    [STACKED_MIN_WIDTH.zh - 1, 'icons', 'icon'],
     [400, 'stacked', 'icon'],
-    [440, 'stacked', 'label'],
-    [700, 'row', 'full'],
+    [SEARCH_ICON_BELOW_WIDTH - 1, 'stacked', 'icon'],
+    [SEARCH_ICON_BELOW_WIDTH, 'stacked', 'label'],
+    [ROW_MIN_WIDTH.zh - 1, 'stacked', 'label'],
+    [ROW_MIN_WIDTH.zh, 'row', 'full'],
   ] as const)(
     'is %i px wide: tabs %s, search %s (Chinese)',
     (width, tabs, search) => {
@@ -48,7 +57,10 @@ describe('useLayoutMode', () => {
 
       const { result } = renderHook(() => useLayoutMode())
 
-      expect(result.current).toEqual({ tabMode: tabs, searchMode: search })
+      expect(result.current).toMatchObject({
+        tabMode: tabs,
+        searchMode: search,
+      })
     }
   )
 
@@ -65,6 +77,8 @@ describe('useLayoutMode', () => {
   })
 
   it('does not render again for a resize that stays inside one layout', () => {
+    expect(SEARCH_ICON_BELOW_WIDTH).toBeLessThanOrEqual(500)
+    expect(ROW_MIN_WIDTH.zh).toBeGreaterThan(600)
     resizeWindow(500)
     let renders = 0
     const { result } = renderHook(() => {
@@ -78,6 +92,44 @@ describe('useLayoutMode', () => {
 
     expect(renders).toBe(before)
     expect(result.current).toBe(first)
+  })
+
+  it('has room for the switch between grid and list from VIEW_TOGGLE_MIN_WIDTH on', () => {
+    resizeWindow(VIEW_TOGGLE_MIN_WIDTH - 1)
+    const { result } = renderHook(() => useLayoutMode())
+    expect(result.current.viewToggle).toBe(false)
+
+    resizeWindow(VIEW_TOGGLE_MIN_WIDTH)
+    expect(result.current.viewToggle).toBe(true)
+
+    resizeWindow(1200)
+    expect(result.current.viewToggle).toBe(true)
+  })
+
+  it('renders again when only the room for that switch changes', () => {
+    // Both widths draw the tabs as icons and the search as an icon.
+    expect(VIEW_TOGGLE_MIN_WIDTH).toBeLessThan(STACKED_MIN_WIDTH.zh)
+    resizeWindow(VIEW_TOGGLE_MIN_WIDTH)
+    const { result } = renderHook(() => useLayoutMode())
+    const first = result.current
+
+    resizeWindow(VIEW_TOGGLE_MIN_WIDTH - 1)
+
+    expect(result.current).not.toBe(first)
+    expect(result.current).toEqual({ ...first, viewToggle: false })
+  })
+
+  it('counts the zoom setting for that switch too: the narrowest window at 140% has no room', () => {
+    load('zh', 1.4)
+    resizeWindow(320)
+
+    const { result } = renderHook(() => useLayoutMode())
+
+    expect(result.current.viewToggle).toBe(false)
+
+    // At the normal size the narrowest window has room.
+    act(() => load('zh', 1))
+    expect(result.current.viewToggle).toBe(true)
   })
 
   it('uses the thresholds of the stored language', () => {

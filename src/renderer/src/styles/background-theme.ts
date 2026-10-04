@@ -22,7 +22,7 @@ type AccentChoice = {
 }
 
 export const ACCENT_CHOICES: Record<BackgroundKey, AccentChoice> = {
-  // Violet, the app icon's colour and the default.
+  // Violet, the app icon's colour.
   aurora: {
     dark: '#a594ff',
     light: '#5544da',
@@ -50,16 +50,27 @@ export const ACCENT_CHOICES: Record<BackgroundKey, AccentChoice> = {
     solidDark: '#2563eb',
     solidLight: '#1d4ed8',
   },
-  // Graphite.
+  // Graphite, the default.
   minimal: {
     dark: '#b4bfd3',
     light: '#475569',
     solidDark: '#52607a',
     solidLight: '#475569',
   },
+  // Monokai's yellow. This choice is a whole palette: themes.css also warms the surfaces and the
+  // text for it, and gives the yellow fills a dark text instead of the white one.
+  monokai: {
+    dark: '#ffd866',
+    light: '#7a4800',
+    solidDark: '#ffd866',
+    solidLight: '#f2bd3a',
+  },
 }
 
-/** Stored prefs are untrusted: an unknown background falls back to aurora. */
+/**
+ * Stored prefs are untrusted, and absent until the data has loaded: anything that is not a choice
+ * is drawn in aurora, the violet of the app icon and of the loading screen.
+ */
 export function resolveBackground(background: unknown): BackgroundKey {
   return typeof background === 'string' &&
     (BACKGROUNDS as readonly string[]).includes(background)
@@ -67,9 +78,14 @@ export function resolveBackground(background: unknown): BackgroundKey {
     : 'aurora'
 }
 
-/** Stored prefs are untrusted: an unknown theme falls back to dark. */
-export function resolveTheme(theme: unknown): Theme {
-  return theme === 'light' ? 'light' : 'dark'
+/**
+ * The theme to draw for the saved setting. `system` follows Windows (`systemDark` says which mode it
+ * is in). Stored prefs are untrusted: an unknown theme falls back to light, the default.
+ */
+export function resolveTheme(theme: unknown, systemDark = false): Theme {
+  if (theme === 'system') return systemDark ? 'dark' : 'light'
+
+  return theme === 'dark' ? 'dark' : 'light'
 }
 
 /** The solid fill of a choice in a theme: what the dot in the settings shows. */
