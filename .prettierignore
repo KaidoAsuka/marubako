@@ -1,0 +1,20 @@
+node_modules/
+out/
+release/
+coverage/
+test-results/
+playwright-report/
+artifacts/
+package-lock.json
+
+# Review documents and catalogs are kept exactly as written.
+docs/review-2026-10-02/
+
+# Written by release-please; its Markdown style is not Prettier's.
+CHANGELOG.md
+
+# Written by tools/third-party-notices.cjs; the licence texts are reproduced verbatim.
+THIRD-PARTY-NOTICES.md
+
+# Written by scripts/generate-tiles.cjs; the script's own output is the reference format.
+src/renderer/src/assets/tiles.generated.ts

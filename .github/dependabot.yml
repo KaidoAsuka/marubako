@@ -1,0 +1,50 @@
+# Dependabot opens the pull requests; a person reads and merges them after CI is green.
+# Minor and patch updates come as one grouped pull request per ecosystem and week, so that the
+# review queue stays short. The Electron runtime and packaging stack is grouped on its own, so it is
+# never hidden inside a large batch. Major updates are not grouped: each one is its own pull request.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      electron-stack:
+        patterns:
+          - electron
+          - electron-*
+        update-types:
+          - minor
+          - patch
+      minor-and-patch:
+        patterns:
+          - '*'
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    labels:
+      - dependencies
+    commit-message:
+      prefix: ci
+      include: scope
+    groups:
+      actions-minor-and-patch:
+        patterns:
+          - '*'
+        update-types:
+          - minor
+          - patch

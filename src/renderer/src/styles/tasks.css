@@ -1,0 +1,230 @@
+/* Tasks use the same surfaces, spacing and controls as the collections. */
+.task-summary {
+  margin-bottom: 10px;
+  color: var(--text-dim);
+  font: 11px/1.5 var(--sans);
+}
+
+.task-section > .empty-state {
+  height: auto;
+  min-height: 200px;
+}
+
+.task-card,
+.task-card.status-doing,
+.task-card.status-skip,
+.task-card.status-done {
+  min-width: 0;
+  border: 1px solid var(--line);
+  background: var(--card-bg);
+}
+
+.task-card:hover {
+  border-color: var(--line-strong);
+  background: var(--hover-bg);
+}
+
+.task-card-header {
+  gap: 6px;
+  cursor: default;
+}
+
+.task-card-toggle {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.task-card-icon {
+  border-color: var(--line);
+  background: var(--accent-soft);
+}
+
+.task-card-meta {
+  align-items: center;
+  font: 10px/1.4 var(--sans);
+}
+
+/* A task that needs no more work reads as finished, the way its subtasks do. The one-click status
+   button at the start of the header is the same control as the subtask one. */
+.task-card.status-done .task-card-title,
+.task-card.status-skip .task-card-title {
+  color: var(--text-dim);
+}
+
+.task-card.status-done .task-card-title {
+  text-decoration: line-through;
+}
+
+.task-card-header > .task-status {
+  flex-shrink: 0;
+}
+
+.task-card-toggle .group-card-chevron {
+  flex-shrink: 0;
+}
+
+.task-card-body {
+  gap: 8px;
+  padding: 0 8px 8px;
+}
+
+.task-card-body .group-add-button {
+  align-self: flex-start;
+}
+
+.task-card-header > .drag-handle,
+.subtask-row > .drag-handle {
+  width: 20px;
+  height: 26px;
+  border-color: transparent;
+  background: transparent;
+}
+
+.subtask-list {
+  gap: 2px;
+}
+
+.subtask-row {
+  min-width: 0;
+  gap: 5px;
+  padding: 3px 4px;
+  border-radius: 8px;
+}
+
+.subtask-row:hover,
+.subtask-row:focus-within {
+  background: var(--hover-bg);
+}
+
+.subtask-status {
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  border-color: var(--line);
+  background: transparent;
+}
+
+.subtask-copy {
+  min-width: 0;
+  padding: 6px 3px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  font: 12px/1.5 var(--sans);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subtask-row.status-done .subtask-copy {
+  color: var(--text-dim);
+  text-decoration: line-through;
+}
+
+.subtask-row.status-skip .subtask-copy {
+  color: var(--text-dim);
+}
+
+.date-nav,
+.date-display,
+.week-day,
+.calendar-popover {
+  border-color: var(--line);
+  background: var(--card-bg);
+}
+
+.date-display {
+  min-width: 0;
+  border-radius: 8px;
+}
+
+.date-display-copy {
+  min-width: 0;
+}
+
+.date-main {
+  flex-wrap: wrap;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.date-sub,
+.date-today-tag,
+.today-btn,
+.wd-label,
+.wd-meta,
+.calendar-title span,
+.calendar-selection,
+.calendar-weekday,
+.calendar-day-meta {
+  font-family: var(--sans);
+}
+
+.date-nav {
+  flex-basis: 30px;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+}
+
+.date-display-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: transparent;
+}
+
+.week-day {
+  border-radius: 8px;
+}
+
+.wd-num {
+  font-weight: 600;
+}
+
+.calendar-popover {
+  left: 0;
+  padding: 12px;
+  border-color: var(--line-strong);
+  border-radius: 12px;
+}
+
+.calendar-header {
+  margin-bottom: 8px;
+}
+
+.calendar-weekdays {
+  margin-bottom: 6px;
+}
+
+.calendar-weekdays,
+.calendar-grid {
+  gap: 4px;
+}
+
+.calendar-day {
+  min-height: 36px;
+  padding: 4px;
+  border-color: var(--line);
+}
+
+.calendar-day-meta {
+  display: none;
+}
+
+.calendar-footer {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-color: var(--line);
+}

@@ -1,0 +1,356 @@
+/* One motion language for the workspace and its body-mounted portals.
+   Keep movement on controls or inner icons so sortable geometry stays stable. */
+:is(
+  .icon-button,
+  .chip-button,
+  .secondary-button,
+  .primary-button,
+  .empty-state-action,
+  .group-add-button,
+  .task-add-button,
+  .text-button,
+  .tab-button,
+  .date-nav,
+  .date-display,
+  .today-btn,
+  .calendar-day,
+  .week-day,
+  .grid-add,
+  .command-trigger,
+  .command-result,
+  .emoji-picker-trigger,
+  .emoji-picker-tab,
+  .emoji-picker-cell,
+  .subtask-status,
+  .subtask-copy
+) {
+  transition:
+    transform var(--motion-fast) var(--ease-out),
+    opacity var(--motion-fast) var(--ease-out),
+    color var(--motion-fast) var(--ease-out),
+    background-color var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-fast) var(--ease-out);
+}
+
+:is(
+    .icon-button,
+    .chip-button,
+    .secondary-button,
+    .primary-button,
+    .empty-state-action,
+    .group-add-button,
+    .task-add-button,
+    .text-button,
+    .date-nav,
+    .today-btn,
+    .grid-add,
+    .emoji-picker-cell,
+    .subtask-status,
+    .subtask-copy
+  ):active:not(:disabled):not(.drag-handle) {
+  transform: scale(0.96);
+  transition-duration: var(--motion-instant);
+}
+
+/* A card answers a press before anything has happened: its icon gives way. Never while a drag is
+   under way, and never for a press on the card's own edit and delete buttons (:active bubbles). */
+body:not(.dnd-active) .grid-main:active .grid-ico,
+body:not(.dnd-active)
+  .widget-loose:active:not(:has(.widget-actions :active))
+  .widget-loose-box,
+body:not(.dnd-active)
+  .folder-widget:active:not(:has(.widget-actions :active))
+  .widget-box,
+body:not(.dnd-active)
+  .item-row[data-launchable]:active:not(:has(.item-actions :active))
+  .item-icon {
+  transform: scale(0.92);
+  transition-duration: var(--motion-instant);
+}
+
+/* ...and once the click is sent, the icon springs back from the same 0.92 and the card's edge lights
+   up for as long as further clicks are swallowed (LAUNCH_WINDOW_MS in use-launch-feedback.ts). */
+[data-launch='launching'] :is(.grid-ico, .widget-loose-box, .item-icon) {
+  animation: launchPop var(--motion-spring) var(--ease-spring);
+}
+
+[data-launch='launching'] {
+  animation: launchRing 600ms var(--ease-out);
+}
+
+/* A launch that failed keeps a red outline, over the card's hover line too. */
+:is(.grid-item, .widget-loose, .item-row)[data-launch='failed'] {
+  border-color: var(--danger);
+  transition: border-color var(--motion-fast) var(--ease-out);
+}
+
+@keyframes launchPop {
+  from {
+    transform: scale(0.92);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes launchRing {
+  from {
+    border-color: var(--accent);
+    background-color: var(--accent-soft);
+  }
+}
+
+/* A copy answers on the button that was pressed: it turns green and shows a tick for as long as the
+   confirmation lasts. The selectors carry :hover too, because the pointer is on the button at that
+   very moment and the buttons' own hover rules would otherwise repaint it. The tint is 10% (12% would
+   take the light theme's small label to the 4.5:1 line); a row's text keeps its colour except on the
+   dark theme, where it follows the tick. */
+:is(.icon-button, .snippet-copy)[data-copied],
+:is(.icon-button, .snippet-copy)[data-copied]:hover:not(:disabled) {
+  color: var(--success);
+}
+
+:is(.icon-button, .snippet-copy, .credential-copy)[data-copied],
+:is(.icon-button, .snippet-copy, .credential-copy)[data-copied]:hover:not(
+    :disabled
+  ) {
+  border-color: color-mix(in srgb, var(--success) 40%, transparent);
+  background-color: color-mix(in srgb, var(--success) 10%, transparent);
+}
+
+:is(.icon-button, .snippet-copy, .credential-copy)[data-copied] svg,
+:is(.icon-button, .snippet-copy, .credential-copy)[data-copied]:hover:not(
+    :disabled
+  )
+  svg {
+  color: var(--success);
+  /* The tick settles on the spring; its opacity never does. */
+  animation:
+    tickPop var(--motion-spring) var(--ease-spring),
+    tickFade var(--motion-fast) var(--ease-out);
+}
+
+.theme-dark .credential-copy[data-copied] .credential-value {
+  color: var(--success);
+}
+
+@keyframes tickPop {
+  from {
+    transform: scale(0.5);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes tickFade {
+  from {
+    opacity: 0.4;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.tab-button {
+  transition-duration: var(--motion-instant);
+}
+
+.tabbar {
+  position: relative;
+  isolation: isolate;
+}
+
+.tabbar::before {
+  content: '';
+  box-sizing: border-box;
+  position: absolute;
+  z-index: -1;
+  top: 0;
+  left: 0;
+  /* TabBar.tsx measures the active button into --tab-x and --tab-w. */
+  width: var(--tab-w, 0px);
+  height: 100%;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  /* No outline, so the fill alone has to carry the marker: a little stronger than --accent-soft. */
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  transform: translateX(var(--tab-x, 0px));
+  transition: transform var(--motion-normal) var(--ease-out);
+  pointer-events: none;
+}
+
+/* A window being resized, or the first paint: the marker is simply there. */
+.tabbar[data-marker-instant]::before {
+  transition: none;
+}
+
+.tab-button.active {
+  background: transparent;
+  border-color: transparent;
+}
+
+/* Hovering moves nothing. These transitions are for the press and its release, and the chevron. */
+.widget-box,
+.widget-loose-box,
+.grid-ico,
+.item-icon,
+.group-card-chevron {
+  transition: transform var(--motion-fast) var(--ease-out);
+}
+
+/* A card changes its fill and its line, nothing else: in on hover, out on leaving. */
+:is(
+  .folder-widget,
+  .widget-loose,
+  .grid-item,
+  .item-row,
+  .task-card,
+  .group-card
+) {
+  transition:
+    background-color var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out);
+}
+
+:is(
+  .folder-widget,
+  .widget-loose,
+  .grid-item,
+  .item-row,
+  .task-card,
+  .group-card
+):hover {
+  transition-duration: var(--motion-instant);
+}
+
+/* The buttons on a card show once the pointer has rested on it (--hover-intent), so sweeping across a grid
+   does not flash every card's buttons, and they cannot be pressed while they are still invisible
+   (the click lands on the card, as it would anywhere else on it). Keyboard focus shows them at once.
+   They stay in the tab order throughout: pointer-events is what is switched, not visibility. */
+.widget-actions,
+.grid-actions,
+.widget-card-toolbar,
+.grid-item-actions,
+.loose-widget-handle {
+  pointer-events: none;
+  transition:
+    opacity var(--motion-instant) var(--ease-out),
+    pointer-events 0s linear var(--motion-instant);
+  transition-behavior: allow-discrete;
+}
+
+.folder-widget:hover .widget-actions,
+.widget-loose:hover .widget-actions,
+.grid-item:hover .grid-actions,
+.widget-card:hover .widget-card-toolbar,
+.grid-item:hover .grid-item-actions {
+  pointer-events: auto;
+  transition-delay: var(--hover-intent);
+}
+
+.folder-widget:focus-within .widget-actions,
+.widget-loose:focus-within .widget-actions,
+.grid-item:focus-within .grid-actions,
+.widget-card:focus-within .widget-card-toolbar,
+.grid-item:focus-within .grid-item-actions {
+  opacity: 1;
+  pointer-events: auto;
+  transition-delay: 0s;
+}
+
+.section-content {
+  animation: sectionIn var(--motion-instant) var(--ease-out) both;
+}
+
+.group-card-body,
+.task-card-body {
+  animation: expandIn var(--motion-normal) var(--ease-out) both;
+}
+
+.calendar-popover,
+.emoji-picker-dropdown[data-side='bottom'] {
+  transform-origin: top left;
+}
+
+.modal-overlay,
+.command-overlay,
+.widget-popup-overlay {
+  animation: overlayIn var(--motion-normal) var(--ease-out) both;
+}
+
+.modal-card,
+.command-dialog,
+.widget-popup,
+.widget-popup-card {
+  animation: widgetOpen var(--motion-normal) var(--ease-out) both;
+}
+
+:is(.modal-overlay, .command-overlay, .widget-popup-overlay)[data-exiting] {
+  pointer-events: none;
+  animation: overlayOut var(--motion-fast) var(--ease-in) both;
+}
+
+:is(.modal-overlay, .command-overlay, .widget-popup-overlay)[data-exiting]
+  > :is(.modal-card, .command-dialog, .widget-popup, .widget-popup-card) {
+  animation: surfaceOut var(--motion-fast) var(--ease-in) both;
+}
+
+@keyframes overlayIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes overlayOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes surfaceOut {
+  from {
+    transform: translateY(0) scale(1);
+  }
+  to {
+    transform: translateY(4px) scale(0.985);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+
+  .tab-button-icon,
+  .widget-box,
+  .widget-loose-box,
+  .grid-ico,
+  .item-icon,
+  .emoji-picker-cell,
+  button:active {
+    transform: none !important;
+  }
+
+  /* The launch ring and pop are animations: without them the swallow window still shows that the
+     click was sent, as a static tint that goes when data-launch clears. */
+  :is(.grid-item, .widget-loose, .item-row)[data-launch='launching'] {
+    border-color: var(--accent);
+    background-color: var(--accent-soft);
+  }
+
+  :is(.modal-overlay, .command-overlay, .widget-popup-overlay)[data-exiting] {
+    visibility: hidden;
+  }
+}

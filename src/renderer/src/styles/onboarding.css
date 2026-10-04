@@ -1,0 +1,116 @@
+/* The first-run card (OnboardingCard.tsx): a quiet neutral card under the category bar. The accent
+   is used only for what is selected or done (the chosen language, a ticked line), as everywhere
+   else. It folds away by animating the height of a grid row (a height cannot transition to auto)
+   together with its opacity. */
+.onboarding-card {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-rows: 1fr;
+  margin: 8px 12px 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card-bg);
+  color: var(--text);
+  font: 12px/1.5 var(--sans);
+  transition:
+    grid-template-rows var(--motion-normal) var(--ease-out),
+    margin-top var(--motion-normal) var(--ease-out),
+    opacity var(--motion-normal) var(--ease-out);
+}
+.onboarding-card[data-folding] {
+  grid-template-rows: 0fr;
+  margin-top: 0;
+  opacity: 0;
+  /* A card that is folding takes no clicks. */
+  pointer-events: none;
+}
+.onboarding-clip {
+  min-height: 0;
+  overflow: hidden;
+}
+.onboarding-body {
+  display: grid;
+  gap: 4px;
+  padding: 6px 8px 8px 12px;
+}
+.onboarding-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.onboarding-title {
+  margin: 0;
+  font: 600 12px/1.4 var(--sans);
+  color: var(--text);
+}
+.onboarding-close {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+}
+.onboarding-steps {
+  display: grid;
+  gap: 4px;
+  margin: 0 0 4px;
+  padding: 0;
+  list-style: none;
+}
+.onboarding-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--text-mid);
+}
+.onboarding-step[data-done] {
+  color: var(--text-dim);
+}
+.onboarding-check {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  color: var(--on-accent);
+}
+.onboarding-step[data-done] .onboarding-check {
+  border-color: transparent;
+  background: var(--accent-solid);
+}
+.onboarding-step-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  /* A Japanese line breaks between phrases, not in the middle of a word. */
+  word-break: auto-phrase;
+}
+.onboarding-step kbd {
+  min-height: 18px;
+  margin: 0 2px;
+  padding: 0 5px;
+}
+.onboarding-language {
+  justify-self: start;
+  align-items: center;
+  max-width: 100%;
+}
+.onboarding-language-icon {
+  flex-shrink: 0;
+  margin: 0 4px 0 6px;
+  color: var(--text-dim);
+}
+.onboarding-language .segmented-option {
+  padding: 3px 10px;
+}
+
+/* An empty category tells what it is for. The sentence is guidance, not a caption: 12px, in the
+   readable grey, over the button that does it. */
+.empty-state-description {
+  max-width: 28em;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-mid);
+}

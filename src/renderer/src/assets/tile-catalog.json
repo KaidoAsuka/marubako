@@ -1,0 +1,865 @@
+{
+  "note": "彩色图块目录：150 个图形（Phosphor 图标名，使用 fill 粗细）和 12 个底色。全部名称已用 @iconify-json/ph 校验存在。",
+  "categories": [
+    {
+      "zh": "文件夹与文件",
+      "en": "Folders & files",
+      "glyphs": [
+        {
+          "phosphor": "folder",
+          "zh": "文件夹 目录",
+          "en": "folder directory"
+        },
+        {
+          "phosphor": "folder-open",
+          "zh": "打开 文件夹 展开",
+          "en": "open folder"
+        },
+        {
+          "phosphor": "folder-star",
+          "zh": "收藏夹 常用 星标",
+          "en": "favorite folder starred"
+        },
+        {
+          "phosphor": "folder-user",
+          "zh": "个人 用户目录 主目录",
+          "en": "user home folder"
+        },
+        {
+          "phosphor": "folder-lock",
+          "zh": "加密 私密 文件夹",
+          "en": "private locked folder"
+        },
+        {
+          "phosphor": "folders",
+          "zh": "项目 多个文件夹 工作区",
+          "en": "folders projects workspace"
+        },
+        {
+          "phosphor": "file-text",
+          "zh": "文本 文档 文件",
+          "en": "text document file"
+        },
+        {
+          "phosphor": "file-pdf",
+          "zh": "PDF 文档",
+          "en": "pdf document"
+        },
+        {
+          "phosphor": "file-doc",
+          "zh": "Word 文档",
+          "en": "word doc"
+        },
+        {
+          "phosphor": "file-xls",
+          "zh": "Excel 表格",
+          "en": "excel spreadsheet"
+        },
+        {
+          "phosphor": "file-ppt",
+          "zh": "PPT 幻灯片",
+          "en": "powerpoint slides"
+        },
+        {
+          "phosphor": "file-zip",
+          "zh": "压缩包 解压",
+          "en": "zip compressed"
+        },
+        {
+          "phosphor": "file-image",
+          "zh": "图片 照片 文件",
+          "en": "image picture file"
+        },
+        {
+          "phosphor": "file-video",
+          "zh": "视频 影片 文件",
+          "en": "video movie file"
+        },
+        {
+          "phosphor": "hard-drive",
+          "zh": "硬盘 磁盘 盘符",
+          "en": "disk drive volume"
+        },
+        {
+          "phosphor": "archive",
+          "zh": "归档 存档 备份",
+          "en": "archive box backup"
+        }
+      ]
+    },
+    {
+      "zh": "网站与网络",
+      "en": "Web & internet",
+      "glyphs": [
+        {
+          "phosphor": "globe",
+          "zh": "网站 网络 互联网",
+          "en": "website internet web"
+        },
+        {
+          "phosphor": "browser",
+          "zh": "浏览器 网页",
+          "en": "browser webpage"
+        },
+        {
+          "phosphor": "magnifying-glass",
+          "zh": "搜索 查找",
+          "en": "search find"
+        },
+        {
+          "phosphor": "envelope-simple",
+          "zh": "邮件 邮箱",
+          "en": "mail email inbox"
+        },
+        {
+          "phosphor": "monitor-play",
+          "zh": "视频 流媒体 追剧",
+          "en": "video streaming watch"
+        },
+        {
+          "phosphor": "music-notes",
+          "zh": "音乐 歌曲",
+          "en": "music songs"
+        },
+        {
+          "phosphor": "shopping-cart",
+          "zh": "购物 电商 购物车",
+          "en": "shopping store cart"
+        },
+        {
+          "phosphor": "chats-circle",
+          "zh": "社交 聊天 论坛",
+          "en": "social chat forum"
+        },
+        {
+          "phosphor": "map-trifold",
+          "zh": "地图 导航",
+          "en": "map navigation"
+        },
+        {
+          "phosphor": "cloud",
+          "zh": "云盘 网盘 云服务",
+          "en": "cloud drive storage"
+        },
+        {
+          "phosphor": "translate",
+          "zh": "翻译 语言",
+          "en": "translate language"
+        },
+        {
+          "phosphor": "robot",
+          "zh": "AI 对话 机器人",
+          "en": "ai chatbot assistant"
+        },
+        {
+          "phosphor": "sparkle",
+          "zh": "AI 生成 灵感",
+          "en": "ai generate magic"
+        },
+        {
+          "phosphor": "newspaper",
+          "zh": "新闻 资讯 博客",
+          "en": "news articles blog"
+        },
+        {
+          "phosphor": "link",
+          "zh": "链接 网址",
+          "en": "link url"
+        },
+        {
+          "phosphor": "bookmark-simple",
+          "zh": "书签 收藏 稍后读",
+          "en": "bookmark saved read later"
+        }
+      ]
+    },
+    {
+      "zh": "开发",
+      "en": "Development",
+      "glyphs": [
+        {
+          "phosphor": "terminal-window",
+          "zh": "终端 命令行",
+          "en": "terminal console shell"
+        },
+        {
+          "phosphor": "code",
+          "zh": "代码 编程",
+          "en": "code programming"
+        },
+        {
+          "phosphor": "code-block",
+          "zh": "代码片段 命令片段",
+          "en": "snippet code block"
+        },
+        {
+          "phosphor": "file-code",
+          "zh": "源码 脚本",
+          "en": "source script file"
+        },
+        {
+          "phosphor": "database",
+          "zh": "数据库 存储",
+          "en": "database sql storage"
+        },
+        {
+          "phosphor": "git-branch",
+          "zh": "Git 分支 版本",
+          "en": "git branch version"
+        },
+        {
+          "phosphor": "git-pull-request",
+          "zh": "PR 合并请求",
+          "en": "pull request merge"
+        },
+        {
+          "phosphor": "bug",
+          "zh": "Bug 调试 缺陷",
+          "en": "bug debug issue"
+        },
+        {
+          "phosphor": "shipping-container",
+          "zh": "容器 Docker",
+          "en": "container docker"
+        },
+        {
+          "phosphor": "package",
+          "zh": "包 依赖 模块",
+          "en": "package dependency module"
+        },
+        {
+          "phosphor": "hard-drives",
+          "zh": "服务器 主机",
+          "en": "server host"
+        },
+        {
+          "phosphor": "cloud-arrow-up",
+          "zh": "部署 上线 上传",
+          "en": "deploy publish upload"
+        },
+        {
+          "phosphor": "plugs-connected",
+          "zh": "API 接口 集成",
+          "en": "api integration connect"
+        },
+        {
+          "phosphor": "cpu",
+          "zh": "处理器 性能 芯片",
+          "en": "cpu chip performance"
+        },
+        {
+          "phosphor": "rocket-launch",
+          "zh": "发布 启动",
+          "en": "launch release"
+        },
+        {
+          "phosphor": "tree-structure",
+          "zh": "架构 结构 流程",
+          "en": "architecture hierarchy flow"
+        }
+      ]
+    },
+    {
+      "zh": "办公",
+      "en": "Office",
+      "glyphs": [
+        {
+          "phosphor": "article",
+          "zh": "文档 文章",
+          "en": "document article"
+        },
+        {
+          "phosphor": "table",
+          "zh": "表格 数据表",
+          "en": "table sheet"
+        },
+        {
+          "phosphor": "presentation-chart",
+          "zh": "演示 幻灯片 汇报",
+          "en": "presentation slides"
+        },
+        {
+          "phosphor": "calendar-dots",
+          "zh": "日历 日程",
+          "en": "calendar schedule"
+        },
+        {
+          "phosphor": "notebook",
+          "zh": "笔记本 手册",
+          "en": "notebook journal"
+        },
+        {
+          "phosphor": "note-pencil",
+          "zh": "笔记 编辑 写作",
+          "en": "note edit write"
+        },
+        {
+          "phosphor": "note",
+          "zh": "便签 便条",
+          "en": "sticky note memo"
+        },
+        {
+          "phosphor": "notepad",
+          "zh": "备忘 记事本",
+          "en": "notepad memo"
+        },
+        {
+          "phosphor": "clipboard-text",
+          "zh": "纪要 清单 剪贴板",
+          "en": "clipboard minutes"
+        },
+        {
+          "phosphor": "chart-bar",
+          "zh": "报表 统计 数据",
+          "en": "chart report analytics"
+        },
+        {
+          "phosphor": "briefcase",
+          "zh": "工作 公文包 商务",
+          "en": "work business"
+        },
+        {
+          "phosphor": "printer",
+          "zh": "打印 打印机",
+          "en": "print printer"
+        },
+        {
+          "phosphor": "address-book",
+          "zh": "通讯录 联系人",
+          "en": "contacts address book"
+        },
+        {
+          "phosphor": "video-conference",
+          "zh": "会议 视频会议",
+          "en": "meeting video call"
+        }
+      ]
+    },
+    {
+      "zh": "设计与媒体",
+      "en": "Design & media",
+      "glyphs": [
+        {
+          "phosphor": "palette",
+          "zh": "设计 调色板 配色",
+          "en": "design palette color"
+        },
+        {
+          "phosphor": "paint-brush",
+          "zh": "画笔 绘画",
+          "en": "paint brush draw"
+        },
+        {
+          "phosphor": "pen-nib",
+          "zh": "钢笔 矢量 插画",
+          "en": "pen vector illustration"
+        },
+        {
+          "phosphor": "pencil-ruler",
+          "zh": "制图 原型 草图",
+          "en": "draft prototype sketch"
+        },
+        {
+          "phosphor": "eyedropper",
+          "zh": "取色 吸管",
+          "en": "color picker eyedropper"
+        },
+        {
+          "phosphor": "image",
+          "zh": "图片 照片",
+          "en": "image photo"
+        },
+        {
+          "phosphor": "images",
+          "zh": "相册 图库 素材",
+          "en": "gallery album assets"
+        },
+        {
+          "phosphor": "camera",
+          "zh": "相机 拍照 摄影",
+          "en": "camera photo"
+        },
+        {
+          "phosphor": "video-camera",
+          "zh": "摄像 录像 录屏",
+          "en": "video record"
+        },
+        {
+          "phosphor": "film-strip",
+          "zh": "影片 剪辑",
+          "en": "film editing clip"
+        },
+        {
+          "phosphor": "microphone",
+          "zh": "麦克风 录音 播客",
+          "en": "microphone recording podcast"
+        },
+        {
+          "phosphor": "headphones",
+          "zh": "耳机 听歌 音频",
+          "en": "headphones audio listen"
+        },
+        {
+          "phosphor": "text-aa",
+          "zh": "字体 排版",
+          "en": "font typography"
+        },
+        {
+          "phosphor": "cube-focus",
+          "zh": "3D 建模",
+          "en": "3d model"
+        }
+      ]
+    },
+    {
+      "zh": "系统与工具",
+      "en": "System & tools",
+      "glyphs": [
+        {
+          "phosphor": "gear",
+          "zh": "设置 配置",
+          "en": "settings config"
+        },
+        {
+          "phosphor": "sliders-horizontal",
+          "zh": "调节 选项 控制面板",
+          "en": "controls preferences"
+        },
+        {
+          "phosphor": "wrench",
+          "zh": "工具 修复 维护",
+          "en": "tool fix repair"
+        },
+        {
+          "phosphor": "download-simple",
+          "zh": "下载",
+          "en": "download"
+        },
+        {
+          "phosphor": "scan",
+          "zh": "截图 截屏 扫描",
+          "en": "screenshot capture scan"
+        },
+        {
+          "phosphor": "calculator",
+          "zh": "计算器",
+          "en": "calculator"
+        },
+        {
+          "phosphor": "desktop",
+          "zh": "电脑 桌面 此电脑",
+          "en": "desktop computer pc"
+        },
+        {
+          "phosphor": "device-mobile",
+          "zh": "手机 移动设备",
+          "en": "phone mobile device"
+        },
+        {
+          "phosphor": "keyboard",
+          "zh": "键盘 输入法 快捷键",
+          "en": "keyboard input shortcut"
+        },
+        {
+          "phosphor": "app-window",
+          "zh": "软件 窗口 程序",
+          "en": "app window program"
+        },
+        {
+          "phosphor": "squares-four",
+          "zh": "应用 面板 全部",
+          "en": "apps grid dashboard"
+        },
+        {
+          "phosphor": "trash",
+          "zh": "回收站 删除 清理",
+          "en": "trash delete recycle"
+        },
+        {
+          "phosphor": "power",
+          "zh": "电源 关机 重启",
+          "en": "power shutdown restart"
+        },
+        {
+          "phosphor": "arrows-clockwise",
+          "zh": "同步 刷新 更新",
+          "en": "sync refresh update"
+        },
+        {
+          "phosphor": "qr-code",
+          "zh": "二维码 扫码",
+          "en": "qr code"
+        },
+        {
+          "phosphor": "puzzle-piece",
+          "zh": "插件 扩展",
+          "en": "plugin extension"
+        }
+      ]
+    },
+    {
+      "zh": "账号与安全",
+      "en": "Accounts & security",
+      "glyphs": [
+        {
+          "phosphor": "key",
+          "zh": "钥匙 密钥 密码",
+          "en": "key secret password"
+        },
+        {
+          "phosphor": "lock",
+          "zh": "锁 锁定",
+          "en": "lock locked"
+        },
+        {
+          "phosphor": "lock-key",
+          "zh": "加密 密码锁",
+          "en": "encrypted lock key"
+        },
+        {
+          "phosphor": "password",
+          "zh": "密码 口令 验证码",
+          "en": "password passcode pin"
+        },
+        {
+          "phosphor": "fingerprint",
+          "zh": "指纹 生物识别",
+          "en": "fingerprint biometric"
+        },
+        {
+          "phosphor": "shield-check",
+          "zh": "盾牌 安全 防护",
+          "en": "shield security protected"
+        },
+        {
+          "phosphor": "credit-card",
+          "zh": "银行卡 信用卡 支付",
+          "en": "credit card payment"
+        },
+        {
+          "phosphor": "bank",
+          "zh": "银行 网银",
+          "en": "bank banking"
+        },
+        {
+          "phosphor": "wallet",
+          "zh": "钱包 理财",
+          "en": "wallet finance"
+        },
+        {
+          "phosphor": "user-circle",
+          "zh": "账号 用户 头像",
+          "en": "account user profile"
+        },
+        {
+          "phosphor": "identification-card",
+          "zh": "身份证 证件 实名",
+          "en": "id card identity"
+        },
+        {
+          "phosphor": "vault",
+          "zh": "保险箱 密码库",
+          "en": "vault safe"
+        },
+        {
+          "phosphor": "eye-slash",
+          "zh": "隐藏 隐私 保密",
+          "en": "hidden privacy"
+        }
+      ]
+    },
+    {
+      "zh": "任务与状态",
+      "en": "Tasks & status",
+      "glyphs": [
+        {
+          "phosphor": "check-circle",
+          "zh": "完成 已办",
+          "en": "done complete"
+        },
+        {
+          "phosphor": "check-square",
+          "zh": "勾选 待办",
+          "en": "checkbox todo"
+        },
+        {
+          "phosphor": "list-checks",
+          "zh": "清单 任务列表",
+          "en": "checklist tasks"
+        },
+        {
+          "phosphor": "kanban",
+          "zh": "看板 进度",
+          "en": "kanban board progress"
+        },
+        {
+          "phosphor": "flag",
+          "zh": "旗帜 标记 里程碑",
+          "en": "flag mark milestone"
+        },
+        {
+          "phosphor": "star",
+          "zh": "星标 收藏 重要",
+          "en": "star favorite important"
+        },
+        {
+          "phosphor": "alarm",
+          "zh": "闹钟 定时",
+          "en": "alarm clock"
+        },
+        {
+          "phosphor": "bell",
+          "zh": "提醒 通知",
+          "en": "reminder notification"
+        },
+        {
+          "phosphor": "timer",
+          "zh": "计时 番茄钟 倒计时",
+          "en": "timer pomodoro countdown"
+        },
+        {
+          "phosphor": "target",
+          "zh": "目标 专注",
+          "en": "goal target focus"
+        },
+        {
+          "phosphor": "push-pin",
+          "zh": "置顶 固定",
+          "en": "pin pinned"
+        },
+        {
+          "phosphor": "lightbulb",
+          "zh": "想法 灵感",
+          "en": "idea inspiration"
+        },
+        {
+          "phosphor": "fire",
+          "zh": "紧急 热门",
+          "en": "urgent hot"
+        },
+        {
+          "phosphor": "warning",
+          "zh": "警告 注意",
+          "en": "warning alert"
+        },
+        {
+          "phosphor": "tag",
+          "zh": "标签 分类",
+          "en": "tag label category"
+        }
+      ]
+    },
+    {
+      "zh": "生活",
+      "en": "Life",
+      "glyphs": [
+        {
+          "phosphor": "house",
+          "zh": "家 主页",
+          "en": "home house"
+        },
+        {
+          "phosphor": "coffee",
+          "zh": "咖啡 休息",
+          "en": "coffee break"
+        },
+        {
+          "phosphor": "fork-knife",
+          "zh": "餐饮 美食 外卖",
+          "en": "food restaurant dining"
+        },
+        {
+          "phosphor": "airplane-tilt",
+          "zh": "旅行 航班 出差",
+          "en": "travel flight trip"
+        },
+        {
+          "phosphor": "car",
+          "zh": "汽车 出行",
+          "en": "car drive commute"
+        },
+        {
+          "phosphor": "barbell",
+          "zh": "健身 运动",
+          "en": "fitness workout gym"
+        },
+        {
+          "phosphor": "first-aid-kit",
+          "zh": "医疗 健康",
+          "en": "medical health"
+        },
+        {
+          "phosphor": "book-open",
+          "zh": "阅读 书籍",
+          "en": "reading book"
+        },
+        {
+          "phosphor": "graduation-cap",
+          "zh": "学习 课程 教育",
+          "en": "study course education"
+        },
+        {
+          "phosphor": "game-controller",
+          "zh": "游戏 娱乐",
+          "en": "game gaming"
+        },
+        {
+          "phosphor": "gift",
+          "zh": "礼物 福利",
+          "en": "gift present"
+        },
+        {
+          "phosphor": "sun",
+          "zh": "天气 白天",
+          "en": "weather sun day"
+        },
+        {
+          "phosphor": "paw-print",
+          "zh": "宠物 动物",
+          "en": "pet animal"
+        },
+        {
+          "phosphor": "map-pin",
+          "zh": "地点 位置",
+          "en": "place location"
+        },
+        {
+          "phosphor": "heart",
+          "zh": "喜欢 最爱",
+          "en": "love like favorite"
+        }
+      ]
+    },
+    {
+      "zh": "品牌与平台",
+      "en": "Brands & platforms",
+      "glyphs": [
+        {
+          "phosphor": "github-logo",
+          "zh": "GitHub 代码托管",
+          "en": "github repo"
+        },
+        {
+          "phosphor": "google-logo",
+          "zh": "谷歌 Google",
+          "en": "google"
+        },
+        {
+          "phosphor": "google-chrome-logo",
+          "zh": "Chrome 浏览器",
+          "en": "chrome browser"
+        },
+        {
+          "phosphor": "google-drive-logo",
+          "zh": "谷歌云盘 Drive",
+          "en": "google drive"
+        },
+        {
+          "phosphor": "youtube-logo",
+          "zh": "YouTube 视频",
+          "en": "youtube video"
+        },
+        {
+          "phosphor": "x-logo",
+          "zh": "X 推特",
+          "en": "x twitter"
+        },
+        {
+          "phosphor": "discord-logo",
+          "zh": "Discord 社群",
+          "en": "discord community"
+        },
+        {
+          "phosphor": "telegram-logo",
+          "zh": "Telegram 电报",
+          "en": "telegram"
+        },
+        {
+          "phosphor": "wechat-logo",
+          "zh": "微信 WeChat",
+          "en": "wechat"
+        },
+        {
+          "phosphor": "notion-logo",
+          "zh": "Notion 笔记",
+          "en": "notion"
+        },
+        {
+          "phosphor": "figma-logo",
+          "zh": "Figma 设计",
+          "en": "figma design"
+        },
+        {
+          "phosphor": "open-ai-logo",
+          "zh": "ChatGPT OpenAI",
+          "en": "openai chatgpt"
+        },
+        {
+          "phosphor": "steam-logo",
+          "zh": "Steam 游戏",
+          "en": "steam games"
+        },
+        {
+          "phosphor": "windows-logo",
+          "zh": "Windows 系统",
+          "en": "windows microsoft"
+        },
+        {
+          "phosphor": "linux-logo",
+          "zh": "Linux 系统",
+          "en": "linux"
+        }
+      ]
+    }
+  ],
+  "colors": [
+    {
+      "zh": "品牌紫",
+      "hex": "#7C6CF0"
+    },
+    {
+      "zh": "蓝",
+      "hex": "#4385E4"
+    },
+    {
+      "zh": "青",
+      "hex": "#0898B4"
+    },
+    {
+      "zh": "绿",
+      "hex": "#2A9F58"
+    },
+    {
+      "zh": "黄绿",
+      "hex": "#719C27"
+    },
+    {
+      "zh": "琥珀黄",
+      "hex": "#B38605"
+    },
+    {
+      "zh": "橙",
+      "hex": "#DA6C1E"
+    },
+    {
+      "zh": "红",
+      "hex": "#DE4F46"
+    },
+    {
+      "zh": "玫红",
+      "hex": "#CF386B"
+    },
+    {
+      "zh": "粉",
+      "hex": "#D469B4"
+    },
+    {
+      "zh": "棕",
+      "hex": "#956A46"
+    },
+    {
+      "zh": "灰蓝",
+      "hex": "#647995"
+    }
+  ]
+}

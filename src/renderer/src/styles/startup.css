@@ -1,0 +1,158 @@
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+html,
+body {
+  overflow: hidden;
+  background: transparent;
+}
+.startup-shell {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--line, rgba(185, 195, 215, 0.1));
+  border-radius: 18px;
+  background: var(--workspace-bg, #15171e);
+  color: var(--text, #f1f5f9);
+  font-family: var(
+    --sans,
+    'Segoe UI',
+    'Microsoft YaHei UI',
+    system-ui,
+    sans-serif
+  );
+}
+.startup-stack {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 24px;
+}
+.startup-visual {
+  position: relative;
+  width: 224px;
+  height: 132px;
+  margin-bottom: 8px;
+}
+.startup-logo {
+  position: absolute;
+  top: 4px;
+  left: 80px;
+  width: 64px;
+  height: 64px;
+  z-index: 2;
+  filter: drop-shadow(0 8px 20px rgba(120, 101, 237, 0.18));
+  animation: startupLogoFloat 1.8s ease-in-out infinite;
+}
+.startup-shortcut {
+  position: absolute;
+  bottom: 12px;
+  left: 0;
+  width: 72px;
+  height: 52px;
+  box-sizing: border-box;
+  padding: 11px;
+  border: 1px solid var(--accent-border, rgba(165, 148, 255, 0.36));
+  border-radius: 9px;
+  background: var(--card-bg, #1d2029);
+  --tilt: -8deg;
+  animation: startupCardRise 1.8s ease-in-out infinite;
+}
+.startup-shortcut:nth-of-type(2) {
+  left: 76px;
+  bottom: 3px;
+  --tilt: 0deg;
+  animation-delay: 160ms;
+}
+.startup-shortcut:nth-of-type(3) {
+  left: 152px;
+  --tilt: 8deg;
+  animation-delay: 320ms;
+}
+.startup-shortcut i {
+  display: block;
+  height: 5px;
+  width: 70%;
+  margin-bottom: 7px;
+  border-radius: 3px;
+  background: var(--accent, #a594ff);
+  opacity: 0.6;
+}
+.startup-shortcut i + i {
+  width: 100%;
+  height: 3px;
+  background: var(--text-dim, #8d96ab);
+  opacity: 0.35;
+}
+.startup-title {
+  font-size: 21px;
+  font-weight: 650;
+  letter-spacing: -0.4px;
+}
+.startup-track {
+  width: 132px;
+  height: 3px;
+  overflow: hidden;
+  margin-top: 8px;
+  background: var(--line, rgba(185, 195, 215, 0.1));
+  border-radius: 3px;
+}
+.startup-track::after {
+  content: '';
+  display: block;
+  width: 44px;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent, #a594ff);
+  animation: startupTrackMove 1.5s ease-in-out infinite;
+}
+@keyframes startupCardRise {
+  0%,
+  100% {
+    transform: translateY(5px) scale(0.96) rotate(var(--tilt));
+    opacity: 0.45;
+  }
+  40%,
+  65% {
+    transform: translateY(0) scale(1) rotate(var(--tilt));
+    opacity: 1;
+  }
+}
+@keyframes startupLogoFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+@keyframes startupTrackMove {
+  from {
+    transform: translateX(-44px);
+  }
+  to {
+    transform: translateX(132px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .startup-logo,
+  .startup-shortcut,
+  .startup-track::after {
+    animation: none;
+  }
+  .startup-shortcut {
+    transform: rotate(var(--tilt));
+  }
+  .startup-track::after {
+    margin-inline: auto;
+    opacity: 0.6;
+  }
+}

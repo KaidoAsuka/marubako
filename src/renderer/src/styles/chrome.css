@@ -1,0 +1,264 @@
+/* The frame above the content: two bars (iteration 4, layout-1), and nothing else is fixed up there.
+   Row 1 is the window row, 36px: the search, the area that drags the window, pin, settings, collapse
+   to the ball and close to the tray. Row 2 is the category row: the seven tabs.
+   "New group" and "add" sit in row 1 beside the search while the window is narrow, and at the right
+   end of row 2 once the tabs have room for icon and name side by side.
+
+   Which layout applies is decided in script from constants per language (shared/layout-widths.ts):
+   data-tab-mode on the category row is `stacked` (icon above the name, the default window), `row`
+   (icon beside the name, a wide window) or `icons` (narrower than the names need), and data-search on
+   the window row is `icon`, `label` or `full`. */
+
+/* Row 1 */
+.titlebar {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 8px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--sidebar-bg);
+  -webkit-app-region: drag;
+}
+.titlebar-search {
+  display: flex;
+  align-items: center;
+  flex: 0 1 240px;
+  gap: 8px;
+  min-width: 0;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card-bg);
+  color: var(--text-dim);
+  text-align: left;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+}
+.titlebar-search:hover {
+  border-color: var(--line-strong);
+  background: var(--hover-bg);
+}
+.titlebar-search svg {
+  flex-shrink: 0;
+}
+.titlebar-search span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+}
+.titlebar-search kbd {
+  min-height: 18px;
+  font-size: 9px;
+}
+/* With "new group" and "add" beside it the search keeps to what it needs: the shortcut is in its
+   tooltip. Narrower still it is only its magnifying glass. */
+.titlebar[data-search='label'] .titlebar-search {
+  flex-basis: 160px;
+}
+.titlebar[data-search='label'] .titlebar-search kbd,
+.titlebar[data-search='icon'] .titlebar-search span,
+.titlebar[data-search='icon'] .titlebar-search kbd {
+  display: none;
+}
+.titlebar[data-search='icon'] .titlebar-search {
+  flex: 0 0 28px;
+  justify-content: center;
+  width: 28px;
+  padding: 0;
+}
+.titlebar-actions,
+.section-actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 2px;
+  -webkit-app-region: no-drag;
+}
+.titlebar-actions {
+  margin-left: auto;
+}
+/* At the zoom limit (140%) a 320px window is only about 228px of interface: the buttons are the one
+   thing in the row that can give way (28px down to 20px), so the close button never leaves the window. */
+.titlebar-actions {
+  flex-shrink: 1;
+  min-width: 0;
+}
+.titlebar-actions .icon-button {
+  flex-shrink: 1;
+  min-width: 20px;
+  width: 28px;
+  height: 28px;
+  border-color: transparent;
+  background: transparent;
+}
+.titlebar-actions .icon-button:hover {
+  background: var(--hover-bg);
+}
+.titlebar-actions .icon-button.active {
+  background: var(--accent-soft);
+}
+/* A little air before the two ways out, so the neighbouring settings button is not mistaken for one. */
+.titlebar-ball,
+.titlebar-close {
+  margin-left: 4px;
+}
+.titlebar-ball img {
+  display: block;
+  width: 14px;
+  height: 14px;
+}
+
+/* Row 2 */
+.workspace-nav {
+  display: flex;
+  align-items: stretch;
+  flex-shrink: 0;
+  gap: 8px;
+  height: 40px;
+  padding: 4px 12px 3px;
+  border-bottom: 1px solid var(--line);
+  background: var(--sidebar-bg);
+}
+.tabbar {
+  display: flex;
+  flex: 1 1 auto;
+  gap: 2px;
+  min-width: 0;
+}
+/* Equal widths, however many tabs there are: the basis is 0 and the share is the same. */
+.tab-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 0;
+  gap: 6px;
+  min-width: 0;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.tab-button:not(.active):hover {
+  background: var(--card-bg);
+  color: var(--text-mid);
+}
+.tab-button.active {
+  color: var(--accent);
+}
+/* On the light bar the accent text falls under 4.5:1 on the marker's 18% fill: pull it toward the
+   text colour. */
+.theme-light .tab-button.active {
+  color: color-mix(in srgb, var(--accent) 60%, var(--text));
+}
+.tab-button-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.tab-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* The default window: the icon above the name, a 52px row. */
+.workspace-nav[data-tab-mode='stacked'] {
+  height: 52px;
+}
+.workspace-nav[data-tab-mode='stacked'] .tab-button {
+  flex-direction: column;
+  gap: 3px;
+  padding: 0 1px;
+  font-size: 11px;
+}
+/* The name is as wide as the tab, no wider: a name that does not fit is cut with an ellipsis instead of
+   spilling into the next tab. */
+.workspace-nav[data-tab-mode='stacked'] .tab-label {
+  align-self: stretch;
+  text-align: center;
+}
+/* Narrower than the names need: icons only (the name and the counts are in the tooltip). */
+.workspace-nav[data-tab-mode='icons'] .tab-label {
+  display: none;
+}
+/* A wide window: the tabs are as wide as their icon and name, and the actions take the right end. */
+.workspace-nav[data-tab-mode='row'] .tab-button {
+  flex: 0 0 auto;
+  gap: 5px;
+  padding: 0 8px;
+}
+.workspace-nav[data-tab-mode='row'] .tabbar {
+  flex-grow: 0;
+}
+.workspace-nav[data-tab-mode='row'] .section-actions {
+  margin-left: auto;
+}
+
+/* "New group" and "add" */
+.section-actions {
+  gap: 6px;
+}
+.section-actions .primary-button,
+.section-actions .secondary-button {
+  height: 28px;
+  min-height: 28px;
+  padding: 0 10px;
+}
+.section-actions .section-group-add,
+.titlebar .section-actions .section-add {
+  width: 28px;
+  padding: 0;
+}
+/* In the window row there is only room for the icons. */
+.titlebar .section-action-label {
+  display: none;
+}
+
+/* What the bars leave is the content. */
+.section-content {
+  padding: 10px 12px 12px;
+}
+
+/* Settings: a choice between two or three things that are all shown, one of them selected. */
+.segmented {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--workspace-bg);
+}
+.segmented-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-mid);
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    color var(--motion-instant) var(--ease-out),
+    background-color var(--motion-instant) var(--ease-out);
+}
+.segmented-option:not(.active):hover:not(:disabled) {
+  color: var(--text);
+}
+.segmented-option.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.segmented-option:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}

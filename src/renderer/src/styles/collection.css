@@ -1,0 +1,445 @@
+/* Compact collections: readable titles, short previews, detail on demand. */
+.list-section,
+.group-item-list,
+.task-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  align-content: start;
+  gap: 6px 10px;
+}
+.list-section > .group-card {
+  grid-column: 1 / -1;
+}
+.list-section > .group-card,
+.task-list > .task-card {
+  margin-bottom: 0;
+}
+.group-card-header,
+.task-card-header {
+  padding: 9px 10px;
+  gap: 8px;
+}
+/* These sit flush inside an overflow:hidden card, which would clip the usual outside ring: draw it
+   inside, and follow the card's inner corner (12px radius minus its 1px border). */
+.group-card-header {
+  border-radius: 11px;
+}
+.group-card-header:focus-visible,
+.snippet-expand:focus-visible {
+  outline-offset: -2px;
+}
+.group-card-icon,
+.task-card-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+.group-card-copy {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+.group-card-title,
+.task-card-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.group-card-meta {
+  flex-shrink: 0;
+}
+.group-card-body {
+  padding: 0 8px 8px;
+  gap: 8px;
+}
+.group-add-button {
+  min-height: 28px;
+  padding: 6px 10px;
+  border-radius: 7px;
+  align-self: flex-start;
+  color: var(--text-dim);
+  border-color: var(--line);
+}
+.item-row {
+  padding: 10px;
+  gap: 8px;
+  min-width: 0;
+  background: var(--card-bg);
+}
+.item-icon {
+  width: 26px;
+  height: 26px;
+  font-size: 20px;
+}
+.item-icon img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+.item-name,
+.item-subtext {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.item-name {
+  font-size: 12px;
+}
+.item-subtext {
+  font-size: 10px;
+  margin-top: 1px;
+}
+.item-actions {
+  gap: 3px;
+  flex-shrink: 0;
+  opacity: 1;
+}
+.item-actions .icon-button {
+  width: 26px;
+  height: 26px;
+  background: transparent;
+  border-color: transparent;
+}
+.item-actions .icon-button:hover {
+  background: var(--neutral-soft);
+}
+.note-preview {
+  font-size: 11px;
+  line-height: 1.65;
+}
+.note-preview:not(.expanded) {
+  max-height: 36px;
+}
+.note-preview.expanded {
+  overflow: auto;
+}
+/* One tile (layout-2) for the grid, the group popup and the popup's add cell: 44px high, a 24px icon and
+   a one-line name; a group adds its count, faint, at the right. The path, address and "n items" are not
+   drawn: they are in the tooltip (title) and the accessible name. The list view keeps its two-line rows
+   for anyone who needs to read the paths.
+   The columns fill the width and are never narrower than 144px: two need 294px of content, three 444px,
+   four 594px. The content is the window less 39px (the 15px scrollbar gutter and 12px padding each
+   side), so the default windows (zh 400, ja 400, en 470: 361 to 431px) all get two columns, at 177px
+   and up, and a name of ten Chinese characters (130px) fits. The minimum window (320) falls back to
+   one column rather than squeezing two tiles to 140px. */
+.widget-grid,
+.grid-view {
+  grid-template-columns: repeat(auto-fill, minmax(144px, 1fr));
+  gap: 6px;
+}
+.folder-widget,
+.widget-loose {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  height: 44px;
+  padding: 0 7px;
+  border-radius: 10px;
+}
+/* A group differs from a loose entry by its soft accent fill and its count column, not by a line. */
+.folder-widget {
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  background: var(--accent-soft);
+}
+.widget-box,
+.widget-loose-box {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+}
+.widget-box {
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+  place-items: center;
+}
+.widget-folder-symbol,
+.loose-icon-source,
+.grid-ico {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  font-size: 18px;
+  line-height: 1;
+}
+.widget-mini-ico {
+  font-size: 9px;
+  border-radius: 3px;
+}
+.widget-mini-ico img {
+  width: 10px;
+  height: 10px;
+}
+.widget-mini-empty {
+  font-size: 22px;
+}
+.widget-label {
+  margin: 0;
+  padding: 0;
+  text-align: left;
+  min-width: 0;
+}
+.widget-name,
+.grid-name {
+  display: block;
+  padding: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 18px;
+  text-align: left;
+}
+.widget-count {
+  display: block;
+  margin: 0;
+  color: var(--text-dim);
+  font: 11px/1 var(--sans);
+  font-variant-numeric: tabular-nums;
+}
+/* The buttons sit at the right, centred on the 44px tile (top and bottom 0 with an auto margin, so no
+   transform), clear of the icon: two 22px buttons are about a quarter of a tile and the popup's three
+   about a half, so the name is never taken over entirely and its tooltip still has the rest. They are
+   the colour of the hovered tile, so once they are there they cover the tail of the name instead of the
+   name having to make room for them. */
+.widget-actions,
+.grid-actions {
+  top: 0;
+  right: 6px;
+  bottom: 0;
+  left: auto;
+  width: auto;
+  height: fit-content;
+  margin-block: auto;
+  transform: none;
+  gap: 6px;
+  background: var(--hover-bg);
+  border-radius: 6px;
+}
+/* A wider gap keeps a slip of the pointer from landing on delete instead of edit. */
+.grid-actions .item-actions {
+  gap: 6px;
+}
+.widget-action-button {
+  width: 22px;
+  height: 22px;
+}
+.grid-copy {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+.grid-item {
+  height: 44px;
+  padding: 0;
+  background: var(--card-bg);
+  border-color: var(--line);
+}
+.grid-main {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+  padding: 0 7px;
+  text-align: left;
+}
+.grid-ico {
+  flex-shrink: 0;
+}
+.grid-actions .icon-button {
+  width: 22px;
+  height: 22px;
+  border-color: transparent;
+  background: transparent;
+  border-radius: 6px;
+}
+.grid-actions .icon-button:hover {
+  background: var(--neutral-soft);
+}
+/* A loose entry that would go into the group lights the whole group tile: it is the drop surface. The
+   :hover copy is there because the pointer is on the tile at that moment and the hover fill would win. */
+.folder-widget.folder-drop,
+.folder-widget.folder-drop:hover {
+  outline: 2px solid var(--accent);
+  outline-offset: 0;
+  background: color-mix(in srgb, var(--accent) 24%, transparent);
+}
+/* The marker for "drop before / after this tile" is as tall as the tile now, not as the old 72px card. */
+:is(.folder-widget, .widget-loose, .grid-item).drop-before::before,
+:is(.folder-widget, .widget-loose, .grid-item).drop-after::after {
+  top: 6px;
+  bottom: 6px;
+}
+/* The popup tile clips what leaves its box (overflow:hidden, for the name and the hover chip), so
+   the bar beside it and an outside focus ring would be cut off: draw both inside the tile. */
+.grid-item.drop-before::before,
+.grid-item.drop-after::after {
+  content: none;
+}
+.grid-item.drop-before {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.grid-item.drop-after {
+  box-shadow: inset -3px 0 0 var(--accent);
+}
+.grid-item:focus-visible,
+.grid-main:focus-visible {
+  outline-offset: -2px;
+}
+/* The tile's corner radius (10px) less its 1px border. */
+.grid-main:focus-visible {
+  border-radius: 9px;
+}
+/* The popup takes the window's width less a margin (it was 82%), which is what leaves room for two
+   tiles per row in a slender window. */
+.widget-popup {
+  width: calc(100% - 16px);
+}
+.snippet-header {
+  padding: 8px 10px;
+  gap: 7px;
+}
+.snippet-icon {
+  font-size: 18px;
+}
+.snippet-heading {
+  gap: 3px;
+}
+.snippet-heading strong {
+  font-size: 12px;
+}
+.snippet-heading > span {
+  font-size: 9px;
+}
+.snippet-copy {
+  height: 26px;
+  width: 26px;
+  padding: 0;
+  justify-content: center;
+}
+.snippet-copy > span {
+  display: none;
+}
+.snippet-description {
+  padding: 0 10px 6px;
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.snippet-line-numbers {
+  min-width: 32px;
+  padding: 6px 7px;
+  font-size: 10px;
+  line-height: 18px;
+}
+.snippet-code pre {
+  padding: 6px 10px;
+  font-size: 11px;
+  line-height: 18px;
+}
+.snippet-expand {
+  padding: 4px;
+  font-size: 10px;
+}
+@media (min-width: 1060px) {
+  .list-section,
+  .group-item-list,
+  .task-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 620px) {
+  .list-section,
+  .group-item-list,
+  .task-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Package "safety" (iteration 5): the security boundary of the password category
+   (PasswordSafetyNote), one permanent block at the top of the page that folds down to its first
+   line. */
+.pwd-safety {
+  margin: 0 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card-bg);
+  color: var(--text-mid);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.pwd-safety-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 32px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.pwd-safety-toggle:hover {
+  background: var(--hover-bg);
+}
+.pwd-safety-icon {
+  flex-shrink: 0;
+  color: var(--accent);
+}
+.pwd-safety-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pwd-safety-toggle > svg:last-child {
+  flex-shrink: 0;
+  color: var(--text-dim);
+}
+.pwd-safety-body {
+  margin: 0;
+  padding: 0 12px 10px 32px;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+/* Dragging a file, a folder or a link in from outside (hooks/use-external-add.ts): a dashed area over
+   the panel with the words for where it would go, and a ring on the group card under the pointer.
+   The area takes no pointer events, so the card under it is still the drop target. */
+.external-drop-zone {
+  position: fixed;
+  inset: 6px;
+  z-index: 180;
+  display: grid;
+  place-items: center;
+  border: 2px dashed var(--accent-border);
+  border-radius: 12px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font: 600 13px var(--sans);
+  pointer-events: none;
+}
+.external-drop-zone span {
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: var(--card-bg);
+  border: 1px solid var(--accent-border);
+}
+.external-drop-target {
+  box-shadow: 0 0 0 2px var(--accent);
+}
