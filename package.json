@@ -41,7 +41,7 @@
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "test:e2e": "npm run build && playwright test",
-    "dist": "npm run build && electron-builder --config electron-builder.config.cjs --win nsis --publish never",
+    "dist": "npm run build && electron-builder --config electron-builder.config.cjs --win nsis --publish never && node scripts/make-portable.cjs",
     "prepare": "husky"
   },
   "lint-staged": {

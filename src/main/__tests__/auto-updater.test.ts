@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => {
   const listeners = new Map<string, Listener[]>()
   return {
     app: { isPackaged: true, getVersion: () => '2.5.8' },
+    portable: false,
     updater: {
       autoDownload: undefined as boolean | undefined,
       autoInstallOnAppQuit: undefined as boolean | undefined,
@@ -39,6 +40,7 @@ const mocks = vi.hoisted(() => {
 vi.mock('electron', () => ({ app: mocks.app }))
 vi.mock('electron-log/main', () => ({ default: mocks.log }))
 vi.mock('electron-updater', () => ({ autoUpdater: mocks.updater }))
+vi.mock('../portable', () => ({ isPortable: () => mocks.portable }))
 
 // Electron sets process.resourcesPath; under vitest it is whatever the test makes it.
 const originalResourcesPath = Object.getOwnPropertyDescriptor(
@@ -82,6 +84,7 @@ beforeEach(async () => {
   setResourcesPath(resourcesDir)
   writeFeed(GITHUB_FEED)
   mocks.app.isPackaged = true
+  mocks.portable = false
   mocks.updater.reset()
   Object.values(mocks.log).forEach((fn) => fn.mockClear())
   vi.resetModules()
@@ -154,6 +157,23 @@ describe('checking for updates', () => {
       status: 'disabled',
     })
     expect(mocks.updater.checkForUpdates).not.toHaveBeenCalled()
+  })
+
+  // The zip of a release carries the same app-update.yml as the installed program.
+  it('does not ask the feed from a portable copy, feed file or not', async () => {
+    mocks.portable = true
+    writeFeed(GITHUB_FEED)
+
+    await expect(updater.checkForUpdatesNow()).resolves.toEqual({
+      status: 'disabled',
+    })
+    expect(mocks.updater.checkForUpdates).not.toHaveBeenCalled()
+
+    // Nothing is set up to download or to install on quit either.
+    updater.configureAutoUpdater()
+    expect(mocks.updater.autoDownload).toBeUndefined()
+    expect(mocks.updater.autoInstallOnAppQuit).toBeUndefined()
+    expect(updater.installDownloadedUpdate()).toBe(false)
   })
 
   it.each([

@@ -87,7 +87,8 @@ jobs:
             test-results
           if-no-files-found: ignore
 
-  # Builds the unpacked app the way a release does, and starts it once. This catches a broken
+  # Builds the unpacked app the way a release does, and starts it once; then makes the portable zip
+  # from it and starts that once, from where it was unpacked. This catches a broken
   # packaging setup on the pull request instead of on release day. It does not fail the run yet:
   # it has not been seen running on a hosted runner. When it has been green for a while, remove
   # `continue-on-error` and add it to the required checks.
@@ -109,3 +110,7 @@ jobs:
         run: npx electron-builder --config electron-builder.config.cjs --win --dir --publish never
       - name: Start the packaged app
         run: node scripts/smoke-packaged.cjs
+      - name: Make the portable copy
+        run: node scripts/make-portable.cjs
+      - name: Start the portable copy
+        run: node scripts/smoke-portable.cjs

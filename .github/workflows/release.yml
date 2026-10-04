@@ -14,7 +14,7 @@ name: Release
 #      then creates the git tag and the GitHub release (release_created is true) ...
 #   4. ... and, in the same run, the `installer` job builds the Windows installer and attaches
 #      Marubako-Setup-<version>.exe, its .blockmap and latest.yml (the file the in-app updater
-#      reads) to that release.
+#      reads) to that release, and then the portable copy, Marubako-<version>-portable.zip.
 #
 # Why the installer is built by a job of THIS workflow and not by a separate workflow that starts on
 # the tag or on the release: the tag and the release in step 3 are created with the default
@@ -149,6 +149,41 @@ jobs:
             echo "Download \`$(basename "$installer")\` from the assets below and run it."
             echo
             echo 'The installer is not code-signed, so Windows may show **Windows protected your PC**. Click **More info**, then **Run anyway**.'
+            echo
+            echo "SHA-256: \`$sha256\`"
+          } >> notes.md
+          gh release edit "$TAG" --notes-file notes.md
+
+      # The portable copy comes last: by now the release is complete for whoever installs, and stays
+      # so if one of these steps fails. It is the program the installer was built from
+      # (win-unpacked), zipped with the file that marks it as portable. It is started from where it
+      # was unpacked before it is uploaded: a zip that does not find itself portable would run on
+      # the data of an installed copy, and must not be published under that name.
+      - name: Make the portable copy
+        run: node scripts/make-portable.cjs
+      - name: Start the portable copy
+        run: node scripts/smoke-portable.cjs
+      - name: Upload the portable copy
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "$TAG" release/*/Marubako-*-portable.zip --clobber
+          assets="$(gh release view "$TAG" --json assets --jq '.assets[].name')"
+          grep -q '^Marubako-.*-portable\.zip$' <<< "$assets"
+      - name: Add the portable notes to the release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          portable="$(ls release/*/Marubako-*-portable.zip | head -n 1)"
+          sha256="$(sha256sum "$portable" | cut -d ' ' -f 1)"
+          gh release view "$TAG" --json body --jq .body > notes.md
+          {
+            echo
+            echo '## Portable'
+            echo
+            echo "Without installing: download \`$(basename "$portable")\`, unpack it anywhere and run \`Marubako.exe\` in the folder. It keeps everything in a \`data\` folder beside it, and it does not update itself: for a new version, unpack the new zip over the old folder."
             echo
             echo "SHA-256: \`$sha256\`"
           } >> notes.md

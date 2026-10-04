@@ -46,7 +46,7 @@ Run these before you open a pull request. CI runs the same on Windows.
 | Build                | `npm run build`                                                       |
 | UI tests, everything | `npm run test:e2e`                                                    |
 | UI tests, one file   | `npm run build`, then `npx playwright test e2e/<name>.spec.ts`        |
-| Installer            | `npm run dist` (the result is in `release\<version>\`)                |
+| Installer, portable  | `npm run dist` (both are in `release\<version>\`)                     |
 
 The UI tests open real windows and move the real mouse: do not use the computer while they run. They use temporary data folders and never read or write your real data. Two specs are sensitive to display scaling and can fail on some machines even on an unchanged checkout: `window-controls.spec.ts` ("a bubble stays at a free position through clicks, edits and restart") and `peek-mode.spec.ts` ("temporary right-side expansion flips inward and repeatedly returns to the untouched bubble"). If one of them fails and you did not touch windows or the bubble, say so in the pull request.
 

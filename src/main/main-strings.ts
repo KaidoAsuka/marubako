@@ -43,6 +43,8 @@ export interface MainStrings {
   // The box that is all there is when the application cannot start.
   startupFailedTitle: string
   startupFailedDetail: (reason: string, logPath: string) => string
+  // Under the same title: a portable folder that comes from another PC and cannot be made ready.
+  portableKeyFailedDetail: (reason: string) => string
 }
 
 export const mainStrings: Record<Lang, MainStrings> = {
@@ -74,6 +76,8 @@ export const mainStrings: Record<Lang, MainStrings> = {
     startupFailedTitle: 'Marubako 无法启动',
     startupFailedDetail: (reason, logPath) =>
       `原因：${reason}\n\n详细信息已写入日志：${logPath}`,
+    portableKeyFailedDetail: (reason) =>
+      `这个文件夹上次是在另一台电脑上使用的。启动之前，Marubako 要先把那台电脑的密码密钥收好，但没有成功，所以没有启动：否则那台电脑上保存的密码就再也读不出来了。\n\n请确认这个文件夹可以写入、磁盘没有满，然后再启动一次。\n\n原因：${reason}`,
   },
   en: {
     dialogTitle: 'Marubako',
@@ -103,6 +107,8 @@ export const mainStrings: Record<Lang, MainStrings> = {
     startupFailedTitle: 'Marubako could not start',
     startupFailedDetail: (reason, logPath) =>
       `Reason: ${reason}\n\nDetails were written to the log: ${logPath}`,
+    portableKeyFailedDetail: (reason) =>
+      `This folder was last used on another PC. Before it starts, Marubako has to put that PC’s password key away, and could not. It did not start: otherwise the passwords saved on that PC could never be read again.\n\nCheck that this folder can be written to and that the disk is not full, then start it again.\n\nReason: ${reason}`,
   },
   ja: {
     dialogTitle: 'Marubako',
@@ -133,6 +139,8 @@ export const mainStrings: Record<Lang, MainStrings> = {
     startupFailedTitle: 'Marubako を起動できません',
     startupFailedDetail: (reason, logPath) =>
       `原因: ${reason}\n\n詳細はログに記録されました: ${logPath}`,
+    portableKeyFailedDetail: (reason) =>
+      `このフォルダは前回、別の PC で使われました。Marubako は起動する前に、その PC のパスワード用の鍵を退避する必要がありますが、できませんでした。そのため起動していません。起動すると、その PC で保存したパスワードが二度と読めなくなるためです。\n\nこのフォルダに書き込めること、ディスクに空きがあることを確認してから、もう一度起動してください。\n\n原因: ${reason}`,
   },
 }
 

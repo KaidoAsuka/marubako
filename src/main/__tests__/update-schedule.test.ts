@@ -29,6 +29,9 @@ describe('when the program asks for updates by itself', () => {
     [{ isPackaged: false, isE2E: false }, false],
     [{ isPackaged: true, isE2E: true }, false],
     [{ isPackaged: false, isE2E: true }, false],
+    // A portable copy does not update itself.
+    [{ isPackaged: true, isE2E: false, isPortable: true }, false],
+    [{ isPackaged: true, isE2E: false, isPortable: false }, true],
   ])('%j: %s', (state, expected) => {
     expect(shouldCheckForUpdates(state)).toBe(expected)
   })
@@ -137,6 +140,7 @@ describe('starting the checks at start-up', () => {
   it.each([
     ['a development build', { isPackaged: false, isE2E: false }],
     ['an e2e run', { isPackaged: true, isE2E: true }],
+    ['a portable copy', { isPackaged: true, isE2E: false, isPortable: true }],
   ])('never schedules anything for %s', (_name, state) => {
     const check = vi.fn(async () => undefined)
 
