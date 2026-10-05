@@ -5,7 +5,7 @@
 [![CI](https://github.com/KaidoAsuka/marubako/actions/workflows/ci.yml/badge.svg)](https://github.com/KaidoAsuka/marubako/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-A small panel for Windows that keeps everything you open again and again at work in one place, one shortcut away.
+A small app launcher for Windows: a panel that keeps everything you open again and again at work in one place, one shortcut away.
 
 <p align="center">
   <img src="docs/images/demo-open.webp" width="880" alt="The shortcut brings the panel out of the floating bubble; one click opens a folder of design documents in the file manager, another opens the sign-in page of the test environment in the browser">
