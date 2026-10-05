@@ -89,6 +89,9 @@ if (portableKey instanceof PortableKeyError && portableKey.fatal) {
   log.info(`Portable data folder, key of this PC: ${portableKey}`)
 }
 
+// Set by the first before-quit. A quit is never taken back, so from then on the program is ending.
+let quitRequested = false
+
 if (!isE2E && !app.requestSingleInstanceLock()) {
   app.quit()
 } else {
@@ -152,8 +155,16 @@ if (!isE2E && !app.requestSingleInstanceLock()) {
         app.quit()
         return
       }
+      // A quit during start-up closes the panel while its page is loading, which fails that load
+      // and with it the start-up. That is no failure to start, and the error box would keep the
+      // program from ending for as long as it is open.
+      if (quitRequested) {
+        log.info('Start-up was cut short by a quit', error)
+        return
+      }
       log.error('Failed to start Marubako', error)
-      showStartupFailure(error, getLogFilePath())
+      // Under test nobody is there to close the box.
+      if (!isE2E && !mustBePortable) showStartupFailure(error, getLogFilePath())
       app.quit()
     })
 }
@@ -197,6 +208,7 @@ async function flushBeforeQuit(): Promise<void> {
 let flushedBeforeQuit = false
 let quitFlow: Promise<void> | null = null
 app.on('before-quit', (event) => {
+  quitRequested = true
   prepareToQuit()
   if (flushedBeforeQuit) return
   event.preventDefault()

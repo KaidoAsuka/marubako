@@ -3546,3 +3546,64 @@ describe('the theme the windows are told is the one that is drawn', () => {
     })
   })
 })
+
+// index.ts calls prepareToQuit() when a quit is asked for, and Electron then closes the windows
+// there are at that moment, once. A window made after that is closed by nobody: the program would
+// go on running with it, unseen.
+describe('a quit that is asked for while the panel is still loading', () => {
+  let finishLoad: () => void
+  let created: Promise<unknown>
+
+  beforeEach(async () => {
+    fake.state.data = createDefaultAppData()
+    const loadFile = vi
+      .spyOn(fake.FakeWindow.prototype, 'loadFile')
+      .mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            finishLoad = resolve
+          })
+      )
+    created = wm.createMainWindow()
+    await vi.waitFor(() => expect(loadFile).toHaveBeenCalledTimes(1))
+    wm.prepareToQuit()
+  })
+
+  afterEach(() => {
+    vi.mocked(fake.FakeWindow.prototype.loadFile).mockRestore()
+  })
+
+  /** Lets the page finish loading, and whatever that starts in the background run. */
+  async function loaded(): Promise<void> {
+    finishLoad()
+    await created
+    await new Promise((resolve) => setTimeout(resolve))
+  }
+
+  async function warnings(): Promise<unknown[][]> {
+    const log = (await import('electron-log/main')).default
+    return [
+      ...vi.mocked(log.warn).mock.calls,
+      ...vi.mocked(log.error).mock.calls,
+    ]
+  }
+
+  it('makes no ball when the page finishes loading while the panel is being closed', async () => {
+    await loaded()
+
+    expect(fake.state.windows).toHaveLength(1)
+    expect(wm.getDockWindow()).toBeNull()
+    expect(await warnings()).toEqual([])
+  })
+
+  it('makes no ball and logs no warning when the panel was closed before its page finished loading', async () => {
+    panel().close()
+    expect(wm.getMainWindow()).toBeNull()
+
+    await loaded()
+
+    expect(fake.state.windows).toHaveLength(1)
+    expect(wm.getDockWindow()).toBeNull()
+    expect(await warnings()).toEqual([])
+  })
+})
