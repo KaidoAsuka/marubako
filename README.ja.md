@@ -5,7 +5,7 @@
 [![CI](https://github.com/KaidoAsuka/marubako/actions/workflows/ci.yml/badge.svg)](https://github.com/KaidoAsuka/marubako/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-仕事で何度も開くものをひとつにまとめておく、Windows 用の小さなパネルです。ショートカットひとつで呼び出せます。
+仕事で何度も開くものをひとつのパネルにまとめておく、Windows 用の小さなランチャーです。ショートカットひとつで呼び出せます。
 
 <p align="center">
   <img src="docs/images/demo-open.webp" width="880" alt="ショートカットを押すと、フローティングボタンからパネルが展開する。ワンクリックで設計書のフォルダがエクスプローラーで開き、もう一度クリックするとテスト環境のサインインページがブラウザで開く">

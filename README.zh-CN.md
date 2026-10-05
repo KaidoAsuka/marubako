@@ -5,7 +5,7 @@
 [![CI](https://github.com/KaidoAsuka/marubako/actions/workflows/ci.yml/badge.svg)](https://github.com/KaidoAsuka/marubako/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-Windows 上的一个小面板：把工作里要反复打开的东西收在一处，按一下快捷键就出来。
+Windows 上的快速启动工具：一个小面板，把工作里要反复打开的东西收在一处，按一下快捷键就出来。
 
 <p align="center">
   <img src="docs/images/demo-open.webp" width="880" alt="按下快捷键，面板从悬浮球里展开；点一下，设计文档的文件夹在资源管理器里打开；再点一下，测试环境的登录页在浏览器里打开">
