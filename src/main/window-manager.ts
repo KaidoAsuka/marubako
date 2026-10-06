@@ -674,7 +674,10 @@ async function buildMainWindow(): Promise<BrowserWindow> {
     hasShadow: false,
     resizable: true,
     alwaysOnTop: launchWindowState.alwaysOnTop,
-    skipTaskbar: false,
+    // The panel comes and goes with every click on the ball. A taskbar button doing the same
+    // pushes the buttons of the user's other programs back and forth; the ball, the tray and
+    // the shortcut are what bring the panel back.
+    skipTaskbar: true,
     minWidth: MIN_EXPANDED_WIDTH,
     minHeight: bounds.minHeight,
     backgroundColor: '#00000000',
@@ -824,8 +827,9 @@ async function buildMainWindow(): Promise<BrowserWindow> {
   mainWindow.on('blur', () => {
     panelBlurredAt = Date.now()
   })
-  // The taskbar button and Win+D minimize the panel without going through the app. The ball stays
-  // (it is permanent) and shows the collapsed state until the panel is restored.
+  // Win+D minimizes the panel without going through the app (it has no taskbar button and no
+  // minimize button of its own). The ball stays (it is permanent) and shows the collapsed state
+  // until the panel is restored.
   mainWindow.on('minimize', () => {
     void panelMinimized().catch((error) =>
       log.warn('Could not follow a minimized panel', error)
@@ -1061,7 +1065,15 @@ export async function showMainWindow(
     const fromBubble =
       (collapsedState || !window.isVisible() || window.isMinimized()) &&
       dockWindow?.isVisible()
-    if (fromBubble && dockWindow) {
+    // A panel that is already open comes forward where it stands, with one exception: a temporary
+    // panel away from the ball (it was resized on the ball's side while it was kept open). The
+    // pointer is on the ball, and the panel would fold away before the pointer got across.
+    const strayPeek =
+      !fromBubble &&
+      mode === 'peek' &&
+      !!dockWindow?.isVisible() &&
+      !standsBeside(window.getBounds(), dockWindow.getBounds())
+    if ((fromBubble || strayPeek) && dockWindow) {
       const dock = dockWindow.getBounds()
       const display = screen.getDisplayMatching(dock)
       const current = window.getBounds()
@@ -1070,6 +1082,7 @@ export async function showMainWindow(
       // remembered place is not beside the ball (the panel was moved or resized while the ball was
       // off screen), or when the screen has no room for the panel there any more.
       const remembered =
+        !strayPeek &&
         expandedAnchor &&
         Math.abs(expandedAnchor.dock.x - dock.x) <= 2 &&
         Math.abs(expandedAnchor.dock.y - dock.y) <= 2
@@ -1336,9 +1349,9 @@ export async function applyBallSizePreference(ballSize: number): Promise<void> {
   }
 }
 
-// The taskbar button and Win+D minimize the panel without going through the app. Keep the ball
-// consistent: it shows the collapsed state while the panel is minimized and the expanded one again
-// once the panel is restored.
+// Win+D minimizes the panel without going through the app. Keep the ball consistent: it shows the
+// collapsed state while the panel is minimized and the expanded one again once the panel is
+// restored.
 async function panelMinimized(): Promise<void> {
   if (isQuitting) return
   // Without the ball a minimized panel is just a minimized panel.
@@ -1492,8 +1505,8 @@ export function previewPanelOpacity(opacity: number | null): void {
 
 /**
  * Folds the panel into the ball. `exit` says how the panel goes: `animate` shrinks it into the
- * ball, `hide` removes it at once ("close to tray"), `minimized` leaves it where the user put it
- * (the taskbar). Without the ball (showBubble off) all three go to the tray instead.
+ * ball, `hide` removes it at once ("close to tray"), `minimized` leaves it minimized, as Windows
+ * made it. Without the ball (showBubble off) all three go to the tray instead.
  */
 export async function collapseWindow(
   position?: DockPosition,
@@ -1567,7 +1580,7 @@ export async function collapseWindow(
       await animateMode(false, motionTimeScale(data.prefs.motion))
       return
     }
-    // The panel is gone (or stays in the taskbar) without a transition: only the ball settles.
+    // The panel is gone (or stays minimized) without a transition: only the ball settles.
     if (exit === 'hide') mainWindow.hide()
     await settleBubble('collapse', data.prefs.motion)
   })
@@ -1607,12 +1620,13 @@ export async function activateDock(
     !windowTransition &&
     mainWindow?.isVisible() &&
     !mainWindow.isMinimized() &&
-    !collapsedState
-  ) {
-    if (!raise) return collapseWindow()
-    await showMainWindow('window')
-    return getWindowSnapshot()
-  }
+    !collapsedState &&
+    !raise
+  )
+    return collapseWindow()
+  // A single click always asks for a temporary panel. A kept-open one that was behind other
+  // windows comes forward as that too, and folds away once the pointer has left it: to the user
+  // it was gone, and they called it back the way they call a temporary panel.
   await showMainWindow(mode)
   return getWindowSnapshot()
 }

@@ -122,10 +122,15 @@ export default function DockBubble(): JSX.Element {
     }
   }, [])
 
+  /** Resolves to whether the panel is open afterwards (not known when the call failed). */
   const activate = useCallback(
-    async (mode: 'peek' | 'window'): Promise<void> => {
+    async (mode: 'peek' | 'window'): Promise<boolean | undefined> => {
       const result = await window.quickLaunch.window.activateDock(mode)
-      if (!result.ok) setError(result.error)
+      if (!result.ok) {
+        setError(result.error)
+        return undefined
+      }
+      return !result.data.collapsed
     },
     []
   )
@@ -190,7 +195,7 @@ export default function DockBubble(): JSX.Element {
           // An open panel that is kept open collapses on the click itself, with no wait.
           const collapseNow =
             !double && expandedRef.current && keptOpenRef.current
-          lastClick.current = double
+          const click = double
             ? null
             : {
                 time: Date.now(),
@@ -198,12 +203,16 @@ export default function DockBubble(): JSX.Element {
                 y: event.screenY,
                 collapsed: collapseNow,
               }
+          lastClick.current = click
           cancelCollapse()
           if (double) {
             // The second click of a double click whose first one collapsed the panel is spent.
             if (!previous?.collapsed) await activate('window')
-          } else if (collapseNow) await activate('peek')
-          else if (expandedRef.current)
+          } else if (collapseNow) {
+            // A kept-open panel that was behind other windows is not collapsed by the click: it is
+            // brought forward as a temporary panel. A second click can then still keep it open.
+            if ((await activate('peek')) && click) click.collapsed = false
+          } else if (expandedRef.current)
             collapseTimer.current = window.setTimeout(() => {
               collapseTimer.current = null
               if (!expandedRef.current) return

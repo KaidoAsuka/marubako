@@ -400,6 +400,19 @@ describe('the transparent windows draw their own shape', () => {
   )
 })
 
+// The panel comes and goes with every click on the ball. A taskbar button that did the same would
+// push the buttons of the user's other programs back and forth each time.
+describe('the taskbar', () => {
+  it.each([
+    ['panel', () => panel()],
+    ['ball', () => ball()],
+  ])('gets no button for the %s', async (_name, getWindow) => {
+    await boot()
+
+    expect(getWindow().options.skipTaskbar).toBe(true)
+  })
+})
+
 describe('the ball is permanent while showBubble is on', () => {
   it('collapse leaves the ball and hides the panel', async () => {
     await boot()
@@ -1075,7 +1088,7 @@ describe('restoring the ball after a restart', () => {
   })
 })
 
-describe('minimizing the panel from the taskbar', () => {
+describe('minimizing the panel from outside the app (Win+D)', () => {
   it('keeps the ball showing and in the collapsed look while the panel is minimized', async () => {
     await boot()
     await wm.collapseWindow()
@@ -1097,7 +1110,7 @@ describe('minimizing the panel from the taskbar', () => {
     await vi.waitFor(() => expect(ball().isVisible()).toBe(true))
   })
 
-  it('restoring from the taskbar syncs the state back to expanded and keeps the ball', async () => {
+  it('restoring it syncs the state back to expanded and keeps the ball', async () => {
     await boot()
     await wm.collapseWindow()
     await wm.showMainWindow()
@@ -1150,6 +1163,7 @@ describe('a click on the ball while the panel is behind other windows (window-ux
 
   it('brings an unfocused panel to the front instead of collapsing it', async () => {
     await openAsWindow()
+    const place = panel().getBounds()
     panel().focus()
     // The user works in another application for a while; the panel is still visible behind it.
     panel().blur()
@@ -1161,7 +1175,82 @@ describe('a click on the ball while the panel is behind other windows (window-ux
     expect(snapshot.collapsed).toBe(false)
     expect(panel().isVisible()).toBe(true)
     expect(panel().isFocused()).toBe(true)
+    expect(panel().getBounds()).toEqual(place)
     expect(ball().isVisible()).toBe(true)
+  })
+
+  // To the user the panel was gone, and a single click is how a temporary panel is called: it
+  // must not stay for good like the window it was before it went behind the others.
+  it('brings it forward as a temporary panel, which folds away once the pointer has left', async () => {
+    // The leave check runs on a 40 ms timer, so this needs the full fake clock.
+    vi.useRealTimers()
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-10-03T10:00:00Z'))
+    await openAsWindow()
+    panel().focus()
+    panel().blur()
+    later(5000)
+    const bounds = ball().getBounds()
+    // The pointer is on the ball it presses.
+    fake.state.cursor = {
+      x: bounds.x + DOCK_SIZE / 2,
+      y: bounds.y + DOCK_SIZE / 2,
+    }
+
+    ball().focus()
+    const snapshot = await wm.activateDock('peek')
+
+    expect(snapshot).toMatchObject({ collapsed: false, mode: 'peek' })
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(panel().isVisible()).toBe(true)
+
+    fake.state.cursor = { x: 5, y: 5 }
+    await vi.advanceTimersByTimeAsync(400)
+
+    expect(wm.getWindowSnapshot().collapsed).toBe(true)
+    expect(panel().isVisible()).toBe(false)
+    expect(ball().isVisible()).toBe(true)
+  })
+
+  it('keeps it open when the click was the first of a double click', async () => {
+    await openAsWindow()
+    panel().focus()
+    panel().blur()
+    later(5000)
+    ball().focus()
+    await wm.activateDock('peek')
+
+    // The ball sends the second click as a request to keep the panel open.
+    const snapshot = await wm.activateDock('window')
+
+    expect(snapshot).toMatchObject({ collapsed: false, mode: 'window' })
+    expect(panel().isVisible()).toBe(true)
+  })
+
+  it('lays a panel that no longer stands beside the ball out beside it again', async () => {
+    await openAsWindow()
+    const beside = panel().getBounds()
+    expect(beside.x).toBe(ball().getBounds().x + DOCK_SIZE + 8)
+    // Made narrower from the edge next to the ball while it was kept open: the ball stays where
+    // it is, and a temporary panel 60 px away would fold away before the pointer reached it.
+    panel().setBounds({
+      ...beside,
+      x: beside.x + 60,
+      width: beside.width - 60,
+    })
+    panel().emit('resized')
+    panel().focus()
+    panel().blur()
+    later(5000)
+
+    ball().focus()
+    await wm.activateDock('peek')
+
+    expect(panel().getBounds()).toEqual({ ...beside, width: beside.width - 60 })
+    expect(data().window.bounds).toMatchObject({
+      x: beside.x,
+      w: beside.width - 60,
+    })
   })
 
   it('still collapses a panel that was in front when the ball was pressed', async () => {
