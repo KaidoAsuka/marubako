@@ -626,7 +626,7 @@ test('an auto-start with --hidden shows nothing when the ball is turned off', as
   }
 })
 
-test('minimizing the panel from the taskbar keeps the ball and restoring it syncs the state', async () => {
+test('minimizing the panel from outside the app keeps the ball and restoring it syncs the state', async () => {
   const context = await launchApp()
   try {
     await context.page.getByTestId('dock-panel').click()
@@ -636,7 +636,7 @@ test('minimizing the panel from the taskbar keeps the ball and restoring it sync
       .poll(async () => (await windowState(context)).panelReady)
       .toBe(true)
 
-    // Taskbar button and Win+D reach the window as a native minimize, not through the title bar.
+    // Win+D reaches the window as a native minimize, not through the title bar.
     await context.electronApp.evaluate(({ BrowserWindow }) =>
       BrowserWindow.getAllWindows()
         .find((window) => window.isResizable())!
@@ -662,7 +662,7 @@ test('minimizing the panel from the taskbar keeps the ball and restoring it sync
   }
 })
 
-test('a click on the ball brings a kept-open panel that is behind other windows forward instead of collapsing it', async () => {
+test('a click on the ball brings a kept-open panel that is behind other windows forward as a temporary panel', async () => {
   const context = await launchApp()
   try {
     await context.page.getByTestId('dock-panel').click()
@@ -694,13 +694,32 @@ test('a click on the ball brings a kept-open panel that is behind other windows 
         .find((window) => !window.isResizable())!
         .emit('focus')
     )
+    // The pointer rests on the ball it presses.
+    await holdPointerOnBall(context)
     await bubble.getByTestId('dock-bubble').click()
     // Brought to the front, not collapsed: it holds the focus again.
     await expect.poll(panelFocused).toBe(true)
     // Wait out the delayed collapse of a single click on an open panel.
     await context.page.waitForTimeout(900)
     expect((await windowState(context)).panelVisible).toBe(true)
-    expect((await snapshotOf(context))?.collapsed).toBe(false)
+    expect(await snapshotOf(context)).toMatchObject({
+      collapsed: false,
+      mode: 'peek',
+    })
+    // It was called with a single click, so it is a temporary panel now: it folds away once the
+    // pointer has left it, instead of staying like the window it was.
+    const area = (await windowState(context)).area!
+    await context.electronApp.evaluate(
+      ({ screen }, point) => {
+        screen.getCursorScreenPoint = () => point
+      },
+      { x: area.x + 10, y: area.y + 10 }
+    )
+    await expect
+      .poll(async () => (await windowState(context)).panelVisible)
+      .toBe(false)
+    expect((await snapshotOf(context))?.collapsed).toBe(true)
+    expect((await windowState(context)).bubbleVisible).toBe(true)
   } finally {
     await closeApp(context)
   }

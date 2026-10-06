@@ -68,9 +68,18 @@ describe('DockBubble clicks', () => {
     })
   }
 
+  /** What the main process answers a click with: the state the panel is in afterwards. */
+  function mainAnswers(open: boolean, stay: Stay = 'temporary'): void {
+    vi.mocked(window.quickLaunch.window.activateDock).mockResolvedValue({
+      ok: true,
+      data: panelState(open, stay),
+    })
+  }
+
   beforeEach(() => {
     vi.clearAllMocks()
     vi.useFakeTimers()
+    mainAnswers(true)
     // The ball asks for the window state when it mounts; these tests start from the collapsed ball.
     vi.mocked(window.quickLaunch.window.getState).mockResolvedValue({
       ok: true,
@@ -328,6 +337,9 @@ describe('DockBubble clicks', () => {
   // A panel that is kept open (opened as a window, or pinned) has nothing a second click could turn
   // it into, so the 250 ms wait would only be a delay.
   describe('a panel that is kept open', () => {
+    // The click collapses it, and the main process says so in its answer.
+    beforeEach(() => mainAnswers(false))
+
     it.each(['window', 'pinned'] as const)(
       'collapses on the click itself, with no wait (%s)',
       async (stay) => {
@@ -451,6 +463,39 @@ describe('DockBubble clicks', () => {
       await flush()
 
       expect(modes()).toEqual(['peek'])
+    })
+
+    // Behind other windows the click does not collapse it: the main process brings it forward
+    // as a temporary panel. The second click of a double click is then not spent.
+    describe('and was behind other windows', () => {
+      beforeEach(() => mainAnswers(true))
+
+      it('is kept open by a double click, whose first click only brought it forward', async () => {
+        await flush()
+        setPanelOpen(true, 'window')
+
+        await click()
+        setPanelOpen(true)
+        await flush(120)
+        await click()
+        await flush(1000)
+
+        expect(modes()).toEqual(['peek', 'window'])
+      })
+
+      it('is collapsed by a later single click, after the usual wait of a temporary panel', async () => {
+        await flush()
+        setPanelOpen(true, 'window')
+
+        await click()
+        setPanelOpen(true)
+        await flush(520)
+        await click()
+        expect(modes()).toEqual(['peek'])
+        await flush(300)
+
+        expect(modes()).toEqual(['peek', 'peek'])
+      })
     })
   })
 
