@@ -37,11 +37,17 @@ export type AppContext = {
   userDataDir: string
 }
 
-export async function launchApp(
+/** The app's process and its data folder: what there is before any window. */
+export type StartedApp = Pick<AppContext, 'electronApp' | 'userDataDir'>
+
+/**
+ * Starts the app and returns as soon as its process is there, without waiting for a window: for
+ * the specs about what happens before the panel is up. Every other spec uses launchApp.
+ */
+export async function startApp(
   userDataDir?: string,
-  // Extra command-line switches, such as the `--hidden` an auto-start passes.
   extraArgs: string[] = []
-): Promise<AppContext> {
+): Promise<StartedApp> {
   const resolvedUserDataDir =
     userDataDir ?? (await fs.mkdtemp(path.join(os.tmpdir(), 'marubako-e2e-')))
   const mainEntry = path.join(process.cwd(), 'out', 'main', 'index.js')
@@ -54,6 +60,18 @@ export async function launchApp(
       QUICKLAUNCH_USER_DATA: resolvedUserDataDir,
     },
   })
+  return { electronApp, userDataDir: resolvedUserDataDir }
+}
+
+export async function launchApp(
+  userDataDir?: string,
+  // Extra command-line switches, such as the `--hidden` an auto-start passes.
+  extraArgs: string[] = []
+): Promise<AppContext> {
+  const { electronApp, userDataDir: resolvedUserDataDir } = await startApp(
+    userDataDir,
+    extraArgs
+  )
   try {
     const page = await electronApp.firstWindow()
 
@@ -108,7 +126,7 @@ function endProcessTree(electronApp: ElectronApplication): void {
  * A process that is still there after the limit is therefore ended. Only if it still had a window
  * open did the app itself not quit, and then the test fails and says so.
  */
-async function quitApp(context: AppContext): Promise<void> {
+async function quitApp(context: StartedApp): Promise<void> {
   const { electronApp } = context
   const closing = electronApp.close().then(() => true as const)
   if (await Promise.race([closing, after(QUIT_TIMEOUT_MS, false as const)]))
@@ -138,7 +156,7 @@ async function quitApp(context: AppContext): Promise<void> {
 }
 
 export async function closeApp(
-  context: AppContext,
+  context: StartedApp,
   options?: { cleanup?: boolean; alreadyClosed?: boolean }
 ): Promise<void> {
   try {

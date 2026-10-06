@@ -846,8 +846,9 @@ async function buildMainWindow(): Promise<BrowserWindow> {
     }
   })
 
+  const panel = mainWindow
   await loadRenderer(
-    mainWindow,
+    panel,
     false,
     toStartupQuery({
       lang: data.prefs.lang,
@@ -855,6 +856,10 @@ async function buildMainWindow(): Promise<BrowserWindow> {
       firstRun: firstRunExperienceEnabled() && isFreshInstall(),
     })
   )
+  // A quit asked for during the load closes the windows there are at that moment, once. A ball
+  // made now would be a window nobody closes, and the program would never end. (The panel may
+  // be closed by now and `mainWindow` cleared, hence the local name.)
+  if (isQuitting) return panel
   peekTimer = setInterval(() => {
     void checkPeekLeave().catch((error) =>
       log.warn('Could not check temporary panel dismissal', error)
